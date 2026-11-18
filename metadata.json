@@ -1,0 +1,6 @@
+{
+  "name": "Como en Casa - Comida Tradicional",
+  "description": "Aplicación de pedidos, mesas con QR, delivery y panel administrativo para el restaurante Como en Casa - Comida Tradicional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

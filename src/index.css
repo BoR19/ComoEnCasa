@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Paleta oficial extraída del logotipo Como en Casa (Tupiza • Potosí • Bolivia) */
+    --brown-dark: #3B1F0E;
+    --brown-secondary: #4A2C1A;
+    --terracotta: #B84A27;
+    --terracotta-soft: #C95B34;
+    --cream-bg: #FFF8E8;
+    --cream-card: #FDF2D6;
+    --gold-primary: #D9A441;
+    --gold-light: #E8C87A;
+    --text-primary: #2B1A0E;
+    --text-secondary: #7A5A3A;
+    --cactus-green: #2E6F32;
+    --river-teal: #1E8299;
+    --canyon-red: #B83227;
+    --green-success: #2E9E5B;
+  }
+
+  body {
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    color: #2B1A0E;
+    background-color: #EDE1C9;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.font-script {
+  font-family: 'Dancing Script', cursive;
+}
+
+.font-serif-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.font-body {
+  font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+}
+
+.linen-backdrop {
+  background-color: #EDE1C9;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(59, 31, 14, 0.025) 0px,
+      rgba(59, 31, 14, 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(59, 31, 14, 0.025) 0px,
+      rgba(59, 31, 14, 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    radial-gradient(circle at 28% 20%, rgba(255, 248, 232, 0.72), rgba(217, 164, 65, 0.14));
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.phone-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.phone-scroll::-webkit-scrollbar-thumb {
+  background: rgba(122, 90, 58, 0.28);
+  border-radius: 9999px;
+}
+
+.phone-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 74, 39, 0.5);
+}
+
+@media print {
+  @page {
+    margin: 6mm;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #FFFFFF !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.printing-ticket > *:not(.ticket-print-modal-root) {
+    display: none !important;
+  }
+
+  .ticket-print-modal-root {
+    position: static !important;
+    inset: auto !important;
+    background: #FFFFFF !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .ticket-print-shell {
+    position: static !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #FFFFFF !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .ticket-paper {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #FFFFFF !important;
+    margin: 0 auto !important;
+    color: #000000 !important;
+  }
+
+  .ticket-paper.ticket-size-58 {
+    width: 58mm !important;
+    max-width: 58mm !important;
+    padding: 2mm !important;
+    font-size: 10px !important;
+  }
+
+  .ticket-paper.ticket-size-80 {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 3mm !important;
+    font-size: 11px !important;
+  }
+
+  .ticket-paper.ticket-size-carta {
+    width: 100% !important;
+    max-width: 170mm !important;
+    padding: 8mm !important;
+  }
+}
+

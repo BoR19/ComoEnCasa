@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { User } from 'firebase/auth';
 import {
   Banknote,
   BarChart3,
@@ -8,9 +9,8 @@ import {
   ChefHat,
   Clock,
   Download,
-  Eye,
-  EyeOff,
   KeyRound,
+  LogIn,
   LogOut,
   Minus,
   Pencil,
@@ -18,13 +18,16 @@ import {
   Printer,
   RefreshCw,
   Search,
+  ShieldCheck,
+  Trash2,
   Unlock,
-  UserCircle2,
+  Users,
   Utensils,
   X,
 } from 'lucide-react';
 import {
   AdminTab,
+  AuthorizedStaffItem,
   DishSizeOption,
   InventoryItem,
   KitchenOrder,
@@ -48,30 +51,38 @@ import { CategoryTabs, MobileHeader } from '../ShellComponents';
 import { TicketModal } from '../TicketModal';
 
 interface AdminLoginScreenProps {
-  onLoginSuccess: () => void;
+  firebaseUser: User | null;
+  isAdmin: boolean;
+  authLoading: boolean;
+  authError?: string;
+  onGoogleSignIn: () => Promise<void>;
+  onGoogleSignOut: () => Promise<void>;
+  onEnterAdminPanel: () => void;
   onBack: () => void;
 }
 
 export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
-  onLoginSuccess,
+  firebaseUser,
+  isAdmin,
+  authLoading,
+  authError,
+  onGoogleSignIn,
+  onGoogleSignOut,
+  onEnterAdminPanel,
   onBack,
 }) => {
-  const [email, setEmail] = useState('usuario@comoencasa.com');
-  const [password, setPassword] = useState('comoencasa2026');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [forgotNotice, setForgotNotice] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim().includes('@') || password.trim().length < 4) {
-      setErrorMsg('Ingresa un usuario válido y una contraseña de al menos 4 caracteres.');
-      return;
-    }
+  const handleGoogleAccess = async () => {
     setErrorMsg('');
-    onLoginSuccess();
+    try {
+      await onGoogleSignIn();
+    } catch {
+      setErrorMsg('No se pudo completar el inicio de sesión con Google.');
+    }
   };
+
+  const displayedError = errorMsg || authError;
 
   return (
     <div className="flex-1 flex flex-col bg-[#3B1F0E] text-[#FFF8E8] min-h-0">
@@ -85,123 +96,87 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex-1 overflow-y-auto phone-scroll px-6 py-4 flex flex-col justify-center"
-      >
+      <div className="flex-1 overflow-y-auto phone-scroll px-6 py-4 flex flex-col justify-center">
         <div className="max-w-md w-full mx-auto lg:rounded-3xl lg:border lg:border-[#D9A441]/30 lg:bg-[#4A2C1A]/45 lg:p-8">
-        <div className="flex flex-col items-center">
-          <OfficialLogo size="sm" />
-          <h1 className="font-serif-display text-2xl font-bold text-[#FFF8E8] mt-3 text-center">
-            Acceso Administrador
-          </h1>
-        </div>
-
-        <div className="space-y-3.5 my-5">
-          <div>
-            <label
-              htmlFor="admin-email"
-              className="block text-xs font-bold text-[#E8C87A] mb-1"
-            >
-              Usuario
-            </label>
-            <div className="relative">
-              <UserCircle2 className="w-4 h-4 text-[#7A5A3A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                id="admin-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[#FFF8E8] text-[#2B1A0E] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#D9A441]"
-              />
-            </div>
+          <div className="flex flex-col items-center">
+            <OfficialLogo size="sm" />
+            <h1 className="font-serif-display text-2xl font-bold text-[#FFF8E8] mt-3 text-center">
+              Acceso Administrador
+            </h1>
+            <p className="text-xs text-[#E8C87A]/85 text-center mt-1">
+              Inicia sesión con tu cuenta Google de administración para sincronizar pedidos, menú y mesas en tiempo real.
+            </p>
           </div>
 
-          <div>
-            <label
-              htmlFor="admin-password"
-              className="block text-xs font-bold text-[#E8C87A] mb-1"
-            >
-              Contraseña
-            </label>
-            <div className="relative">
-              <input
-                id="admin-password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-11 pl-4 pr-11 rounded-2xl bg-[#FFF8E8] text-[#2B1A0E] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#D9A441]"
-              />
+          <div className="space-y-3.5 my-6">
+            {firebaseUser && (
+              <div className="rounded-2xl bg-[#3B1F0E]/80 border border-[#D9A441]/40 p-3.5 text-center space-y-1">
+                <p className="text-[11px] font-bold text-[#E8C87A]">
+                  Cuenta actual conectada
+                </p>
+                <p className="text-sm font-extrabold text-[#FFF8E8] truncate">
+                  {firebaseUser.email}
+                </p>
+                {!isAdmin && !authLoading && (
+                  <p className="text-xs font-bold text-[#E8C87A] pt-1">
+                    Esta cuenta no tiene permisos de Administrador.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {displayedError && (
+              <p className="text-xs font-bold text-[#E8C87A] bg-[#4A2C1A] px-3 py-2 rounded-xl border border-[#D9A441]/40">
+                {displayedError}
+              </p>
+            )}
+
+            {isAdmin ? (
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                className="w-10 h-10 absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#3B1F0E] cursor-pointer"
+                onClick={onEnterAdminPanel}
+                className="w-full min-h-[50px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
+                <ShieldCheck className="w-5 h-5" />
+                <span>Entrar al Panel Administrador</span>
               </button>
-            </div>
+            ) : (
+              <button
+                type="button"
+                disabled={authLoading}
+                onClick={handleGoogleAccess}
+                className="w-full min-h-[50px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>
+                  {authLoading
+                    ? 'Verificando cuenta...'
+                    : firebaseUser
+                    ? 'Cambiar a cuenta Administrador'
+                    : 'Ingresar con Google'}
+                </span>
+              </button>
+            )}
+
+            {firebaseUser && (
+              <button
+                type="button"
+                onClick={() => void onGoogleSignOut()}
+                className="w-full min-h-[42px] rounded-2xl border border-[#D9A441]/50 text-[#FFF8E8] font-bold text-xs hover:bg-[#4A2C1A] cursor-pointer"
+              >
+                Cerrar cuenta Google actual
+              </button>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setRememberMe((prev) => !prev)}
-            className="flex items-center gap-2 text-xs font-bold text-[#FFF8E8] cursor-pointer"
-          >
-            <span
-              className={`w-4 h-4 rounded border flex items-center justify-center ${
-                rememberMe
-                  ? 'bg-[#D9A441] border-[#D9A441] text-[#2B1A0E]'
-                  : 'border-[#E8C87A]'
-              }`}
-            >
-              {rememberMe && <Check className="w-3 h-3" strokeWidth={3} />}
-            </span>
-            <span>Recordarme</span>
-          </button>
-
-          {errorMsg && (
-            <p className="text-xs font-bold text-[#E8C87A] bg-[#4A2C1A] px-3 py-2 rounded-xl border border-[#D9A441]/40">
-              {errorMsg}
+          <footer className="text-center space-y-1 pt-2">
+            <p className="text-xs font-bold text-[#E8C87A]">Solo personal autorizado</p>
+            <p className="text-[11px] text-[#FFF8E8]/70">
+              Sincronización en vivo • Firebase Firestore
             </p>
-          )}
-
-          <button
-            type="submit"
-            className="w-full min-h-[50px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer"
-          >
-            Ingresar
-          </button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setForgotNotice(true)}
-              className="text-xs font-bold text-[#FFF8E8]/90 underline decoration-[#D9A441] cursor-pointer"
-            >
-              Olvidé mi contraseña
-            </button>
-          </div>
-
-          {forgotNotice && (
-            <p className="text-[11px] text-center text-[#E8C87A] bg-[#4A2C1A] rounded-xl px-3 py-2">
-              Se enviaron instrucciones de restablecimiento a usuario@comoencasa.com.
-            </p>
-          )}
+          </footer>
         </div>
-
-        <footer className="text-center space-y-1 pt-2">
-          <p className="text-xs font-bold text-[#E8C87A]">Solo personal autorizado</p>
-          <p className="text-[11px] text-[#FFF8E8]/70">
-            Versión 1.0 • Términos y Privacidad
-          </p>
-        </footer>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };
@@ -211,6 +186,8 @@ interface AdminPanelScreenProps {
   kitchenOrders: KitchenOrder[];
   tables: TableItem[];
   inventory: InventoryItem[];
+  authorizedStaff: AuthorizedStaffItem[];
+  adminEmail?: string | null;
   onToggleDishAvailability: (id: string) => void;
   onSaveDishEdit: (updated: MenuItem) => void;
   onAddNewDish: (newItem: MenuItem) => void;
@@ -230,6 +207,9 @@ interface AdminPanelScreenProps {
   onUpdateInventory: (updated: InventoryItem[]) => void;
   mozoPin: string;
   onUpdateMozoPin: (newPin: string) => void;
+  onAddAuthorizedStaff: (email: string, name: string) => void;
+  onToggleAuthorizedStaff: (email: string, active: boolean) => void;
+  onRemoveAuthorizedStaff: (email: string) => void;
   onLogout: () => void;
   onBack: () => void;
 }
@@ -239,6 +219,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   kitchenOrders,
   tables,
   inventory,
+  authorizedStaff,
+  adminEmail,
   onToggleDishAvailability,
   onSaveDishEdit,
   onAddNewDish,
@@ -250,11 +232,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onUpdateInventory,
   mozoPin,
   onUpdateMozoPin,
+  onAddAuthorizedStaff,
+  onToggleAuthorizedStaff,
+  onRemoveAuthorizedStaff,
   onLogout,
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [pinDraft, setPinDraft] = useState(mozoPin);
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffName, setNewStaffName] = useState('');
+  useEffect(() => {
+    setPinDraft(mozoPin);
+  }, [mozoPin]);
   const [menuCategory, setMenuCategory] = useState<MenuCategory>('Platos Fuertes');
   const [menuQuery, setMenuQuery] = useState('');
   const [orderFilter, setOrderFilter] = useState<'all' | 'unpaid' | 'dine-in' | 'delivery'>('all');
@@ -602,9 +592,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-6 space-y-4 lg:space-y-5">
         {activeTab === 'dashboard' && (
           <>
-            <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] text-center lg:text-left">
-              Hola Administrador
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] text-center lg:text-left">
+                Hola Administrador
+              </h2>
+              {adminEmail && (
+                <span className="px-3 py-1 rounded-xl bg-[#2E6F32]/12 border border-[#2E6F32]/30 text-[11px] font-extrabold text-[#2E6F32]">
+                  En vivo · {adminEmail}
+                </span>
+              )}
+            </div>
 
             {/* Waiter Alerts */}
             {waiterRequests.map((req) => (
@@ -793,6 +790,89 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       Guardar PIN
                     </button>
                   </div>
+                </div>
+
+                {/* Authorized Mozos (Google Accounts) */}
+                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/65 p-3 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-[#B84A27]" />
+                      <span>Mozos autorizados (Google)</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-[#7A5A3A]">
+                      {authorizedStaff.length} registrados
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <input
+                      type="text"
+                      value={newStaffName}
+                      onChange={(e) => setNewStaffName(e.target.value)}
+                      placeholder="Nombre (Ej. Carlos)"
+                      className="h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                    />
+                    <input
+                      type="email"
+                      value={newStaffEmail}
+                      onChange={(e) => setNewStaffEmail(e.target.value)}
+                      placeholder="correo.mozo@gmail.com"
+                      className="h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!newStaffEmail.trim().includes('@')}
+                    onClick={() => {
+                      onAddAuthorizedStaff(newStaffEmail.trim(), newStaffName.trim() || newStaffEmail.trim());
+                      setNewStaffEmail('');
+                      setNewStaffName('');
+                    }}
+                    className="w-full h-9 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
+                  >
+                    Autorizar Mozo
+                  </button>
+
+                  {authorizedStaff.length > 0 && (
+                    <div className="space-y-1.5 pt-1 max-h-36 overflow-y-auto phone-scroll">
+                      {authorizedStaff.map((staff) => (
+                        <div
+                          key={staff.email}
+                          className="flex items-center justify-between gap-2 rounded-xl bg-[#FFFDF8] border border-[#D9A441]/40 px-2.5 py-1.5 text-[11px]"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-[#2B1A0E] truncate">
+                              {staff.name}
+                            </p>
+                            <p className="text-[10px] text-[#7A5A3A] truncate">
+                              {staff.email}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => onToggleAuthorizedStaff(staff.email, !staff.active)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer ${
+                                staff.active
+                                  ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
+                                  : 'bg-[#7A5A3A]/15 text-[#7A5A3A]'
+                              }`}
+                            >
+                              {staff.active ? 'Activo' : 'Pausado'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onRemoveAuthorizedStaff(staff.email)}
+                              aria-label={`Eliminar ${staff.email}`}
+                              className="w-6 h-6 rounded-lg text-[#B83227] hover:bg-[#B83227]/10 flex items-center justify-center cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
+import { User } from 'firebase/auth';
 import {
   Banknote,
   BellRing,
   Check,
   CheckCircle2,
   ChefHat,
+  LogIn,
   LogOut,
   Minus,
   Plus,
@@ -40,6 +42,9 @@ interface MozoScreenProps {
   menuItems: MenuItem[];
   kitchenOrders: KitchenOrder[];
   tables: TableItem[];
+  firebaseUser: User | null;
+  isStaff: boolean;
+  onGoogleSignIn: () => void;
   onCreatePosOrder: (payload: {
     mode: OrderMode;
     tableNumber?: number;
@@ -61,6 +66,9 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
   menuItems,
   kitchenOrders,
   tables,
+  firebaseUser,
+  isStaff,
+  onGoogleSignIn,
   onCreatePosOrder,
   onAppendOrderItems,
   onUpdateOrderStatus,
@@ -304,6 +312,31 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-6 space-y-4">
+          {(!firebaseUser || !isStaff) && (
+            <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-extrabold text-[#D9A441]">
+                  {firebaseUser
+                    ? `Cuenta (${firebaseUser.email}) sin permiso de Mozo`
+                    : 'Sincronización en vivo con Cocina y Caja'}
+                </p>
+                <p className="text-[11px] text-[#FFF8E8]/85 mt-0.5">
+                  {firebaseUser
+                    ? 'Pide al Administrador que agregue este correo en Personal Autorizado o cambia a una cuenta autorizada.'
+                    : 'Conecta tu cuenta Google autorizada para ver pedidos y mesas de otros dispositivos en tiempo real.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onGoogleSignIn}
+                className="px-3.5 py-2 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{firebaseUser ? 'Cambiar cuenta' : 'Conectar con Google'}</span>
+              </button>
+            </div>
+          )}
+
           {/* Waiter Calls */}
           {waiterRequests.map((req) => (
             <div

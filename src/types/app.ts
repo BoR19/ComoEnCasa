@@ -102,6 +102,7 @@ export interface OrderLineItem {
 export interface KitchenOrder {
   id: string;
   code: string;
+  customerUid?: string;
   mode: OrderMode;
   tableNumber?: number;
   customerLabel: string;
@@ -134,6 +135,12 @@ export interface InventoryItem {
   quantity: number;
   unit: string;
   status: 'Stock OK' | 'Bajo stock';
+}
+
+export interface AuthorizedStaffItem {
+  email: string;
+  name: string;
+  active: boolean;
 }
 
 export type AdminTab = 'dashboard' | 'menu' | 'kitchen' | 'reports';

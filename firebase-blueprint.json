@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "MenuItemDoc": {
+      "title": "MenuItemDoc",
+      "description": "Platillo o bebida del menú tradicional de Como en Casa.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "category": { "type": "string", "enum": ["Platos Fuertes", "Guisos", "Sopas", "Jugos"] },
+        "description": { "type": "string", "maxLength": 300 },
+        "priceBadge": { "type": "string", "maxLength": 120 },
+        "sizes": { "type": "array" },
+        "ingredients": { "type": "array" },
+        "rating": { "type": "number" },
+        "prepTime": { "type": "string", "maxLength": 40 },
+        "available": { "type": "boolean" },
+        "visualType": { "type": "string", "maxLength": 40 },
+        "sortOrder": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "category", "priceBadge", "sizes", "available", "visualType", "updatedAt"]
+    },
+    "TableDoc": {
+      "title": "TableDoc",
+      "description": "Estado en tiempo real de cada mesa del restaurante.",
+      "type": "object",
+      "properties": {
+        "number": { "type": "number" },
+        "status": { "type": "string", "enum": ["libre", "ocupada"] },
+        "capacity": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["number", "status", "capacity", "updatedAt"]
+    },
+    "OrderDoc": {
+      "title": "OrderDoc",
+      "description": "Comanda o pedido activo en cocina/caja sin PII sensible.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "mode": { "type": "string", "enum": ["dine-in", "delivery"] },
+        "tableNumber": { "type": "number" },
+        "customerLabel": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "items": { "type": "array" },
+        "notes": { "type": "string", "maxLength": 300 },
+        "status": { "type": "string", "enum": ["Preparando", "Listo", "En camino", "Entregado"] },
+        "total": { "type": "number" },
+        "estimatedMinutes": { "type": "number" },
+        "createdAtLabel": { "type": "string", "maxLength": 20 },
+        "deliveredAtLabel": { "type": "string", "maxLength": 20 },
+        "paid": { "type": "boolean" },
+        "paymentMethod": { "type": "string", "enum": ["Efectivo", "QR", "Transferencia Bancaria", "Tarjeta"] },
+        "waiterRequested": { "type": "boolean" },
+        "ratingStars": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "customerUid", "mode", "customerLabel", "items", "notes", "status", "total", "estimatedMinutes", "createdAtLabel", "paid", "waiterRequested", "createdAt", "updatedAt"]
+    },
+    "OrderPrivateDeliveryDoc": {
+      "title": "OrderPrivateDeliveryDoc",
+      "description": "Datos privados de entrega (PII) aislados del pedido principal.",
+      "type": "object",
+      "properties": {
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "address": { "type": "string", "minLength": 1, "maxLength": 220 },
+        "reference": { "type": "string", "maxLength": 220 },
+        "phone": { "type": "string", "minLength": 5, "maxLength": 30 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerUid", "address", "phone", "updatedAt"]
+    },
+    "InventoryItemDoc": {
+      "title": "InventoryItemDoc",
+      "description": "Insumo de inventario controlado por administración.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "status": { "type": "string", "enum": ["Stock OK", "Bajo stock"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "quantity", "unit", "status", "updatedAt"]
+    },
+    "StaffConfigDoc": {
+      "title": "StaffConfigDoc",
+      "description": "Configuración privada operativa (PIN de Mozo).",
+      "type": "object",
+      "properties": {
+        "mozoPin": { "type": "string", "minLength": 4, "maxLength": 4, "pattern": "^[0-9]{4}$" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mozoPin", "updatedAt"]
+    },
+    "AuthorizedStaffDoc": {
+      "title": "AuthorizedStaffDoc",
+      "description": "Cuenta de personal (Mozo/Caja) autorizada por el administrador.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "active", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/menuItems/{dishId}": {
+      "schema": { "$ref": "#/entities/MenuItemDoc" },
+      "description": "Catálogo en tiempo real de platillos y bebidas."
+    },
+    "/tables/{tableId}": {
+      "schema": { "$ref": "#/entities/TableDoc" },
+      "description": "Estado en tiempo real de las mesas del local."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/OrderDoc" },
+      "description": "Pedidos de mesa y delivery en tiempo real."
+    },
+    "/orders/{orderId}/private/delivery": {
+      "schema": { "$ref": "#/entities/OrderPrivateDeliveryDoc" },
+      "description": "Dirección y teléfono privados de entrega para delivery."
+    },
+    "/inventory/{itemId}": {
+      "schema": { "$ref": "#/entities/InventoryItemDoc" },
+      "description": "Inventario operativo exclusivo del administrador."
+    },
+    "/config/staff": {
+      "schema": { "$ref": "#/entities/StaffConfigDoc" },
+      "description": "Configuración operativa de PIN de Mozo."
+    },
+    "/authorized_staff/{staffEmail}": {
+      "schema": { "$ref": "#/entities/AuthorizedStaffDoc" },
+      "description": "Lista de correos de mozos autorizados."
+    }
+  }
+}

@@ -1,0 +1,338 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Identity & Validation Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmailKey(email) {
+      return email is string && email.size() >= 3 && email.size() <= 120 && email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrapAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'borbjo637@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrapAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isAuthorizedMozo() {
+      return isVerifiedUser() &&
+        request.auth.token.email is string &&
+        exists(/databases/$(database)/documents/authorized_staff/$(request.auth.token.email)) &&
+        get(/databases/$(database)/documents/authorized_staff/$(request.auth.token.email)).data.active == true;
+    }
+
+    function isStaff() {
+      return isAdmin() || isAuthorizedMozo();
+    }
+
+    // Validation Blueprint: MenuItemDoc
+    function isValidMenuItem(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'category', 'description', 'priceBadge',
+          'sizes', 'ingredients', 'rating', 'prepTime', 'available',
+          'visualType', 'sortOrder', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'name', 'category', 'description', 'priceBadge',
+          'sizes', 'ingredients', 'rating', 'prepTime', 'available',
+          'visualType', 'sortOrder', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.category in ['Platos Fuertes', 'Guisos', 'Sopas', 'Jugos'] &&
+        data.description is string && data.description.size() <= 300 &&
+        data.priceBadge is string && data.priceBadge.size() >= 1 && data.priceBadge.size() <= 120 &&
+        data.sizes is list && data.sizes.size() >= 1 && data.sizes.size() <= 3 &&
+        data.sizes[0] is map &&
+        data.ingredients is list && data.ingredients.size() <= 12 &&
+        (data.ingredients.size() == 0 || data.ingredients[0] is string) &&
+        data.rating is number && data.rating >= 0 && data.rating <= 5 &&
+        data.prepTime is string && data.prepTime.size() <= 40 &&
+        data.available is bool &&
+        data.visualType is string && data.visualType.size() <= 40 &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 500 &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: TableDoc
+    function isValidTable(data) {
+      return data.keys().hasAll(['number', 'status', 'capacity', 'updatedAt']) &&
+        data.keys().hasOnly(['number', 'status', 'capacity', 'updatedAt']) &&
+        data.number is number && data.number >= 1 && data.number <= 50 &&
+        data.status in ['libre', 'ocupada'] &&
+        data.capacity is number && data.capacity >= 1 && data.capacity <= 30 &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: OrderDoc (NO PII)
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+          'id', 'code', 'customerUid', 'mode', 'customerLabel',
+          'items', 'notes', 'status', 'total', 'estimatedMinutes',
+          'createdAtLabel', 'paid', 'waiterRequested', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'code', 'customerUid', 'mode', 'tableNumber', 'customerLabel',
+          'items', 'notes', 'status', 'total', 'estimatedMinutes',
+          'createdAtLabel', 'deliveredAtLabel', 'paid', 'paymentMethod',
+          'waiterRequested', 'ratingStars', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.code is string && data.code.size() >= 2 && data.code.size() <= 20 &&
+        data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128 &&
+        data.mode in ['dine-in', 'delivery'] &&
+        (!('tableNumber' in data) || (data.tableNumber is number && data.tableNumber >= 1 && data.tableNumber <= 50)) &&
+        data.customerLabel is string && data.customerLabel.size() >= 1 && data.customerLabel.size() <= 80 &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 50 &&
+        data.items[0] is map &&
+        data.notes is string && data.notes.size() <= 300 &&
+        data.status in ['Preparando', 'Listo', 'En camino', 'Entregado'] &&
+        data.total is number && data.total > 0 && data.total <= 50000 &&
+        data.estimatedMinutes is number && data.estimatedMinutes >= 1 && data.estimatedMinutes <= 180 &&
+        data.createdAtLabel is string && data.createdAtLabel.size() >= 1 && data.createdAtLabel.size() <= 20 &&
+        (!('deliveredAtLabel' in data) || (data.deliveredAtLabel is string && data.deliveredAtLabel.size() <= 20)) &&
+        data.paid is bool &&
+        (!('paymentMethod' in data) || data.paymentMethod in ['Efectivo', 'QR', 'Transferencia Bancaria', 'Tarjeta']) &&
+        data.waiterRequested is bool &&
+        (!('ratingStars' in data) || (data.ratingStars is number && data.ratingStars >= 1 && data.ratingStars <= 5)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: OrderPrivateDeliveryDoc (Isolated PII)
+    function isValidPrivateDelivery(data) {
+      return data.keys().hasAll(['customerUid', 'address', 'phone', 'updatedAt']) &&
+        data.keys().hasOnly(['customerUid', 'address', 'reference', 'phone', 'updatedAt']) &&
+        data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128 &&
+        data.address is string && data.address.size() >= 1 && data.address.size() <= 220 &&
+        (!('reference' in data) || (data.reference is string && data.reference.size() <= 220)) &&
+        data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 30 &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: InventoryItemDoc
+    function isValidInventoryItem(data) {
+      return data.keys().hasAll(['id', 'name', 'quantity', 'unit', 'status', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'quantity', 'unit', 'status', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.quantity is number && data.quantity >= 0 && data.quantity <= 100000 &&
+        data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 20 &&
+        data.status in ['Stock OK', 'Bajo stock'] &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: StaffConfigDoc
+    function isValidStaffConfig(data) {
+      return data.keys().hasAll(['mozoPin', 'updatedAt']) &&
+        data.keys().hasOnly(['mozoPin', 'updatedAt']) &&
+        data.mozoPin is string && data.mozoPin.size() == 4 && data.mozoPin.matches('^[0-9]{4}$') &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: AuthorizedStaffDoc
+    function isValidAuthorizedStaff(data) {
+      return data.keys().hasAll(['email', 'name', 'active', 'createdAt']) &&
+        data.keys().hasOnly(['email', 'name', 'active', 'createdAt']) &&
+        isValidEmailKey(data.email) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.active is bool &&
+        data.createdAt is timestamp;
+    }
+
+    // 1. Menu Catalog (non-PII, public readable, admin-only writable)
+    match /menuItems/{dishId} {
+      allow get: if isValidId(dishId);
+      allow list: if true;
+      allow create: if isValidId(dishId) && isAdmin() && isValidMenuItem(incoming()) && incoming().id == dishId;
+      allow update: if isValidId(dishId) && isAdmin() && isValidMenuItem(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(dishId) && isAdmin();
+    }
+
+    // 2. Tables (non-PII, public readable, staff full write + verified customer occupy-on-order)
+    match /tables/{tableId} {
+      allow get: if isValidId(tableId);
+      allow list: if true;
+      allow create: if isValidId(tableId) && isAdmin() && isValidTable(incoming());
+      allow update: if isValidId(tableId) && isValidTable(incoming()) && (
+        isStaff() ||
+        (
+          isVerifiedUser() &&
+          existing().status == 'libre' &&
+          incoming().status == 'ocupada' &&
+          incoming().number == existing().number &&
+          incoming().capacity == existing().capacity &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+        )
+      );
+      allow delete: if isValidId(tableId) && isAdmin();
+    }
+
+    // 3. Orders (customer sees own orders; staff sees all orders)
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (
+        isStaff() ||
+        (isVerifiedUser() && existing().customerUid == request.auth.uid)
+      );
+      allow list: if isStaff() || (
+        isVerifiedUser() && existing().customerUid == request.auth.uid
+      );
+      allow create: if isValidId(orderId) &&
+        isVerifiedUser() &&
+        isValidOrder(incoming()) &&
+        incoming().id == orderId &&
+        incoming().createdAt == request.time &&
+        (
+          isStaff() ||
+          (
+            incoming().customerUid == request.auth.uid &&
+            incoming().status == 'Preparando' &&
+            (
+              incoming().paid == false ||
+              (incoming().mode == 'delivery' && incoming().paid == true && 'paymentMethod' in incoming())
+            )
+          )
+        );
+      allow update: if isValidId(orderId) &&
+        isVerifiedUser() &&
+        isValidOrder(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().customerUid == existing().customerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().mode == existing().mode &&
+        (
+          isAdmin() ||
+          (
+            isStaff() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'items', 'total', 'notes', 'status', 'deliveredAtLabel',
+              'paid', 'paymentMethod', 'waiterRequested', 'updatedAt'
+            ])
+          ) ||
+          (
+            existing().customerUid == request.auth.uid &&
+            (
+              (
+                !(existing().status == 'Entregado' && existing().paid == true) &&
+                (
+                  // Customer action: append items to own unpaid dine-in table order
+                  (
+                    existing().paid == false &&
+                    incoming().paid == false &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['items', 'total', 'status', 'updatedAt'])
+                  ) ||
+                  // Customer action: call waiter at table
+                  (
+                    incoming().waiterRequested == true &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['waiterRequested', 'updatedAt'])
+                  ) ||
+                  // Customer action: mark own delivery order delivered / rate order
+                  (
+                    existing().mode == 'delivery' &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'deliveredAtLabel', 'ratingStars', 'updatedAt'])
+                  ) ||
+                  // Customer action: pay via QR / payment screen on own order
+                  (
+                    existing().paid == false &&
+                    incoming().paid == true &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['paid', 'paymentMethod', 'updatedAt'])
+                  )
+                )
+              ) ||
+              // Allow rating a delivered+paid delivery order once if not yet rated
+              (
+                existing().mode == 'delivery' &&
+                !('ratingStars' in existing()) &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['ratingStars', 'updatedAt'])
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(orderId) && isAdmin();
+
+      // 3B. Isolated Private Delivery PII
+      match /private/delivery {
+        allow get: if isValidId(orderId) && (
+          isStaff() ||
+          (
+            isVerifiedUser() &&
+            get(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == request.auth.uid
+          )
+        );
+        allow create: if isValidId(orderId) &&
+          isVerifiedUser() &&
+          isValidPrivateDelivery(incoming()) &&
+          (isStaff() || incoming().customerUid == request.auth.uid) &&
+          getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == incoming().customerUid;
+        allow update: if isValidId(orderId) &&
+          isVerifiedUser() &&
+          isValidPrivateDelivery(incoming()) &&
+          incoming().customerUid == existing().customerUid &&
+          isStaff();
+        allow delete: if isValidId(orderId) && isAdmin();
+      }
+    }
+
+    // 4. Inventory (Admin only)
+    match /inventory/{itemId} {
+      allow get: if isValidId(itemId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(itemId) && isAdmin() && isValidInventoryItem(incoming()) && incoming().id == itemId;
+      allow update: if isValidId(itemId) && isAdmin() && isValidInventoryItem(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(itemId) && isAdmin();
+    }
+
+    // 5. Staff Config (Mozo PIN - Staff read, Admin write)
+    match /config/staff {
+      allow get: if isStaff();
+      allow create, update: if isAdmin() && isValidStaffConfig(incoming());
+    }
+
+    // 6. Admins registry (Bootstrapped admin manages)
+    match /admins/{uid} {
+      allow get: if isVerifiedUser() && (request.auth.uid == uid || isBootstrapAdmin());
+      allow list, create, update, delete: if isBootstrapAdmin();
+    }
+
+    // 7. Authorized Staff / Mozos (Admin manages; user can verify own email entry)
+    match /authorized_staff/{staffEmail} {
+      allow get: if isValidEmailKey(staffEmail) && (
+        isAdmin() ||
+        (isVerifiedUser() && request.auth.token.email == staffEmail)
+      );
+      allow list: if isAdmin();
+      allow create: if isValidEmailKey(staffEmail) && isAdmin() && isValidAuthorizedStaff(incoming()) && incoming().email == staffEmail && incoming().createdAt == request.time;
+      allow update: if isValidEmailKey(staffEmail) && isAdmin() && isValidAuthorizedStaff(incoming()) && incoming().email == existing().email && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidEmailKey(staffEmail) && isAdmin();
+    }
+  }
+}

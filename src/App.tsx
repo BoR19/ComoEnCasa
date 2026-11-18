@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { LogIn, X } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { BottomNav } from './components/ShellComponents';
 import { AdminLoginScreen, AdminPanelScreen } from './components/screens/AdminScreens';
@@ -31,7 +33,34 @@ import {
   INITIAL_MENU_ITEMS,
   INITIAL_TABLES,
 } from './data/mockData';
+import { auth, googleProvider } from './firebase';
 import {
+  addAuthorizedStaffInFirestore,
+  appendOrderItemsInFirestore,
+  buildOrderCode,
+  collectOrderPaymentInFirestore,
+  createOrderInFirestore,
+  customerPayOrderInFirestore,
+  freeTableInFirestore,
+  rateOrderInFirestore,
+  removeAuthorizedStaffInFirestore,
+  resolveUserRoles,
+  saveInventoryInFirestore,
+  saveMozoPinInFirestore,
+  seedInitialCatalogIfEmpty,
+  setWaiterCallInFirestore,
+  subscribeAuthorizedStaff,
+  subscribeInventory,
+  subscribeMenuItems,
+  subscribeOrders,
+  subscribeStaffConfig,
+  subscribeTables,
+  toggleAuthorizedStaffInFirestore,
+  updateOrderStatusInFirestore,
+  upsertMenuItemInFirestore,
+} from './services/firestoreService';
+import {
+  AuthorizedStaffItem,
   CartItem,
   DeliveryInfo,
   DishSizeOption,
@@ -59,7 +88,21 @@ export default function App() {
   const shouldReduceMotion = useReducedMotion();
   const currentScreen = history[history.length - 1];
 
-  // Global reactive app state (starts clean without fake orders)
+  // Firebase Auth & Role state
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [authError, setAuthError] = useState<string>('');
+  const [isAdminUser, setIsAdminUser] = useState<boolean>(false);
+  const [isMozoStaff, setIsMozoStaff] = useState<boolean>(false);
+  const isStaff = isAdminUser || isMozoStaff;
+  const popupInFlightRef = useRef<boolean>(false);
+
+  // Customer Google Sign-In modal prompt (triggered on order send / payment if unsigned)
+  const [showGooglePrompt, setShowGooglePrompt] = useState<boolean>(false);
+  const pendingAuthActionRef = useRef<((user: User) => void) | null>(null);
+
+  // Global reactive app state (hydrated & synced in real time via Firestore)
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [selectedDishId, setSelectedDishId] = useState<string>('pollo-al-horno');
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -81,6 +124,7 @@ export default function App() {
   const [lastPaidAmount, setLastPaidAmount] = useState<number>(0);
 
   const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
+  const [authorizedStaff, setAuthorizedStaff] = useState<AuthorizedStaffItem[]>([]);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [isMozoAuthenticated, setIsMozoAuthenticated] = useState<boolean>(false);
   const [mozoPin, setMozoPin] = useState<string>('1234');
@@ -90,7 +134,154 @@ export default function App() {
     setToastMsg(msg);
     setTimeout(() => {
       setToastMsg((curr) => (curr === msg ? '' : curr));
-    }, 2400);
+    }, 2600);
+  };
+
+  // Monitor Firebase Authentication & Role Resolution
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthLoading(true);
+      setFirebaseUser(user);
+
+      if (user) {
+        const roles = await resolveUserRoles(user);
+        setIsAdminUser(roles.isAdmin);
+        setIsMozoStaff(roles.isMozo);
+        setIsAdminAuthenticated(roles.isAdmin);
+
+        if (roles.isAdmin) {
+          void seedInitialCatalogIfEmpty();
+        }
+      } else {
+        setIsAdminUser(false);
+        setIsMozoStaff(false);
+        setIsAdminAuthenticated(false);
+        setKitchenOrders([]);
+        setAuthorizedStaff([]);
+      }
+
+      setAuthReady(true);
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Auto-enter Admin Panel if Admin signs in while on admin-login screen
+  useEffect(() => {
+    if (isAdminUser && currentScreen === 'admin-login') {
+      setIsAdminAuthenticated(true);
+      setNavDirection(1);
+      setHistory((prev) => (prev[prev.length - 1] === 'admin-panel' ? prev : [...prev, 'admin-panel']));
+    }
+  }, [isAdminUser, currentScreen]);
+
+  // Public real-time listeners: Menu & Tables (visible immediately across all devices)
+  useEffect(() => {
+    const unsubMenu = subscribeMenuItems(setMenuItems);
+    const unsubTables = subscribeTables(setTables);
+    return () => {
+      unsubMenu();
+      unsubTables();
+    };
+  }, []);
+
+  // Auth-gated real-time Orders listener
+  useEffect(() => {
+    if (!authReady || authLoading || !firebaseUser || !firebaseUser.emailVerified) {
+      return;
+    }
+    const unsubOrders = subscribeOrders(firebaseUser.uid, isStaff, setKitchenOrders);
+    return () => unsubOrders();
+  }, [authReady, authLoading, firebaseUser, isStaff]);
+
+  // Staff-gated real-time Mozo PIN config listener
+  useEffect(() => {
+    if (!authReady || authLoading || !firebaseUser || !isStaff) {
+      return;
+    }
+    const unsubConfig = subscribeStaffConfig(setMozoPin);
+    return () => unsubConfig();
+  }, [authReady, authLoading, firebaseUser, isStaff]);
+
+  // Admin-gated real-time Inventory & Authorized Staff listeners
+  useEffect(() => {
+    if (!authReady || authLoading || !firebaseUser || !isAdminUser) {
+      return;
+    }
+    const unsubInv = subscribeInventory(setInventory);
+    const unsubStaff = subscribeAuthorizedStaff(setAuthorizedStaff);
+    return () => {
+      unsubInv();
+      unsubStaff();
+    };
+  }, [authReady, authLoading, firebaseUser, isAdminUser]);
+
+  const handleGoogleSignIn = async () => {
+    if (popupInFlightRef.current) return;
+    popupInFlightRef.current = true;
+    setAuthError('');
+    try {
+      setAuthLoading(true);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const roles = await resolveUserRoles(user);
+      setFirebaseUser(user);
+      setIsAdminUser(roles.isAdmin);
+      setIsMozoStaff(roles.isMozo);
+      setIsAdminAuthenticated(roles.isAdmin);
+      if (roles.isAdmin) {
+        await seedInitialCatalogIfEmpty();
+      }
+      showToast(`Conectado como ${user.displayName || user.email}`);
+
+      if (pendingAuthActionRef.current && user.emailVerified) {
+        const action = pendingAuthActionRef.current;
+        pendingAuthActionRef.current = null;
+        setShowGooglePrompt(false);
+        action(user);
+      }
+    } catch (err) {
+      const code = (err as { code?: string })?.code || '';
+      let msg = 'No se pudo completar el acceso con Google. Inténtalo nuevamente.';
+
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        msg = 'Cerraste la ventana de Google antes de terminar. Toca el botón nuevamente para iniciar sesión.';
+      } else if (code === 'auth/popup-blocked') {
+        msg = 'Tu navegador bloqueó la ventana emergente de Google. Permite las ventanas emergentes (popups) e inténtalo de nuevo.';
+      } else if (code === 'auth/unauthorized-domain') {
+        msg = 'Este dominio aún no está autorizado en Firebase Authentication (Authorized domains).';
+      } else if (code === 'auth/network-request-failed') {
+        msg = 'Sin conexión a internet. Verifica tu red e inténtalo de nuevo.';
+      }
+
+      setAuthError(msg);
+      showToast(msg);
+    } finally {
+      popupInFlightRef.current = false;
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleSignOut = async () => {
+    setAuthError('');
+    try {
+      await signOut(auth);
+      setIsAdminAuthenticated(false);
+      showToast('Cuenta Google desconectada');
+    } catch {
+      showToast('No se pudo cerrar la cuenta Google');
+    }
+  };
+
+  const requireVerifiedCustomer = (action: (user: User) => void) => {
+    if (firebaseUser && firebaseUser.emailVerified) {
+      action(firebaseUser);
+      return;
+    }
+    setAuthError('');
+    pendingAuthActionRef.current = action;
+    setShowGooglePrompt(true);
   };
 
   const navigate = (screen: ScreenId) => {
@@ -290,72 +481,111 @@ export default function App() {
     navigate('cart');
   };
 
-  const handleCartProceedOrder = () => {
-    if (cart.length === 0) return;
+  const executeDineInOrder = (user: User) => {
+    const lines = cartItemsToOrderLines(cart);
+    const existingUnpaid = kitchenOrders.find(
+      (o) =>
+        o.mode === 'dine-in' &&
+        o.tableNumber === selectedTable &&
+        !o.paid &&
+        (isStaff || o.customerUid === user.uid)
+    );
 
-    if (orderMode === 'dine-in') {
-      const lines = cartItemsToOrderLines(cart);
-      const existingUnpaid = kitchenOrders.find(
-        (o) => o.mode === 'dine-in' && o.tableNumber === selectedTable && !o.paid
+    if (existingUnpaid) {
+      const updatedItems = [...existingUnpaid.items, ...lines];
+      const updatedTotal = existingUnpaid.total + cartTotal;
+      setKitchenOrders((prev) =>
+        prev.map((o) =>
+          o.id === existingUnpaid.id
+            ? {
+                ...o,
+                items: updatedItems,
+                total: updatedTotal,
+                status: 'Preparando',
+              }
+            : o
+        )
       );
-
-      if (existingUnpaid) {
-        setKitchenOrders((prev) =>
-          prev.map((o) =>
-            o.id === existingUnpaid.id
-              ? {
-                  ...o,
-                  items: [...o.items, ...lines],
-                  total: o.total + cartTotal,
-                  status: 'Preparando',
-                }
-              : o
-          )
-        );
-        setActiveTableOrderId(existingUnpaid.id);
-      } else {
-        const newOrderId = `ord-mesa-${Date.now()}`;
-        const newOrder: KitchenOrder = {
-          id: newOrderId,
-          code: `#${1001 + kitchenOrders.length}`,
-          mode: 'dine-in',
-          tableNumber: selectedTable,
-          customerLabel: `Mesa ${selectedTable}`,
-          items: lines,
-          notes: 'Pedido desde mesa',
-          status: 'Preparando',
-          total: cartTotal,
-          estimatedMinutes: 15,
-          createdAt: getCurrentTimeLabel(),
-          paid: false,
-        };
-        setKitchenOrders((prev) => [newOrder, ...prev]);
-        setActiveTableOrderId(newOrderId);
-      }
-
+      setActiveTableOrderId(existingUnpaid.id);
+      void appendOrderItemsInFirestore({
+        orderId: existingUnpaid.id,
+        items: updatedItems,
+        total: updatedTotal,
+        status: 'Preparando',
+      });
+    } else {
+      const newOrderId = `ord-mesa-${Date.now()}`;
+      const newOrder: KitchenOrder = {
+        id: newOrderId,
+        code: buildOrderCode(kitchenOrders.length),
+        customerUid: user.uid,
+        mode: 'dine-in',
+        tableNumber: selectedTable,
+        customerLabel: `Mesa ${selectedTable}`,
+        items: lines,
+        notes: 'Pedido desde mesa',
+        status: 'Preparando',
+        total: cartTotal,
+        estimatedMinutes: 15,
+        createdAt: getCurrentTimeLabel(),
+        paid: false,
+        waiterRequested: false,
+      };
+      const tableObj = tables.find((t) => t.number === selectedTable);
+      setKitchenOrders((prev) => [newOrder, ...prev]);
+      setActiveTableOrderId(newOrderId);
       setTables((prev) =>
         prev.map((t) =>
           t.number === selectedTable ? { ...t, status: 'ocupada' } : t
         )
       );
-      setCart([]);
-      showToast(`Pedido enviado a Cocina · Mesa ${selectedTable}`);
-      navigate('tables-order');
+
+      void createOrderInFirestore({
+        order: newOrder,
+        customerUid: user.uid,
+        occupyTableIfNeeded: {
+          tableNumber: selectedTable,
+          capacity: tableObj?.capacity || 4,
+          isCurrentlyFree: tableObj?.status === 'libre',
+          isStaff,
+        },
+      });
+    }
+
+    setCart([]);
+    showToast(`Pedido enviado a Cocina · Mesa ${selectedTable}`);
+    navigate('tables-order');
+  };
+
+  const handleCartProceedOrder = () => {
+    if (cart.length === 0) return;
+
+    if (orderMode === 'dine-in') {
+      requireVerifiedCustomer((user) => {
+        executeDineInOrder(user);
+      });
     } else {
       navigate('delivery-info');
     }
   };
 
-  const createDeliveryOrderFromCart = (paid: boolean, method?: PaymentMethod): KitchenOrder => {
+  const createDeliveryOrderFromCart = (
+    user: User,
+    paid: boolean,
+    method?: PaymentMethod
+  ): KitchenOrder => {
     const newDelId = `ord-del-${Date.now()}`;
     const notesParts = [deliveryInfo.reference.trim(), deliveryInfo.notes.trim()].filter(
       Boolean
     );
     const deliveryOrder: KitchenOrder = {
       id: newDelId,
-      code: `#${1001 + kitchenOrders.length}`,
+      code: buildOrderCode(kitchenOrders.length),
+      customerUid: user.uid,
       mode: 'delivery',
-      customerLabel: 'Pedido Delivery',
+      customerLabel: user.displayName
+        ? `Delivery · ${user.displayName.split(' ')[0]}`
+        : 'Pedido Delivery',
       deliveryAddress: deliveryInfo.address.trim(),
       deliveryPhone: deliveryInfo.phone.trim(),
       items: cartItemsToOrderLines(cart),
@@ -366,10 +596,18 @@ export default function App() {
       createdAt: getCurrentTimeLabel(),
       paid,
       paymentMethod: method,
+      waiterRequested: false,
     };
     setKitchenOrders((prev) => [deliveryOrder, ...prev]);
     setActiveDeliveryOrderId(newDelId);
     setCart([]);
+
+    void createOrderInFirestore({
+      order: deliveryOrder,
+      customerUid: user.uid,
+      deliveryReference: deliveryInfo.reference.trim(),
+    });
+
     return deliveryOrder;
   };
 
@@ -381,9 +619,11 @@ export default function App() {
     }
 
     if (deliveryInfo.payOnDelivery) {
-      createDeliveryOrderFromCart(false);
-      showToast('Pedido Delivery enviado a Cocina (pago contra entrega)');
-      navigate('delivery-tracking');
+      requireVerifiedCustomer((user) => {
+        createDeliveryOrderFromCart(user, false);
+        showToast('Pedido Delivery enviado a Cocina (pago contra entrega)');
+        navigate('delivery-tracking');
+      });
     } else {
       setPaymentContext('delivery-prepay');
       navigate('payment-methods');
@@ -391,54 +631,64 @@ export default function App() {
   };
 
   const handleCompletePayment = () => {
-    if (paymentContext === 'table') {
-      if (!activeTableOrder) {
-        showToast('No hay pedido activo en la mesa seleccionada');
-        return;
+    requireVerifiedCustomer((user) => {
+      if (paymentContext === 'table') {
+        if (!activeTableOrder) {
+          showToast('No hay pedido activo en la mesa seleccionada');
+          return;
+        }
+        setKitchenOrders((prev) =>
+          prev.map((o) =>
+            o.id === activeTableOrder.id
+              ? { ...o, paid: true, paymentMethod }
+              : o
+          )
+        );
+        setLastPaidOrderId(activeTableOrder.id);
+        setLastPaidAmount(activeTableOrder.total);
+        void customerPayOrderInFirestore(activeTableOrder.id, paymentMethod);
+        showToast(`Pago registrado para Mesa ${selectedTable}`);
+        navigate('payment-confirm');
+      } else {
+        if (cart.length === 0) {
+          showToast('Tu carrito está vacío');
+          navigate('menu');
+          return;
+        }
+        const created = createDeliveryOrderFromCart(user, true, paymentMethod);
+        setLastPaidOrderId(created.id);
+        setLastPaidAmount(created.total);
+        showToast('Pago confirmado · Tu Delivery está en preparación');
+        navigate('payment-confirm');
       }
-      setKitchenOrders((prev) =>
-        prev.map((o) =>
-          o.id === activeTableOrder.id
-            ? { ...o, paid: true, paymentMethod }
-            : o
-        )
-      );
-      setLastPaidOrderId(activeTableOrder.id);
-      setLastPaidAmount(activeTableOrder.total);
-      showToast(`Pago registrado para Mesa ${selectedTable}`);
-      navigate('payment-confirm');
-    } else {
-      if (cart.length === 0) {
-        showToast('Tu carrito está vacío');
-        navigate('menu');
-        return;
-      }
-      const created = createDeliveryOrderFromCart(true, paymentMethod);
-      setLastPaidOrderId(created.id);
-      setLastPaidAmount(created.total);
-      showToast('Pago confirmado · Tu Delivery está en preparación');
-      navigate('payment-confirm');
-    }
+    });
   };
 
   const handleUpdateOrderStatus = (orderId: string, status: OrderStatus) => {
+    const deliveredAtLabel = status === 'Entregado' ? getCurrentTimeLabel() : undefined;
     setKitchenOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
           ? {
               ...o,
               status,
-              deliveredAt: status === 'Entregado' ? getCurrentTimeLabel() : o.deliveredAt,
+              deliveredAt: deliveredAtLabel || o.deliveredAt,
             }
           : o
       )
     );
+    if (firebaseUser) {
+      void updateOrderStatusInFirestore(orderId, status, deliveredAtLabel);
+    }
   };
 
   const handleCallWaiter = (orderId: string) => {
     setKitchenOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, waiterRequested: true } : o))
     );
+    if (firebaseUser) {
+      void setWaiterCallInFirestore(orderId, true);
+    }
     showToast(`Mesero notificado para Mesa ${selectedTable}`);
   };
 
@@ -446,6 +696,9 @@ export default function App() {
     setKitchenOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, waiterRequested: false } : o))
     );
+    if (firebaseUser && isStaff) {
+      void setWaiterCallInFirestore(orderId, false);
+    }
   };
 
   const handleCollectOrderPayment = (orderId: string, method: PaymentMethod) => {
@@ -459,6 +712,7 @@ export default function App() {
       )
     );
 
+    let tableNumberToFree: number | undefined;
     if (targetOrder?.mode === 'dine-in' && targetOrder.tableNumber) {
       const tableNum = targetOrder.tableNumber;
       const hasOtherUnpaidOnTable = kitchenOrders.some(
@@ -470,6 +724,7 @@ export default function App() {
       );
 
       if (!hasOtherUnpaidOnTable) {
+        tableNumberToFree = tableNum;
         setTables((prev) =>
           prev.map((t) =>
             t.number === tableNum ? { ...t, status: 'libre' } : t
@@ -478,12 +733,22 @@ export default function App() {
         if (activeTableOrderId === orderId) {
           setActiveTableOrderId(null);
         }
-        showToast(`Cobro registrado (${method}) · Mesa ${tableNum} ahora Libre`);
-        return;
       }
     }
 
-    showToast(`Cobro registrado (${method})`);
+    if (firebaseUser && isStaff) {
+      void collectOrderPaymentInFirestore({
+        orderId,
+        method,
+        tableNumberToFree,
+      });
+    }
+
+    if (tableNumberToFree) {
+      showToast(`Cobro registrado (${method}) · Mesa ${tableNumberToFree} ahora Libre`);
+    } else {
+      showToast(`Cobro registrado (${method})`);
+    }
   };
 
   const handleCreatePosOrder = (payload: {
@@ -497,9 +762,11 @@ export default function App() {
   }): KitchenOrder => {
     const total = payload.items.reduce((acc, it) => acc + it.price * it.quantity, 0);
     const newId = `ord-pos-${Date.now()}`;
+    const ownerUid = firebaseUser?.uid || 'local-staff';
     const newOrder: KitchenOrder = {
       id: newId,
-      code: `#${1001 + kitchenOrders.length}`,
+      code: buildOrderCode(kitchenOrders.length),
+      customerUid: ownerUid,
       mode: payload.mode,
       tableNumber: payload.mode === 'dine-in' ? payload.tableNumber : undefined,
       customerLabel:
@@ -509,16 +776,24 @@ export default function App() {
       deliveryAddress: payload.mode === 'delivery' ? payload.deliveryAddress : undefined,
       deliveryPhone: payload.mode === 'delivery' ? payload.deliveryPhone : undefined,
       items: payload.items,
-      notes: payload.notes || (payload.mode === 'dine-in' ? 'Tomado en caja' : 'Delivery tomado en caja'),
+      notes:
+        payload.notes ||
+        (payload.mode === 'dine-in' ? 'Tomado en caja' : 'Delivery tomado en caja'),
       status: 'Preparando',
       total,
       estimatedMinutes: payload.mode === 'dine-in' ? 15 : 25,
       createdAt: getCurrentTimeLabel(),
       paid: Boolean(payload.payNowMethod),
       paymentMethod: payload.payNowMethod,
+      waiterRequested: false,
     };
 
     setKitchenOrders((prev) => [newOrder, ...prev]);
+
+    const tableObj =
+      payload.mode === 'dine-in' && payload.tableNumber
+        ? tables.find((t) => t.number === payload.tableNumber)
+        : undefined;
 
     if (payload.mode === 'dine-in' && payload.tableNumber) {
       setTables((prev) =>
@@ -529,6 +804,24 @@ export default function App() {
       setActiveTableOrderId(newId);
     } else if (payload.mode === 'delivery') {
       setActiveDeliveryOrderId(newId);
+    }
+
+    if (firebaseUser && isStaff) {
+      void createOrderInFirestore({
+        order: newOrder,
+        customerUid: ownerUid,
+        occupyTableIfNeeded:
+          payload.mode === 'dine-in' && payload.tableNumber
+            ? {
+                tableNumber: payload.tableNumber,
+                capacity: tableObj?.capacity || 4,
+                isCurrentlyFree: tableObj?.status === 'libre',
+                isStaff: true,
+              }
+            : undefined,
+      });
+    } else {
+      showToast('Conecta Google autorizado para sincronizar en la nube');
     }
 
     showToast(
@@ -549,6 +842,9 @@ export default function App() {
     if (activeTableOrder && activeTableOrder.tableNumber === tableNumber && activeTableOrder.paid) {
       setActiveTableOrderId(null);
     }
+    if (firebaseUser && isStaff) {
+      void freeTableInFirestore(tableNumber);
+    }
     showToast(`Mesa ${tableNumber} liberada`);
   };
 
@@ -561,22 +857,37 @@ export default function App() {
     if (!existing) return undefined;
 
     const extraTotal = newItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
+    const updatedItems = [...existing.items, ...newItems];
+    const updatedTotal = existing.total + extraTotal;
+    const updatedStatus: OrderStatus =
+      existing.status === 'Entregado' ? 'Preparando' : existing.status;
+
     const updatedOrder: KitchenOrder = {
       ...existing,
-      items: [...existing.items, ...newItems],
-      total: existing.total + extraTotal,
-      status: existing.status === 'Entregado' ? 'Preparando' : existing.status,
+      items: updatedItems,
+      total: updatedTotal,
+      status: updatedStatus,
     };
 
     setKitchenOrders((prev) =>
       prev.map((o) => (o.id === orderId ? updatedOrder : o))
     );
 
+    if (firebaseUser && (isStaff || existing.customerUid === firebaseUser.uid)) {
+      void appendOrderItemsInFirestore({
+        orderId,
+        items: updatedItems,
+        total: updatedTotal,
+        status: updatedStatus,
+      });
+    }
+
     showToast('Platos agregados a la comanda');
     return updatedOrder;
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    await handleGoogleSignOut();
     setIsAdminAuthenticated(false);
     setNavDirection(-1);
     setHistory(['welcome']);
@@ -601,6 +912,9 @@ export default function App() {
     setKitchenOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, ratingStars: stars } : o))
     );
+    if (firebaseUser) {
+      void rateOrderInFirestore(orderId, stars);
+    }
     showToast(`¡Gracias por calificar con ${stars} estrellas!`);
   };
 
@@ -890,17 +1204,29 @@ export default function App() {
                   selectedTable={selectedTable}
                   activeTableOrder={activeTableOrder}
                   activeDeliveryOrder={activeDeliveryOrder}
+                  firebaseUser={firebaseUser}
+                  authLoading={authLoading}
+                  onGoogleSignIn={() => void handleGoogleSignIn()}
+                  onGoogleSignOut={() => void handleGoogleSignOut()}
                   onBack={goBack}
                   onGoTables={() => navigate('tables-select')}
                   onGoTableOrder={() => navigate('tables-order')}
                   onGoDeliveryTracking={() => navigate('delivery-tracking')}
-                  onGoAdminLogin={() => navigate('admin-login')}
+                  onGoAdminLogin={() =>
+                    navigate(isAdminAuthenticated ? 'admin-panel' : 'admin-login')
+                  }
                 />
               )}
 
               {currentScreen === 'admin-login' && (
                 <AdminLoginScreen
-                  onLoginSuccess={() => {
+                  firebaseUser={firebaseUser}
+                  isAdmin={isAdminUser}
+                  authLoading={authLoading}
+                  authError={authError}
+                  onGoogleSignIn={handleGoogleSignIn}
+                  onGoogleSignOut={handleGoogleSignOut}
+                  onEnterAdminPanel={() => {
                     setIsAdminAuthenticated(true);
                     navigate('admin-panel');
                   }}
@@ -914,21 +1240,38 @@ export default function App() {
                   kitchenOrders={kitchenOrders}
                   tables={tables}
                   inventory={inventory}
+                  authorizedStaff={authorizedStaff}
+                  adminEmail={firebaseUser?.email}
                   onToggleDishAvailability={(id) => {
+                    const idx = menuItems.findIndex((m) => m.id === id);
+                    if (idx < 0) return;
+                    const updated = {
+                      ...menuItems[idx],
+                      available: !menuItems[idx].available,
+                    };
                     setMenuItems((prev) =>
-                      prev.map((m) =>
-                        m.id === id ? { ...m, available: !m.available } : m
-                      )
+                      prev.map((m) => (m.id === id ? updated : m))
                     );
+                    if (isAdminUser) {
+                      void upsertMenuItemInFirestore(updated, idx);
+                    }
                   }}
                   onSaveDishEdit={(updated) => {
+                    const idx = menuItems.findIndex((m) => m.id === updated.id);
                     setMenuItems((prev) =>
                       prev.map((m) => (m.id === updated.id ? updated : m))
                     );
+                    if (isAdminUser) {
+                      void upsertMenuItemInFirestore(updated, idx >= 0 ? idx : menuItems.length);
+                    }
                     showToast(`${updated.name} actualizado`);
                   }}
                   onAddNewDish={(newItem) => {
+                    const nextOrder = menuItems.length;
                     setMenuItems((prev) => [...prev, newItem]);
+                    if (isAdminUser) {
+                      void upsertMenuItemInFirestore(newItem, nextOrder);
+                    }
                     showToast(`${newItem.name} agregado al menú`);
                   }}
                   onUpdateOrderStatus={handleUpdateOrderStatus}
@@ -938,14 +1281,38 @@ export default function App() {
                   onFreeTable={handleFreeTable}
                   onUpdateInventory={(updated) => {
                     setInventory(updated);
+                    if (isAdminUser) {
+                      void saveInventoryInFirestore(updated);
+                    }
                     showToast('Inventario actualizado');
                   }}
                   mozoPin={mozoPin}
                   onUpdateMozoPin={(newPin) => {
                     setMozoPin(newPin);
+                    if (isAdminUser) {
+                      void saveMozoPinInFirestore(newPin);
+                    }
                     showToast(`PIN de Mozo actualizado (${newPin})`);
                   }}
-                  onLogout={handleAdminLogout}
+                  onAddAuthorizedStaff={(email, name) => {
+                    if (isAdminUser) {
+                      void addAuthorizedStaffInFirestore(email, name);
+                      showToast(`Mozo autorizado: ${email.toLowerCase()}`);
+                    }
+                  }}
+                  onToggleAuthorizedStaff={(email, active) => {
+                    if (isAdminUser) {
+                      void toggleAuthorizedStaffInFirestore(email, active);
+                      showToast(active ? 'Mozo activado' : 'Mozo pausado');
+                    }
+                  }}
+                  onRemoveAuthorizedStaff={(email) => {
+                    if (isAdminUser) {
+                      void removeAuthorizedStaffInFirestore(email);
+                      showToast(`Acceso revocado para ${email}`);
+                    }
+                  }}
+                  onLogout={() => void handleAdminLogout()}
                   onBack={goBack}
                 />
               )}
@@ -955,6 +1322,9 @@ export default function App() {
                   menuItems={menuItems}
                   kitchenOrders={kitchenOrders}
                   tables={tables}
+                  firebaseUser={firebaseUser}
+                  isStaff={isStaff}
+                  onGoogleSignIn={() => void handleGoogleSignIn()}
                   onCreatePosOrder={handleCreatePosOrder}
                   onAppendOrderItems={handleAppendOrderItems}
                   onUpdateOrderStatus={handleUpdateOrderStatus}
@@ -967,6 +1337,52 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Customer Google Sign-In Modal for live order sync */}
+        {showGooglePrompt && (
+          <div className="absolute inset-0 z-50 bg-black/65 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm rounded-3xl bg-[#FFF8E8] border-2 border-[#D9A441] p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+                    Conecta tu cuenta Google
+                  </h2>
+                  <p className="text-xs text-[#7A5A3A] mt-1 leading-relaxed">
+                    Para enviar tu pedido a Cocina y sincronizarlo en tiempo real con tu mesa o delivery, inicia sesión con Google en un toque.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pendingAuthActionRef.current = null;
+                    setAuthError('');
+                    setShowGooglePrompt(false);
+                  }}
+                  aria-label="Cerrar"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] hover:bg-[#FDF2D6] cursor-pointer shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {authError && (
+                <p className="text-xs font-bold text-[#B84A27] bg-[#FDF2D6] border border-[#D9A441] rounded-xl px-3 py-2">
+                  {authError}
+                </p>
+              )}
+
+              <button
+                type="button"
+                disabled={authLoading}
+                onClick={() => void handleGoogleSignIn()}
+                className="w-full min-h-[48px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-[#4A2C1A] disabled:opacity-50 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4 text-[#D9A441]" />
+                <span>{authLoading ? 'Conectando...' : 'Continuar con Google'}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Shared Bottom Nav on interior client/panel screens */}
         {showBottomNav && (

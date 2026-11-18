@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { AppIcon } from './components/BrandAssets';
+import { DesktopSidebar } from './components/DesktopSidebar';
 import { BottomNav } from './components/ShellComponents';
 import { AdminLoginScreen, AdminPanelScreen } from './components/screens/AdminScreens';
 import { CartScreen } from './components/screens/CartScreen';
@@ -52,25 +52,6 @@ import {
   getCartTotal,
   getCurrentTimeLabel,
 } from './utils/appHelpers';
-
-const QUICK_NAV_ITEMS: { id: ScreenId; label: string; group: string }[] = [
-  { id: 'welcome', label: '1. Bienvenida', group: 'Cliente' },
-  { id: 'menu', label: '2. Menú Cliente', group: 'Cliente' },
-  { id: 'dish-detail', label: '3. Detalle Plato', group: 'Cliente' },
-  { id: 'customize', label: '4. Personaliza tu Platillo', group: 'Cliente' },
-  { id: 'cart', label: '5. Carrito', group: 'Cliente' },
-  { id: 'tables-select', label: '6A. Selecciona tu Mesa', group: 'Mesas QR' },
-  { id: 'tables-qr', label: '6B. Escanea el QR', group: 'Mesas QR' },
-  { id: 'tables-order', label: '6C. Pedido en Mesa', group: 'Mesas QR' },
-  { id: 'delivery-info', label: '7A. Datos de Delivery', group: 'Delivery' },
-  { id: 'delivery-tracking', label: '7B. Repartidor en camino', group: 'Delivery' },
-  { id: 'delivery-confirm', label: '7C. Confirmación Delivery', group: 'Delivery' },
-  { id: 'payment-methods', label: '8A. Métodos de Pago', group: 'Pagos' },
-  { id: 'payment-qr', label: '8B. Pago con QR', group: 'Pagos' },
-  { id: 'payment-confirm', label: '8C. Confirmación de Pago', group: 'Pagos' },
-  { id: 'admin-login', label: '9. Admin Login', group: 'Admin' },
-  { id: 'admin-panel', label: '10. Admin Panel', group: 'Admin' },
-];
 
 export default function App() {
   const [history, setHistory] = useState<ScreenId[]>(['welcome']);
@@ -643,86 +624,23 @@ export default function App() {
 
   return (
     <div className="h-screen w-full linen-backdrop flex flex-col lg:flex-row lg:p-4 lg:gap-4 overflow-hidden">
-      {/* Desktop Navigation Sidebar (PC & Large Screens) */}
-      <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 flex-col rounded-[24px] bg-[#3B1F0E] text-[#FFF8E8] p-5 shadow-xl border border-[#D9A441]/30">
-        <div className="pb-4 border-b border-[#D9A441]/25">
-          <div className="flex items-center gap-3">
-            <AppIcon size="sm" />
-            <div>
-              <p className="font-script text-2xl text-[#D9A441] leading-none">
-                Como en Casa
-              </p>
-              <p className="text-[11px] font-bold text-[#E8C87A] mt-1">
-                Tupiza • Comida Tradicional
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto phone-scroll py-3 space-y-1.5 pr-1">
-          {QUICK_NAV_ITEMS.map((nav) => {
-            const active = currentScreen === nav.id;
-            return (
-              <button
-                key={nav.id}
-                type="button"
-                onClick={() => navigate(nav.id)}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                  active
-                    ? 'bg-[#D9A441] text-[#2B1A0E]'
-                    : 'bg-[#4A2C1A]/60 text-[#FFF8E8]/90 hover:bg-[#4A2C1A]'
-                }`}
-              >
-                <span className="truncate">{nav.label}</span>
-                <span
-                  className={`text-[10px] ml-2 shrink-0 ${
-                    active ? 'text-[#3B1F0E]' : 'text-[#E8C87A]/80'
-                  }`}
-                >
-                  {nav.group}
-                </span>
-              </button>
-            );
-          })}
-          {isMozoAuthenticated && (
-            <button
-              type="button"
-              onClick={() => navigate('mozo-panel')}
-              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                currentScreen === 'mozo-panel'
-                  ? 'bg-[#D9A441] text-[#2B1A0E]'
-                  : 'bg-[#2E6F32]/35 text-[#FFF8E8] border border-[#D9A441]/40 hover:bg-[#2E6F32]/50'
-              }`}
-            >
-              <span className="truncate">Modo Mozo • Comandas</span>
-              <span className="text-[10px] ml-2 shrink-0 text-[#E8C87A]">
-                Activo
-              </span>
-            </button>
-          )}
-        </div>
-
-        <div className="pt-3 border-t border-[#D9A441]/25 text-xs space-y-1.5">
-          <div className="flex justify-between">
-            <span className="text-[#E8C87A]">Modo activo:</span>
-            <span className="font-extrabold">
-              {orderMode === 'dine-in' ? `Mesa ${selectedTable}` : 'Delivery'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#E8C87A]">Carrito:</span>
-            <span className="font-extrabold tabular-nums">
-              {cartCount} items · {formatBs(cartTotal)}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#E8C87A]">Pedidos en Cocina:</span>
-            <span className="font-extrabold tabular-nums">
-              {kitchenOrders.length}
-            </span>
-          </div>
-        </div>
-      </aside>
+      {/* Desktop Live Dashboard & Navigation Sidebar (PC & Large Screens) */}
+      <DesktopSidebar
+        currentScreen={currentScreen}
+        onNavigate={navigate}
+        orderMode={orderMode}
+        onChangeOrderMode={(m) => setOrderMode(m)}
+        selectedTable={selectedTable}
+        tables={tables}
+        cartCount={cartCount}
+        cartTotal={cartTotal}
+        favoritesCount={favoriteIds.length}
+        kitchenOrders={kitchenOrders}
+        activeTableOrder={activeTableOrder}
+        activeDeliveryOrder={activeDeliveryOrder}
+        isAdminAuthenticated={isAdminAuthenticated}
+        isMozoAuthenticated={isMozoAuthenticated}
+      />
 
       {/* Main Responsive App Frame (Full-screen on mobile, full desktop workspace on PC) */}
       <main className="relative flex-1 h-full bg-[#FFF8E8] lg:rounded-[24px] shadow-2xl lg:border-2 lg:border-[#3B1F0E]/20 overflow-hidden flex flex-col">

@@ -108,143 +108,99 @@ export const VintageCorners: React.FC<{ color?: string; opacity?: number }> = ({
   );
 };
 
+const DISH_PHOTO_BY_ID: Record<string, string> = {
+  'pollo-al-horno':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Pollo_al_horno_Per%C3%BA.jpg/960px-Pollo_al_horno_Per%C3%BA.jpg',
+  milanesa:
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Milanesa_con_papas_fritas_y_huevo_frito_%28Argentina%29.jpg/960px-Milanesa_con_papas_fritas_y_huevo_frito_%28Argentina%29.jpg',
+  'picante-carne':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ad/Picante_mixto%2C_plato_boliviano.jpg/960px-Picante_mixto%2C_plato_boliviano.jpg',
+  'picante-pollo':
+    'https://upload.wikimedia.org/wikipedia/commons/f/fc/Picante_de_pollo.jpg',
+  'picante-pata':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/El_Caminante_%28Aj%C3%AD_de_patas%29.jpg/960px-El_Caminante_%28Aj%C3%AD_de_patas%29.jpg',
+  falso:
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6e/Falso_conejo%2C_plato_tradicional_boliviano.jpg/960px-Falso_conejo%2C_plato_tradicional_boliviano.jpg',
+  saice:
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/SAICE_TARIJE%C3%91O.jpg/960px-SAICE_TARIJE%C3%91O.jpg',
+  'guiso-fideo':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Aj%C3%AD_de_fideo_plato_t%C3%ADpico_boliviano.jpg/960px-Aj%C3%AD_de_fideo_plato_t%C3%ADpico_boliviano.jpg',
+  'guiso-lenteja':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/Guiso_de_lentejas_en_Rosario_2020.jpg/960px-Guiso_de_lentejas_en_Rosario_2020.jpg',
+  'guiso-liza':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Aj%C3%AD_de_papalisas.jpg/960px-Aj%C3%AD_de_papalisas.jpg',
+  'guiso-chuno':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Chairo_pace%C3%B1o.jpg/960px-Chairo_pace%C3%B1o.jpg',
+  'guiso-trigo':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Guiso_de_quinua.jpg/960px-Guiso_de_quinua.jpg',
+  'guiso-chanfaina':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Chanfaina_Peru.jpg/960px-Chanfaina_Peru.jpg',
+  'sopa-de-pollo':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Sopa_de_Pollo_-_El_Siboney_Restaurant%2C_Key_West.jpg/960px-Sopa_de_Pollo_-_El_Siboney_Restaurant%2C_Key_West.jpg',
+  'sopa-de-mani':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/91/Sopa_de_Man%C3%AD_de_Bolivia.jpg/960px-Sopa_de_Man%C3%AD_de_Bolivia.jpg',
+  lagua:
+    'https://upload.wikimedia.org/wikipedia/commons/c/c7/Lagua%2C_o_K%27alapari_a_la_piedra.jpg',
+  'jugo-de-pelon':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Refresco_de_mocochinchi.jpg/960px-Refresco_de_mocochinchi.jpg',
+  'jugo-de-linaza':
+    'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Refresco_de_linaza.jpg/960px-Refresco_de_linaza.jpg',
+};
+
+const DISH_PHOTO_BY_VISUAL_TYPE: Record<MenuItem['visualType'], string> = {
+  'pollo-horno': DISH_PHOTO_BY_ID['pollo-al-horno'],
+  milanesa: DISH_PHOTO_BY_ID.milanesa,
+  'picante-carne': DISH_PHOTO_BY_ID['picante-carne'],
+  'picante-pollo': DISH_PHOTO_BY_ID['picante-pollo'],
+  'picante-pata': DISH_PHOTO_BY_ID['picante-pata'],
+  falso: DISH_PHOTO_BY_ID.falso,
+  saice: DISH_PHOTO_BY_ID.saice,
+  guiso: DISH_PHOTO_BY_ID['guiso-fideo'],
+  chanfaina: DISH_PHOTO_BY_ID['guiso-chanfaina'],
+  'sopa-pollo': DISH_PHOTO_BY_ID['sopa-de-pollo'],
+  'sopa-mani': DISH_PHOTO_BY_ID['sopa-de-mani'],
+  lagua: DISH_PHOTO_BY_ID.lagua,
+  'jugo-pelon': DISH_PHOTO_BY_ID['jugo-de-pelon'],
+  'jugo-linaza': DISH_PHOTO_BY_ID['jugo-de-linaza'],
+};
+
 export const DishIllustration: React.FC<{
   visualType: MenuItem['visualType'];
+  dishId?: string;
+  name?: string;
   className?: string;
-}> = ({ visualType, className = 'w-full h-full' }) => {
-  const isJuice = visualType === 'jugo-pelon' || visualType === 'jugo-linaza';
-  const isSoup =
-    visualType === 'sopa-pollo' ||
-    visualType === 'sopa-mani' ||
-    visualType === 'lagua';
-  const isGuiso = visualType === 'guiso' || visualType === 'chanfaina';
+}> = ({ visualType, dishId, name, className = 'w-full h-full' }) => {
+  const [failed, setFailed] = React.useState(false);
+  const src =
+    (dishId && DISH_PHOTO_BY_ID[dishId]) ||
+    DISH_PHOTO_BY_VISUAL_TYPE[visualType] ||
+    DISH_PHOTO_BY_ID['pollo-al-horno'];
 
-  if (isJuice) {
-    const liquidColor = visualType === 'jugo-pelon' ? '#C47427' : '#A98A52';
-    const liquidHighlight = visualType === 'jugo-pelon' ? '#DF923E' : '#C9AA6B';
+  React.useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (failed) {
     return (
-      <svg viewBox="0 0 120 96" className={className} aria-hidden="true">
-        <rect width="120" height="96" rx="12" fill="#F4E5C8" />
-        {/* Wood table base */}
-        <ellipse cx="60" cy="80" rx="34" ry="7" fill="#D9A441" opacity="0.28" />
-        {/* Tall glass */}
-        <path
-          d="M42,20 L78,20 L73,77 C72.5,80 47.5,80 47,77 Z"
-          fill="#FFFDF7"
-          stroke="#7A5A3A"
-          strokeWidth="2"
-        />
-        {/* Liquid */}
-        <path
-          d="M44.5,34 L75.5,34 L71.5,75 C71,77 49,77 48.5,75 Z"
-          fill={liquidColor}
-        />
-        <ellipse cx="60" cy="34" rx="15.5" ry="3.5" fill={liquidHighlight} />
-        {/* Pelon / lemon garnish */}
-        {visualType === 'jugo-pelon' ? (
-          <>
-            <circle cx="57" cy="63" r="6" fill="#7A3E14" />
-            <circle cx="65" cy="54" r="4.5" fill="#8C4B1B" />
-            <rect x="64" y="10" width="3.5" height="36" rx="1.5" transform="rotate(14 64 10)" fill="#3B1F0E" />
-          </>
-        ) : (
-          <>
-            <circle cx="76" cy="22" r="9" fill="#D9A441" stroke="#3B1F0E" strokeWidth="1.5" />
-            <circle cx="76" cy="22" r="6" fill="#FFF8E8" />
-            <circle cx="56" cy="56" r="1.4" fill="#3B1F0E" opacity="0.55" />
-            <circle cx="63" cy="64" r="1.4" fill="#3B1F0E" opacity="0.55" />
-            <circle cx="53" cy="68" r="1.2" fill="#3B1F0E" opacity="0.55" />
-          </>
-        )}
-      </svg>
+      <div
+        className={`${className} bg-[#F4E5C8] flex flex-col items-center justify-center p-2 text-center border border-[#D9A441]/30`}
+      >
+        <span className="text-[10px] font-extrabold text-[#3B1F0E] line-clamp-2">
+          {name || 'Como en Casa'}
+        </span>
+      </div>
     );
   }
-
-  if (isSoup) {
-    const brothColor =
-      visualType === 'sopa-mani'
-        ? '#E7B963'
-        : visualType === 'lagua'
-        ? '#DDA447'
-        : '#D9993A';
-    return (
-      <svg viewBox="0 0 120 96" className={className} aria-hidden="true">
-        <rect width="120" height="96" rx="12" fill="#F4E5C8" />
-        {/* Steam */}
-        <path d="M48,22 Q44,15 49,10" fill="none" stroke="#7A5A3A" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
-        <path d="M62,20 Q58,13 63,8" fill="none" stroke="#7A5A3A" strokeWidth="1.8" strokeLinecap="round" opacity="0.6" />
-        <path d="M74,23 Q70,16 75,11" fill="none" stroke="#7A5A3A" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
-        {/* Bowl */}
-        <path d="M24,42 L96,42 C94,70 78,80 60,80 C42,80 26,70 24,42 Z" fill="#3B1F0E" />
-        <ellipse cx="60" cy="42" rx="36" ry="11" fill="#FFF8E8" stroke="#3B1F0E" strokeWidth="2.5" />
-        <ellipse cx="60" cy="43" rx="31" ry="8.5" fill={brothColor} />
-        {/* Soup garnish */}
-        <circle cx="48" cy="42" r="4" fill="#FFF6E0" />
-        <circle cx="66" cy="44" r="4.5" fill="#A64B2A" />
-        <circle cx="58" cy="40" r="2.2" fill="#2E7D32" />
-        <circle cx="71" cy="40" r="2" fill="#2E7D32" />
-        <path d="M51,46 L68,46" stroke="#F8E2A6" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (isGuiso) {
-    const sauceColor = visualType === 'chanfaina' ? '#B96426' : '#C6742E';
-    return (
-      <svg viewBox="0 0 120 96" className={className} aria-hidden="true">
-        <rect width="120" height="96" rx="12" fill="#F4E5C8" />
-        {/* Plate */}
-        <ellipse cx="60" cy="54" rx="44" ry="26" fill="#FFFDF8" stroke="#D9A441" strokeWidth="2" />
-        <ellipse cx="60" cy="53" rx="35" ry="19" fill="#FFF3D6" />
-        {/* Rice side */}
-        <ellipse cx="44" cy="52" rx="14" ry="11" fill="#FFFDF8" stroke="#E5D5B5" strokeWidth="1" />
-        {/* Stew */}
-        <ellipse cx="68" cy="53" rx="17" ry="12" fill={sauceColor} />
-        <circle cx="64" cy="50" r="4" fill="#F0C778" />
-        <circle cx="74" cy="54" r="4.5" fill="#7A3E14" />
-        <circle cx="66" cy="58" r="3" fill="#2E7D32" />
-        <circle cx="43" cy="49" r="1.5" fill="#D9A441" />
-      </svg>
-    );
-  }
-
-  // Platos fuertes
-  const meatColor =
-    visualType === 'pollo-horno'
-      ? '#B45B24'
-      : visualType === 'milanesa' || visualType === 'falso'
-      ? '#C67F2E'
-      : '#9D3B1D';
 
   return (
-    <svg viewBox="0 0 120 96" className={className} aria-hidden="true">
-      <rect width="120" height="96" rx="12" fill="#F4E5C8" />
-      {/* Serving plate */}
-      <ellipse cx="60" cy="53" rx="46" ry="28" fill="#FFFDF8" stroke="#D9A441" strokeWidth="2" />
-      <ellipse cx="60" cy="52" rx="38" ry="22" fill="#F9ECD2" />
-      {/* Rice mound */}
-      <path d="M31,52 C31,41 51,41 51,52 C51,60 31,60 31,52 Z" fill="#FFFFFF" stroke="#E6D6B8" strokeWidth="1" />
-      {/* Golden potatoes */}
-      <ellipse cx="45" cy="64" rx="9" ry="5" fill="#E6B24C" />
-      <ellipse cx="56" cy="66" rx="8" ry="4.5" fill="#D9A441" />
-      {/* Fresh salad */}
-      <circle cx="77" cy="61" r="6" fill="#438E46" />
-      <circle cx="83" cy="57" r="4.5" fill="#5CA95F" />
-      <circle cx="79" cy="60" r="2.2" fill="#C62828" />
-      {/* Main protein */}
-      <ellipse cx="69" cy="46" rx="18" ry="11" fill={meatColor} />
-      <path d="M58,43 Q69,38 79,44" fill="none" stroke="#E8C87A" strokeWidth="1.8" strokeLinecap="round" opacity="0.65" />
-      {/* Chuno / garnish accent for picantes */}
-      {(visualType === 'picante-carne' ||
-        visualType === 'picante-pollo' ||
-        visualType === 'picante-pata' ||
-        visualType === 'saice') && (
-        <>
-          <circle cx="38" cy="61" r="4" fill="#4A2C1A" />
-          <circle cx="44" cy="57" r="3.2" fill="#5D3924" />
-        </>
-      )}
-    </svg>
+    <img
+      src={src}
+      alt={name || 'Platillo tradicional Como en Casa'}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className={`${className} object-cover bg-[#F4E5C8]`}
+    />
   );
 };
 

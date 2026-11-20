@@ -177,7 +177,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                       className="w-20 h-16 md:w-full md:h-32 rounded-xl overflow-hidden shrink-0 border border-[#D9A441]/35 cursor-pointer focus:outline-none"
                       aria-label={`Ver detalle de ${item.name}`}
                     >
-                      <DishIllustration visualType={item.visualType} />
+                      <DishIllustration visualType={item.visualType} dishId={item.id} name={item.name} />
                     </button>
 
                     <div className="flex-1 min-w-0">

@@ -44,6 +44,7 @@ interface MozoScreenProps {
   tables: TableItem[];
   firebaseUser: User | null;
   isStaff: boolean;
+  authError?: string;
   onGoogleSignIn: () => void;
   onCreatePosOrder: (payload: {
     mode: OrderMode;
@@ -68,6 +69,7 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
   tables,
   firebaseUser,
   isStaff,
+  authError,
   onGoogleSignIn,
   onCreatePosOrder,
   onAppendOrderItems,
@@ -312,28 +314,42 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-6 space-y-4">
-          {(!firebaseUser || !isStaff) && (
-            <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-extrabold text-[#D9A441]">
-                  {firebaseUser
-                    ? `Cuenta (${firebaseUser.email}) sin permiso de Mozo`
-                    : 'Sincronización en vivo con Cocina y Caja'}
-                </p>
-                <p className="text-[11px] text-[#FFF8E8]/85 mt-0.5">
-                  {firebaseUser
-                    ? 'Pide al Administrador que agregue este correo en Personal Autorizado o cambia a una cuenta autorizada.'
-                    : 'Conecta tu cuenta Google autorizada para ver pedidos y mesas de otros dispositivos en tiempo real.'}
-                </p>
+          {(!firebaseUser || !isStaff) ? (
+            <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] p-3.5 space-y-2 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-extrabold text-[#D9A441]">
+                    {firebaseUser
+                      ? `Cuenta (${firebaseUser.email}) sin permiso de Mozo`
+                      : 'Conecta una cuenta Google autorizada para sincronizar en vivo'}
+                  </p>
+                  <p className="text-[11px] text-[#FFF8E8]/85 mt-0.5 leading-relaxed">
+                    {firebaseUser
+                      ? 'Para seguridad de los pedidos, el Administrador debe agregar este correo en Panel Admin → Mozos autorizados (o conecta la cuenta del Administrador).'
+                      : 'Por seguridad, las comandas y mesas en vivo requieren conectar una vez la cuenta Google del Administrador o de un Mozo autorizado en Panel Admin.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onGoogleSignIn}
+                  className="px-3.5 py-2 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>{firebaseUser ? 'Cambiar cuenta' : 'Conectar con Google'}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onGoogleSignIn}
-                className="px-3.5 py-2 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>{firebaseUser ? 'Cambiar cuenta' : 'Conectar con Google'}</span>
-              </button>
+              {authError && (
+                <p className="text-[11px] font-bold text-[#E8C87A] bg-[#4A2C1A] border border-[#D9A441]/40 rounded-xl px-3 py-1.5">
+                  {authError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-[#2E6F32]/12 border border-[#2E6F32]/30 px-3 py-1.5 flex items-center justify-between text-[11px] font-extrabold text-[#2E6F32]">
+              <span className="inline-flex items-center gap-1.5 truncate">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Sincronización en vivo activa · {firebaseUser.email}</span>
+              </span>
             </div>
           )}
 
@@ -770,7 +786,7 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-16 h-14 rounded-xl overflow-hidden shrink-0 border border-[#D9A441]/40">
-                        <DishIllustration visualType={item.visualType} />
+                        <DishIllustration visualType={item.visualType} dishId={item.id} name={item.name} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">

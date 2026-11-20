@@ -69,7 +69,7 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
             {/* Left column on PC: Dish photo + Ingredients */}
             <div className="space-y-4 lg:col-span-5">
               <div className="rounded-2xl overflow-hidden border border-[#D9A441]/60 bg-[#FDF2D6] h-44 lg:h-64 shadow-xs">
-                <DishIllustration visualType={item.visualType} className="w-full h-full object-cover" />
+                <DishIllustration visualType={item.visualType} dishId={item.id} name={item.name} className="w-full h-full object-cover" />
               </div>
 
               <section className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-3.5 hidden lg:block">

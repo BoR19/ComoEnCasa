@@ -250,7 +250,10 @@ export default function App() {
       } else if (code === 'auth/popup-blocked') {
         msg = 'Tu navegador bloqueó la ventana emergente de Google. Permite las ventanas emergentes (popups) e inténtalo de nuevo.';
       } else if (code === 'auth/unauthorized-domain') {
-        msg = 'Este dominio aún no está autorizado en Firebase Authentication (Authorized domains).';
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        msg = host
+          ? `El dominio "${host}" aún no está autorizado en Firebase Authentication (Settings → Authorized domains).`
+          : 'Este dominio aún no está autorizado en Firebase Authentication (Authorized domains).';
       } else if (code === 'auth/network-request-failed') {
         msg = 'Sin conexión a internet. Verifica tu red e inténtalo de nuevo.';
       }
@@ -1000,6 +1003,9 @@ export default function App() {
                 <WelcomeScreen
                   mozoPin={mozoPin}
                   isMozoLoggedIn={isMozoAuthenticated}
+                  firebaseUser={firebaseUser}
+                  isStaff={isStaff}
+                  onGoogleSignIn={() => void handleGoogleSignIn()}
                   onMozoLoginSuccess={handleMozoLoginSuccess}
                   onMozoLogout={handleMozoLogout}
                   onGoMozoPanel={() => navigate('mozo-panel')}
@@ -1324,6 +1330,7 @@ export default function App() {
                   tables={tables}
                   firebaseUser={firebaseUser}
                   isStaff={isStaff}
+                  authError={authError}
                   onGoogleSignIn={() => void handleGoogleSignIn()}
                   onCreatePosOrder={handleCreatePosOrder}
                   onAppendOrderItems={handleAppendOrderItems}

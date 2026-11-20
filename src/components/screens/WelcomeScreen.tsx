@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { User } from 'firebase/auth';
 import {
   Bike,
+  CheckCircle2,
   Delete,
   KeyRound,
+  LogIn,
   LogOut,
   UtensilsCrossed,
   X,
@@ -12,6 +15,9 @@ import { OfficialLogo, VintageCorners } from '../BrandAssets';
 interface WelcomeScreenProps {
   mozoPin: string;
   isMozoLoggedIn: boolean;
+  firebaseUser: User | null;
+  isStaff: boolean;
+  onGoogleSignIn: () => void;
   onMozoLoginSuccess: () => void;
   onMozoLogout: () => void;
   onGoMozoPanel: () => void;
@@ -23,6 +29,9 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   mozoPin,
   isMozoLoggedIn,
+  firebaseUser,
+  isStaff,
+  onGoogleSignIn,
   onMozoLoginSuccess,
   onMozoLogout,
   onGoMozoPanel,
@@ -288,6 +297,32 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 <UtensilsCrossed className="w-4 h-4" />
                 <span>Entrar al Panel de Mozo</span>
               </button>
+            )}
+
+            {/* Google Staff Sync Status inside PIN Modal */}
+            {firebaseUser && isStaff ? (
+              <div className="rounded-xl bg-[#2E6F32]/12 border border-[#2E6F32]/30 px-3 py-2 flex items-center gap-2 text-[11px] font-extrabold text-[#2E6F32]">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span className="truncate">
+                  Sincronizado en vivo: {firebaseUser.email}
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 px-3 py-2 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-[#7A5A3A] leading-tight">
+                  {firebaseUser
+                    ? `Cuenta (${firebaseUser.email}) sin rol de personal`
+                    : 'Conecta Google autorizado para sincronizar en vivo'}
+                </span>
+                <button
+                  type="button"
+                  onClick={onGoogleSignIn}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#3B1F0E] text-[#FFF8E8] text-[10px] font-extrabold inline-flex items-center gap-1 hover:bg-[#4A2C1A] cursor-pointer shrink-0"
+                >
+                  <LogIn className="w-3 h-3 text-[#D9A441]" />
+                  <span>{firebaseUser ? 'Cambiar' : 'Conectar'}</span>
+                </button>
+              </div>
             )}
 
             {/* 4-digit visual slots */}

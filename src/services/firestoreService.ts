@@ -77,6 +77,23 @@ export async function resolveUserRoles(user: User | null): Promise<UserRoleStatu
   return { isAdmin, isMozo };
 }
 
+function sanitizeOrderLines(items: OrderLineItem[]): OrderLineItem[] {
+  return items.slice(0, 50).map((it) => {
+    const clean: OrderLineItem = {
+      menuItemId: String(it.menuItemId || ''),
+      category: it.category,
+      name: String(it.name || ''),
+      sizeLabel: String(it.sizeLabel || ''),
+      quantity: Math.max(1, Number(it.quantity) || 1),
+      price: Number(it.price) || 0,
+    };
+    if (typeof it.extrasSummary === 'string' && it.extrasSummary.trim().length > 0) {
+      clean.extrasSummary = it.extrasSummary.trim().slice(0, 200);
+    }
+    return clean;
+  });
+}
+
 function buildMenuDocPayload(item: MenuItem, sortOrder: number) {
   return {
     id: item.id,
@@ -84,8 +101,12 @@ function buildMenuDocPayload(item: MenuItem, sortOrder: number) {
     category: item.category,
     description: (item.description || '').slice(0, 300),
     priceBadge: item.priceBadge.slice(0, 120),
-    sizes: item.sizes.slice(0, 3),
-    ingredients: item.ingredients.slice(0, 12),
+    sizes: item.sizes.slice(0, 3).map((s) => ({
+      id: String(s.id || ''),
+      label: String(s.label || ''),
+      price: Number(s.price) || 0,
+    })),
+    ingredients: item.ingredients.slice(0, 12).map((ing) => String(ing || '')),
     rating: Number(item.rating) || 4.8,
     prepTime: (item.prepTime || '15 min').slice(0, 40),
     available: Boolean(item.available),
@@ -389,7 +410,7 @@ export async function createOrderInFirestore(params: {
       customerUid,
       mode: order.mode,
       customerLabel: order.customerLabel.slice(0, 80),
-      items: order.items.slice(0, 50),
+      items: sanitizeOrderLines(order.items),
       notes: (order.notes || '').slice(0, 300),
       status: order.status,
       total: Number(order.total),
@@ -447,7 +468,7 @@ export async function appendOrderItemsInFirestore(params: {
 }): Promise<void> {
   try {
     await updateDoc(doc(db, 'orders', params.orderId), {
-      items: params.items.slice(0, 50),
+      items: sanitizeOrderLines(params.items),
       total: Number(params.total),
       status: params.status,
       updatedAt: serverTimestamp(),
@@ -487,6 +508,45 @@ export async function setWaiterCallInFirestore(
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `orders/${orderId}`);
+  }
+}
+
+export async function updateOrderItemsInFirestore(params: {
+  orderId: string;
+  items: OrderLineItem[];
+  total: number;
+}): Promise<void> {
+  try {
+    await updateDoc(doc(db, 'orders', params.orderId), {
+      items: sanitizeOrderLines(params.items),
+      total: Number(params.total),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `orders/${params.orderId}`);
+  }
+}
+
+export async function deleteOrderInFirestore(params: {
+  orderId: string;
+  isDelivery: boolean;
+  tableNumberToFree?: number;
+}): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    if (params.isDelivery) {
+      batch.delete(doc(db, 'orders', params.orderId, 'private', 'delivery'));
+    }
+    batch.delete(doc(db, 'orders', params.orderId));
+    if (typeof params.tableNumberToFree === 'number') {
+      batch.update(doc(db, 'tables', `mesa-${params.tableNumberToFree}`), {
+        status: 'libre',
+        updatedAt: serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `orders/${params.orderId}`);
   }
 }
 

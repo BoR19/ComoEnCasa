@@ -93,7 +93,7 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
             {/* Right column on PC: Details, Size, Extras, CTA */}
             <div className="space-y-4 lg:col-span-7">
               <div>
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] leading-tight">
                       {item.name}

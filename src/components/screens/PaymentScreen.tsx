@@ -118,21 +118,23 @@ export const PaymentQrScreen: React.FC<PaymentQrScreenProps> = ({
     <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
       <MobileHeader title="Pago con QR" onBack={onBack} />
 
-      <div className="flex-1 overflow-y-auto phone-scroll px-5 py-6 flex flex-col items-center justify-center text-center space-y-4">
-        <div className="p-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/70 shadow-sm">
-          <QrCodeSvg seed={`como-en-casa-pago-${totalAmount}`} size={196} />
-        </div>
+      <div className="flex-1 overflow-y-auto phone-scroll px-5 py-6 flex flex-col">
+        <div className="my-auto mx-auto w-full max-w-md flex flex-col items-center text-center space-y-4">
+          <div className="p-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/70 shadow-sm">
+            <QrCodeSvg seed={`como-en-casa-pago-${totalAmount}`} size={196} />
+          </div>
 
-        <div className="space-y-1">
-          <h2 className="font-serif-display text-2xl font-bold text-[#2B1A0E]">
-            Como en Casa
-          </h2>
-          <p className="text-lg font-extrabold text-[#B84A27] tabular-nums">
-            Total {formatBs(totalAmount)}
-          </p>
-          <p className="text-xs font-bold text-[#7A5A3A]">
-            Instrucciones: Escanea y paga
-          </p>
+          <div className="space-y-1">
+            <h2 className="font-serif-display text-2xl font-bold text-[#2B1A0E]">
+              Como en Casa
+            </h2>
+            <p className="text-lg font-extrabold text-[#B84A27] tabular-nums">
+              Total {formatBs(totalAmount)}
+            </p>
+            <p className="text-xs font-bold text-[#7A5A3A]">
+              Instrucciones: Escanea y paga
+            </p>
+          </div>
         </div>
       </div>
 
@@ -195,8 +197,8 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
     <div className="relative flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
       <MobileHeader title="Confirmación de Pago" onBack={onBack} />
 
-      <div className="flex-1 overflow-y-auto phone-scroll px-5 py-8 flex flex-col items-center justify-center text-center">
-        <div className="max-w-md w-full space-y-4 flex flex-col items-center">
+      <div className="flex-1 overflow-y-auto phone-scroll px-5 py-6 sm:py-8 flex flex-col">
+        <div className="my-auto mx-auto max-w-md w-full space-y-4 flex flex-col items-center text-center">
           <div className="w-18 h-18 rounded-full bg-[#2E6F32]/15 flex items-center justify-center">
             <CheckCircle2 className="w-14 h-14 text-[#2E6F32]" strokeWidth={2.2} />
           </div>

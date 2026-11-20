@@ -19,6 +19,13 @@
     --green-success: #2E9E5B;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     font-family: 'Nunito', system-ui, -apple-system, sans-serif;
     color: #2B1A0E;

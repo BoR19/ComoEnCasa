@@ -2,7 +2,6 @@ import React from 'react';
 import { MenuItem } from '../types/app';
 
 interface OfficialLogoProps {
-  variant?: 'dark' | 'light';
   size?: 'sm' | 'md' | 'lg';
 }
 

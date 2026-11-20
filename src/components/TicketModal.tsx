@@ -107,7 +107,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
       aria-modal="true"
       aria-label={`Ticket ${order.code}`}
     >
-      <div className="ticket-print-shell w-full max-w-2xl max-h-[92vh] bg-[#FFF8E8] rounded-3xl border-2 border-[#D9A441] shadow-2xl flex flex-col overflow-hidden">
+      <div className="ticket-print-shell w-full max-w-2xl max-h-[92dvh] bg-[#FFF8E8] rounded-3xl border-2 border-[#D9A441] shadow-2xl flex flex-col overflow-hidden">
         {/* Top Bar (hidden on print) */}
         <div className="no-print px-4 py-3 bg-[#3B1F0E] text-[#FFF8E8] flex items-center justify-between gap-2 shrink-0 border-b border-[#D9A441]/30">
           <div className="flex items-center gap-2 min-w-0">

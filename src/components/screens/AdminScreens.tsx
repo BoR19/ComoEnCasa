@@ -1,26 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { User } from 'firebase/auth';
 import {
-  Banknote,
   BarChart3,
   BellRing,
-  Check,
-  CheckCircle2,
   ChefHat,
   Clock,
   Download,
   KeyRound,
   LogIn,
   LogOut,
-  Minus,
   Pencil,
   Plus,
   Printer,
   RefreshCw,
   Search,
   ShieldCheck,
+  ShoppingBag,
   Trash2,
-  Unlock,
   Users,
   Utensils,
   X,
@@ -41,12 +37,16 @@ import {
 } from '../../types/app';
 import {
   MENU_CATEGORIES,
-  PAYMENT_METHODS,
+  OrderFilterType,
   buildPriceBadge,
   computeCategorySalesReport,
+  filterOrdersByType,
   formatBs,
+  getTableStats,
 } from '../../utils/appHelpers';
 import { OfficialLogo } from '../BrandAssets';
+import { CollectPaymentModal, OrderKdsCard } from '../OrderKdsCard';
+import { PosOrderModal } from '../PosOrderModal';
 import { CategoryTabs, MobileHeader } from '../ShellComponents';
 import { TicketModal } from '../TicketModal';
 
@@ -96,8 +96,8 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto phone-scroll px-6 py-4 flex flex-col justify-center">
-        <div className="max-w-md w-full mx-auto lg:rounded-3xl lg:border lg:border-[#D9A441]/30 lg:bg-[#4A2C1A]/45 lg:p-8">
+      <div className="flex-1 overflow-y-auto phone-scroll px-5 sm:px-6 py-4 flex flex-col">
+        <div className="my-auto max-w-md w-full mx-auto lg:rounded-3xl lg:border lg:border-[#D9A441]/30 lg:bg-[#4A2C1A]/45 lg:p-8">
           <div className="flex flex-col items-center">
             <OfficialLogo size="sm" />
             <h1 className="font-serif-display text-2xl font-bold text-[#FFF8E8] mt-3 text-center">
@@ -170,7 +170,9 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
           </div>
 
           <footer className="text-center space-y-1 pt-2">
-            <p className="text-xs font-bold text-[#E8C87A]">Solo personal autorizado</p>
+            <p className="text-xs font-bold text-[#E8C87A]">
+              Solo personal autorizado
+            </p>
             <p className="text-[11px] text-[#FFF8E8]/70">
               Sincronización en vivo • Firebase Firestore
             </p>
@@ -188,6 +190,8 @@ interface AdminPanelScreenProps {
   inventory: InventoryItem[];
   authorizedStaff: AuthorizedStaffItem[];
   adminEmail?: string | null;
+  cartCount: number;
+  onOpenComanda: () => void;
   onToggleDishAvailability: (id: string) => void;
   onSaveDishEdit: (updated: MenuItem) => void;
   onAddNewDish: (newItem: MenuItem) => void;
@@ -221,6 +225,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   inventory,
   authorizedStaff,
   adminEmail,
+  cartCount,
+  onOpenComanda,
   onToggleDishAvailability,
   onSaveDishEdit,
   onAddNewDish,
@@ -242,48 +248,52 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [pinDraft, setPinDraft] = useState(mozoPin);
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffName, setNewStaffName] = useState('');
+
   useEffect(() => {
     setPinDraft(mozoPin);
   }, [mozoPin]);
-  const [menuCategory, setMenuCategory] = useState<MenuCategory>('Platos Fuertes');
-  const [menuQuery, setMenuQuery] = useState('');
-  const [orderFilter, setOrderFilter] = useState<'all' | 'unpaid' | 'dine-in' | 'delivery'>('all');
 
-  // Dish Edit / Add Modal (supports dynamic sizes including 3-size Jugos)
+  const [menuCategory, setMenuCategory] =
+    useState<MenuCategory>('Platos Fuertes');
+  const [menuQuery, setMenuQuery] = useState('');
+  const [orderFilter, setOrderFilter] = useState<OrderFilterType>('all');
+
+  // Dish Edit / Add Modal
   const [editingDish, setEditingDish] = useState<MenuItem | null>(null);
   const [isAddingDish, setIsAddingDish] = useState(false);
   const [dishName, setDishName] = useState('');
-  const [dishCategory, setDishCategory] = useState<MenuCategory>('Platos Fuertes');
+  const [dishCategory, setDishCategory] =
+    useState<MenuCategory>('Platos Fuertes');
   const [dishSizePrices, setDishSizePrices] = useState<DishSizeOption[]>([]);
   const [dishDesc, setDishDesc] = useState('');
 
-  // Collect Payment Modal (Cobro de cualquier Mesa o Delivery)
-  const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(null);
-  const [collectMethod, setCollectMethod] = useState<PaymentMethod>('Efectivo');
-  const [openTicketOnCollect, setOpenTicketOnCollect] = useState(true);
+  // Collect Payment Modal
+  const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(
+    null
+  );
 
   // Ticket Print / WhatsApp Modal
   const [ticketOrder, setTicketOrder] = useState<KitchenOrder | null>(null);
 
   // Admin POS New Order Modal
   const [showPosModal, setShowPosModal] = useState(false);
-  const [posMode, setPosMode] = useState<OrderMode>('dine-in');
-  const [posTable, setPosTable] = useState<number>(1);
-  const [posAddress, setPosAddress] = useState('');
-  const [posPhone, setPosPhone] = useState('');
-  const [posNotes, setPosNotes] = useState('');
-  const [posCategory, setPosCategory] = useState<MenuCategory>('Platos Fuertes');
-  const [posItems, setPosItems] = useState<OrderLineItem[]>([]);
-  const [posPayNow, setPosPayNow] = useState<boolean>(false);
-  const [posPayMethod, setPosPayMethod] = useState<PaymentMethod>('Efectivo');
-  const [openTicketOnPos, setOpenTicketOnPos] = useState(true);
 
   // Inventory modal
   const [showInvModal, setShowInvModal] = useState(false);
   const [invDraft, setInvDraft] = useState<InventoryItem[]>(inventory);
   const [reportMsg, setReportMsg] = useState('');
 
-  // Real-time calculated KPIs (zero fake numbers)
+  const switchTab = (next: AdminTab) => {
+    setEditingDish(null);
+    setIsAddingDish(false);
+    setCollectingOrder(null);
+    setTicketOrder(null);
+    setShowPosModal(false);
+    setShowInvModal(false);
+    setActiveTab(next);
+  };
+
+  // Real-time calculated KPIs
   const totalSalesBs = useMemo(
     () =>
       kitchenOrders
@@ -302,9 +312,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
   const ordersTodayCount = kitchenOrders.length;
 
-  const occupiedTablesCount = tables.filter(
-    (t) => t.status === 'ocupada'
-  ).length;
+  const { occupiedCount: occupiedTablesCount } = useMemo(
+    () => getTableStats(tables),
+    [tables]
+  );
 
   const waiterRequests = useMemo(
     () => kitchenOrders.filter((o) => o.waiterRequested),
@@ -319,21 +330,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const filteredMenu = useMemo(() => {
     const q = menuQuery.trim().toLowerCase();
     return menuItems.filter((item) => {
-      if (q) {
-        return item.name.toLowerCase().includes(q);
-      }
+      if (q) return item.name.toLowerCase().includes(q);
       return item.category === menuCategory;
     });
   }, [menuItems, menuCategory, menuQuery]);
 
-  const filteredOrders = useMemo(() => {
-    return kitchenOrders.filter((o) => {
-      if (orderFilter === 'unpaid') return !o.paid;
-      if (orderFilter === 'dine-in') return o.mode === 'dine-in';
-      if (orderFilter === 'delivery') return o.mode === 'delivery';
-      return true;
-    });
-  }, [kitchenOrders, orderFilter]);
+  const filteredOrders = useMemo(
+    () => filterOrdersByType(kitchenOrders, orderFilter),
+    [kitchenOrders, orderFilter]
+  );
 
   const openEditModal = (dish: MenuItem) => {
     setIsAddingDish(false);
@@ -344,50 +349,35 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setDishDesc(dish.description);
   };
 
+  const getDefaultSizesForCategory = (cat: MenuCategory): DishSizeOption[] =>
+    cat === 'Jugos'
+      ? [
+          { id: 'vaso', label: 'Vaso', price: 3 },
+          { id: 'medio-litro', label: 'Medio Litro', price: 5 },
+          { id: 'litro', label: 'Litro', price: 10 },
+        ]
+      : cat === 'Platos Fuertes'
+      ? [
+          { id: 'entero', label: 'Entero', price: 15 },
+          { id: 'mini', label: 'Mini', price: 10 },
+        ]
+      : [
+          { id: 'entero', label: 'Entero', price: 9 },
+          { id: 'medio', label: 'Medio', price: 5 },
+        ];
+
   const openAddModal = () => {
     setEditingDish(null);
     setIsAddingDish(true);
     setDishName('');
     setDishCategory(menuCategory);
-    setDishSizePrices(
-      menuCategory === 'Jugos'
-        ? [
-            { id: 'vaso', label: 'Vaso', price: 3 },
-            { id: 'medio-litro', label: 'Medio Litro', price: 5 },
-            { id: 'litro', label: 'Litro', price: 10 },
-          ]
-        : menuCategory === 'Platos Fuertes'
-        ? [
-            { id: 'entero', label: 'Entero', price: 15 },
-            { id: 'mini', label: 'Mini', price: 10 },
-          ]
-        : [
-            { id: 'entero', label: 'Entero', price: 9 },
-            { id: 'medio', label: 'Medio', price: 5 },
-          ]
-    );
+    setDishSizePrices(getDefaultSizesForCategory(menuCategory));
     setDishDesc('Preparado al estilo tradicional de Como en Casa.');
   };
 
   const handleCategoryChangeInAddModal = (cat: MenuCategory) => {
     setDishCategory(cat);
-    setDishSizePrices(
-      cat === 'Jugos'
-        ? [
-            { id: 'vaso', label: 'Vaso', price: 3 },
-            { id: 'medio-litro', label: 'Medio Litro', price: 5 },
-            { id: 'litro', label: 'Litro', price: 10 },
-          ]
-        : cat === 'Platos Fuertes'
-        ? [
-            { id: 'entero', label: 'Entero', price: 15 },
-            { id: 'mini', label: 'Mini', price: 10 },
-          ]
-        : [
-            { id: 'entero', label: 'Entero', price: 9 },
-            { id: 'medio', label: 'Medio', price: 5 },
-          ]
-    );
+    setDishSizePrices(getDefaultSizesForCategory(cat));
   };
 
   const handleSaveDishModal = (e: React.FormEvent) => {
@@ -420,7 +410,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       description: dishDesc.trim() || 'Platillo tradicional hecho en casa.',
       priceBadge: badge,
       sizes: cleanSizes,
-      ingredients: ['Ingredientes frescos de temporada', 'Especias tradicionales'],
+      ingredients: [
+        'Ingredientes frescos de temporada',
+        'Especias tradicionales',
+      ],
       rating: 4.8,
       prepTime: '15 min',
       available: true,
@@ -435,63 +428,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     };
     onAddNewDish(newItem);
     setIsAddingDish(false);
-  };
-
-  const addPosLine = (item: MenuItem, size: DishSizeOption) => {
-    setPosItems((prev) => {
-      const idx = prev.findIndex(
-        (l) => l.menuItemId === item.id && l.sizeLabel === size.label
-      );
-      if (idx >= 0) {
-        return prev.map((l, i) =>
-          i === idx ? { ...l, quantity: l.quantity + 1 } : l
-        );
-      }
-      return [
-        ...prev,
-        {
-          menuItemId: item.id,
-          category: item.category,
-          name: item.name,
-          sizeLabel: size.label,
-          quantity: 1,
-          price: size.price,
-        },
-      ];
-    });
-  };
-
-  const updatePosQty = (index: number, delta: number) => {
-    setPosItems((prev) =>
-      prev
-        .map((it, i) => (i === index ? { ...it, quantity: it.quantity + delta } : it))
-        .filter((it) => it.quantity > 0)
-    );
-  };
-
-  const posTotal = posItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
-
-  const handleSubmitPosOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (posItems.length === 0) return;
-    const created = onCreatePosOrder({
-      mode: posMode,
-      tableNumber: posMode === 'dine-in' ? posTable : undefined,
-      deliveryAddress: posMode === 'delivery' ? posAddress : undefined,
-      deliveryPhone: posMode === 'delivery' ? posPhone : undefined,
-      notes: posNotes,
-      items: posItems,
-      payNowMethod: posPayNow ? posPayMethod : undefined,
-    });
-    setPosItems([]);
-    setPosNotes('');
-    setPosAddress('');
-    setPosPhone('');
-    setPosPayNow(false);
-    setShowPosModal(false);
-    if (openTicketOnPos) {
-      setTicketOrder(created);
-    }
   };
 
   const handleDownloadReport = () => {
@@ -510,7 +446,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       ),
       '',
       'INVENTARIO ACTUAL:',
-      ...inventory.map((i) => `- ${i.name}: ${i.quantity}${i.unit} (${i.status})`),
+      ...inventory.map(
+        (i) => `- ${i.name}: ${i.quantity}${i.unit} (${i.status})`
+      ),
     ].join('\n');
 
     const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
@@ -539,15 +477,31 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         title={headerTitle}
         onBack={onBack}
         rightSlot={
-          <button
-            type="button"
-            onClick={onLogout}
-            aria-label="Cerrar sesión de administrador"
-            title="Cerrar sesión"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onOpenComanda}
+              aria-label="Abrir Comanda en Vivo"
+              title="Comanda en Vivo"
+              className="xl:hidden relative min-w-[40px] min-h-[40px] px-2 flex items-center justify-center rounded-xl bg-[#4A2C1A] text-[#D9A441] hover:bg-[#4A2C1A]/80 cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {cartCount > 0 && (
+                <span className="ml-1 text-[10px] font-extrabold text-[#FFF8E8] tabular-nums">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onLogout}
+              aria-label="Cerrar sesión de administrador"
+              title="Cerrar sesión"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         }
       />
 
@@ -572,15 +526,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`min-h-[36px] lg:min-h-[40px] px-1.5 py-1 rounded-xl text-[11px] lg:text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+                onClick={() => switchTab(tab.id)}
+                className={`min-h-[36px] lg:min-h-[40px] px-1 sm:px-2 py-1 rounded-xl text-[10px] sm:text-xs font-extrabold flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer min-w-0 ${
                   active
                     ? 'bg-[#D9A441] text-[#2B1A0E]'
                     : 'text-[#FFF8E8]/85 hover:bg-[#3B1F0E]'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{tab.label}</span>
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -590,997 +544,597 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-6 space-y-4 lg:space-y-5">
-        {activeTab === 'dashboard' && (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] text-center lg:text-left">
-                Hola Administrador
-              </h2>
-              {adminEmail && (
-                <span className="px-3 py-1 rounded-xl bg-[#2E6F32]/12 border border-[#2E6F32]/30 text-[11px] font-extrabold text-[#2E6F32]">
-                  En vivo · {adminEmail}
-                </span>
-              )}
-            </div>
-
-            {/* Waiter Alerts */}
-            {waiterRequests.map((req) => (
-              <div
-                key={`waiter-${req.id}`}
-                className="rounded-2xl bg-[#B84A27] text-[#FFF8E8] p-3 flex items-center justify-between gap-2 shadow-sm"
-              >
-                <div className="flex items-center gap-2 text-xs font-extrabold">
-                  <BellRing className="w-4 h-4 text-[#D9A441] shrink-0" />
-                  <span>{req.customerLabel} solicita al mesero</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onDismissWaiterCall(req.id)}
-                  className="px-2.5 py-1 rounded-xl bg-[#FFF8E8] text-[#2B1A0E] text-[11px] font-extrabold cursor-pointer shrink-0"
-                >
-                  Atendido
-                </button>
-              </div>
-            ))}
-
-            {/* KPI Row: stacked on mobile, 3-card strip on PC */}
-            <div className="space-y-2.5 lg:grid lg:grid-cols-12 lg:gap-4 lg:space-y-0">
-              <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] p-4 shadow-sm flex items-center justify-between gap-2 lg:col-span-6">
-                <div>
-                  <p className="text-xs font-bold text-[#E8C87A]">Ventas cobradas hoy</p>
-                  <p className="text-3xl font-extrabold mt-0.5 tabular-nums">
-                    {formatBs(totalSalesBs)}
-                  </p>
-                </div>
-                {pendingSalesBs > 0 && (
-                  <div className="text-right">
-                    <p className="text-[11px] font-bold text-[#E8C87A]">Por cobrar</p>
-                    <p className="text-base font-extrabold text-[#D9A441] tabular-nums">
-                      {formatBs(pendingSalesBs)}
-                    </p>
-                  </div>
+          {activeTab === 'dashboard' && (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] text-center lg:text-left">
+                  Hola Administrador
+                </h2>
+                {adminEmail && (
+                  <span className="text-xs font-bold text-[#2E6F32]">
+                    En vivo · {adminEmail}
+                  </span>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 lg:col-span-6 lg:gap-4">
-                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 p-3 lg:p-4 flex flex-col justify-center">
-                  <p className="text-xs font-bold text-[#7A5A3A]">Pedidos hoy</p>
-                  <p className="text-xl lg:text-2xl font-extrabold text-[#2B1A0E] mt-0.5 tabular-nums">
-                    {ordersTodayCount}
-                  </p>
+              {waiterRequests.map((req) => (
+                <div
+                  key={`waiter-${req.id}`}
+                  className="rounded-2xl bg-[#B84A27] text-[#FFF8E8] p-3 flex items-center justify-between gap-2 shadow-sm"
+                >
+                  <div className="flex items-center gap-2 text-xs font-extrabold">
+                    <BellRing className="w-4 h-4 text-[#D9A441] shrink-0" />
+                    <span>{req.customerLabel} solicita al mesero</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onDismissWaiterCall(req.id)}
+                    className="px-2.5 py-1 rounded-xl bg-[#FFF8E8] text-[#2B1A0E] text-[11px] font-extrabold cursor-pointer shrink-0"
+                  >
+                    Atendido
+                  </button>
                 </div>
-                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 p-3 lg:p-4 flex flex-col justify-center">
-                  <p className="text-xs font-bold text-[#7A5A3A]">Mesas ocupadas</p>
-                  <p className="text-xl lg:text-2xl font-extrabold text-[#2B1A0E] mt-0.5 tabular-nums">
-                    {occupiedTablesCount}/{tables.length}
-                  </p>
+              ))}
+
+              {/* KPI Row */}
+              <div className="space-y-2.5 lg:grid lg:grid-cols-12 lg:gap-4 lg:space-y-0">
+                <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] p-4 shadow-sm flex items-center justify-between gap-2 lg:col-span-6">
+                  <div>
+                    <p className="text-xs font-bold text-[#E8C87A]">
+                      Ventas cobradas hoy
+                    </p>
+                    <p className="text-3xl font-extrabold mt-0.5 tabular-nums">
+                      {formatBs(totalSalesBs)}
+                    </p>
+                  </div>
+                  {pendingSalesBs > 0 && (
+                    <div className="text-right">
+                      <p className="text-[11px] font-bold text-[#E8C87A]">
+                        Por cobrar
+                      </p>
+                      <p className="text-base font-extrabold text-[#D9A441] tabular-nums">
+                        {formatBs(pendingSalesBs)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 lg:col-span-6 lg:gap-4">
+                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 lg:p-4 flex flex-col justify-center">
+                    <p className="text-xs font-bold text-[#7A5A3A]">
+                      Pedidos hoy
+                    </p>
+                    <p className="text-xl lg:text-2xl font-extrabold text-[#2B1A0E] mt-0.5 tabular-nums">
+                      {ordersTodayCount}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 lg:p-4 flex flex-col justify-center">
+                    <p className="text-xs font-bold text-[#7A5A3A]">
+                      Mesas ocupadas
+                    </p>
+                    <p className="text-xl lg:text-2xl font-extrabold text-[#2B1A0E] mt-0.5 tabular-nums">
+                      {occupiedTablesCount}/{tables.length}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-4 lg:grid lg:grid-cols-12 lg:gap-5 lg:space-y-0 lg:items-start">
-              {/* Actividad Reciente */}
-              <section className="space-y-2 lg:col-span-7">
-                <h3 className="text-sm font-extrabold text-[#2B1A0E] inline-flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-[#B84A27]" />
-                  <span>Actividad Reciente</span>
-                </h3>
+              <div className="space-y-4 lg:grid lg:grid-cols-12 lg:gap-5 lg:space-y-0 lg:items-start">
+                {/* Actividad Reciente */}
+                <section className="space-y-2 lg:col-span-7">
+                  <h3 className="text-sm font-extrabold text-[#2B1A0E] inline-flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[#B84A27]" />
+                    <span>Actividad Reciente</span>
+                  </h3>
 
-                {kitchenOrders.length === 0 ? (
-                  <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-4 text-center space-y-1">
-                    <p className="text-xs font-extrabold text-[#3B1F0E]">
-                      Sin pedidos registrados aún
-                    </p>
-                    <p className="text-[11px] text-[#7A5A3A]">
-                      Crea un pedido desde Cliente (Mesa o Delivery) o desde Cocina/Caja.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 divide-y divide-[#D9A441]/30">
-                    {kitchenOrders.slice(0, 6).map((ord) => (
-                      <div
-                        key={ord.id}
-                        className="p-3 flex items-center justify-between gap-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-extrabold text-sm text-[#2B1A0E] truncate">
-                            Pedido {ord.code} - {formatBs(ord.total)}
-                          </p>
-                          <p className="text-[11px] text-[#7A5A3A]">
-                            {ord.customerLabel} · {ord.createdAt} ·{' '}
-                            {ord.paid ? `Pagado (${ord.paymentMethod})` : 'Pendiente cobro'}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setTicketOrder(ord)}
-                            aria-label={`Ver ticket ${ord.code}`}
-                            title="Imprimir o enviar ticket por WhatsApp"
-                            className="w-8 h-8 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-[#3B1F0E] flex items-center justify-center hover:bg-[#E8C87A]/35 cursor-pointer"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-
-                          {!ord.paid ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCollectMethod('Efectivo');
-                                setCollectingOrder(ord);
-                              }}
-                              className="px-2.5 py-1.5 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-[11px] font-extrabold shrink-0 cursor-pointer"
-                            >
-                              Cobrar
-                            </button>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-[#2E6F32]/15 text-[#2E6F32] shrink-0">
-                              {ord.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {/* Quick actions */}
-              <div className="space-y-3 lg:col-span-5">
-                <h3 className="hidden lg:block text-sm font-extrabold text-[#2B1A0E]">
-                  Acciones rápidas
-                </h3>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('menu')}
-                    className="min-h-[44px] px-3 py-2 rounded-2xl bg-[#FDF2D6] border border-[#D9A441] text-[#2B1A0E] font-extrabold text-xs cursor-pointer"
-                  >
-                    Gestión de Menú
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('kitchen')}
-                    className="min-h-[44px] px-3 py-2 rounded-2xl bg-[#FDF2D6] border border-[#D9A441] text-[#2B1A0E] font-extrabold text-xs cursor-pointer"
-                  >
-                    Cocina y Caja
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPosModal(true);
-                    setActiveTab('kitchen');
-                  }}
-                  className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" strokeWidth={2.5} />
-                  <span>Nuevo Pedido / Cobro en Caja</span>
-                </button>
-
-                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/65 p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
-                      <KeyRound className="w-3.5 h-3.5 text-[#B84A27]" />
-                      <span>PIN de Mozo (4 dígitos)</span>
-                    </span>
-                    <span className="text-[10px] font-bold text-[#7A5A3A]">
-                      5 toques al logo
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={4}
-                      value={pinDraft}
-                      onChange={(e) =>
-                        setPinDraft(e.target.value.replace(/\D/g, '').slice(0, 4))
-                      }
-                      placeholder="1234"
-                      className="flex-1 h-9 px-3 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-xs font-extrabold tracking-widest text-center text-[#2B1A0E] tabular-nums focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
-                    />
-                    <button
-                      type="button"
-                      disabled={pinDraft.length !== 4 || pinDraft === mozoPin}
-                      onClick={() => onUpdateMozoPin(pinDraft)}
-                      className="h-9 px-3 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
-                    >
-                      Guardar PIN
-                    </button>
-                  </div>
-                </div>
-
-                {/* Authorized Mozos (Google Accounts) */}
-                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/65 p-3 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-[#B84A27]" />
-                      <span>Mozos autorizados (Google)</span>
-                    </span>
-                    <span className="text-[10px] font-bold text-[#7A5A3A]">
-                      {authorizedStaff.length} registrados
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    <input
-                      type="text"
-                      value={newStaffName}
-                      onChange={(e) => setNewStaffName(e.target.value)}
-                      placeholder="Nombre (Ej. Carlos)"
-                      className="h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                    />
-                    <input
-                      type="email"
-                      value={newStaffEmail}
-                      onChange={(e) => setNewStaffEmail(e.target.value)}
-                      placeholder="correo.mozo@gmail.com"
-                      className="h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!newStaffEmail.trim().includes('@')}
-                    onClick={() => {
-                      onAddAuthorizedStaff(newStaffEmail.trim(), newStaffName.trim() || newStaffEmail.trim());
-                      setNewStaffEmail('');
-                      setNewStaffName('');
-                    }}
-                    className="w-full h-9 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
-                  >
-                    Autorizar Mozo
-                  </button>
-
-                  {authorizedStaff.length > 0 && (
-                    <div className="space-y-1.5 pt-1 max-h-36 overflow-y-auto phone-scroll">
-                      {authorizedStaff.map((staff) => (
+                  {kitchenOrders.length === 0 ? (
+                    <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-4 text-center space-y-1">
+                      <p className="text-xs font-extrabold text-[#3B1F0E]">
+                        Sin pedidos registrados aún
+                      </p>
+                      <p className="text-[11px] text-[#7A5A3A]">
+                        Crea un pedido desde Cliente (Mesa o Delivery) o desde Cocina/Caja.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 divide-y divide-[#D9A441]/30">
+                      {kitchenOrders.slice(0, 6).map((ord) => (
                         <div
-                          key={staff.email}
-                          className="flex items-center justify-between gap-2 rounded-xl bg-[#FFFDF8] border border-[#D9A441]/40 px-2.5 py-1.5 text-[11px]"
+                          key={ord.id}
+                          className="p-3 flex items-center justify-between gap-2"
                         >
                           <div className="min-w-0">
-                            <p className="font-extrabold text-[#2B1A0E] truncate">
-                              {staff.name}
+                            <p className="font-extrabold text-sm text-[#2B1A0E] truncate tabular-nums">
+                              Pedido {ord.code} - {formatBs(ord.total)}
                             </p>
-                            <p className="text-[10px] text-[#7A5A3A] truncate">
-                              {staff.email}
+                            <p className="text-[11px] text-[#7A5A3A]">
+                              {ord.customerLabel} · {ord.createdAt} ·{' '}
+                              {ord.paid
+                                ? `Pagado (${ord.paymentMethod})`
+                                : 'Pendiente cobro'}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               type="button"
-                              onClick={() => onToggleAuthorizedStaff(staff.email, !staff.active)}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer ${
-                                staff.active
-                                  ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
-                                  : 'bg-[#7A5A3A]/15 text-[#7A5A3A]'
-                              }`}
+                              onClick={() => setTicketOrder(ord)}
+                              aria-label={`Ver ticket ${ord.code}`}
+                              title="Imprimir o enviar ticket por WhatsApp"
+                              className="w-8 h-8 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-[#3B1F0E] flex items-center justify-center hover:bg-[#E8C87A]/35 cursor-pointer"
                             >
-                              {staff.active ? 'Activo' : 'Pausado'}
+                              <Printer className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => onRemoveAuthorizedStaff(staff.email)}
-                              aria-label={`Eliminar ${staff.email}`}
-                              className="w-6 h-6 rounded-lg text-[#B83227] hover:bg-[#B83227]/10 flex items-center justify-center cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+
+                            {!ord.paid ? (
+                              <button
+                                type="button"
+                                onClick={() => setCollectingOrder(ord)}
+                                className="px-2.5 py-1.5 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-[11px] font-extrabold shrink-0 cursor-pointer"
+                              >
+                                Cobrar
+                              </button>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#2E6F32]/15 text-[#2E6F32] shrink-0">
+                                {ord.status}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
+                </section>
+
+                {/* Quick actions */}
+                <div className="space-y-3 lg:col-span-5">
+                  <h3 className="hidden lg:block text-sm font-extrabold text-[#2B1A0E]">
+                    Acciones rápidas
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => switchTab('menu')}
+                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[#FFFDF8] border border-[#D9A441] text-[#2B1A0E] font-extrabold text-xs hover:bg-[#FDF2D6] cursor-pointer"
+                    >
+                      Gestión de Menú
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchTab('kitchen')}
+                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[#FFFDF8] border border-[#D9A441] text-[#2B1A0E] font-extrabold text-xs hover:bg-[#FDF2D6] cursor-pointer"
+                    >
+                      Cocina y Caja
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      switchTab('kitchen');
+                      setShowPosModal(true);
+                    }}
+                    className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={2.5} />
+                    <span>Nuevo Pedido / Cobro en Caja</span>
+                  </button>
+
+                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-[#B84A27]" />
+                        <span>PIN de Mozo (4 dígitos)</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-[#7A5A3A]">
+                        5 toques al logo
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={pinDraft}
+                        onChange={(e) =>
+                          setPinDraft(
+                            e.target.value.replace(/\D/g, '').slice(0, 4)
+                          )
+                        }
+                        placeholder="1234"
+                        className="flex-1 h-9 px-3 rounded-xl bg-[#FFF8E8] border border-[#D9A441] text-xs font-extrabold tracking-widest text-center text-[#2B1A0E] tabular-nums focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
+                      />
+                      <button
+                        type="button"
+                        disabled={pinDraft.length !== 4 || pinDraft === mozoPin}
+                        onClick={() => onUpdateMozoPin(pinDraft)}
+                        className="h-9 px-3 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
+                      >
+                        Guardar PIN
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Authorized Mozos (Google Accounts) */}
+                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-[#B84A27]" />
+                        <span>Mozos autorizados (Google)</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-[#7A5A3A] tabular-nums">
+                        {authorizedStaff.length} registrados
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      <input
+                        type="text"
+                        value={newStaffName}
+                        onChange={(e) => setNewStaffName(e.target.value)}
+                        placeholder="Nombre (Ej. Carlos)"
+                        className="h-9 px-2.5 rounded-xl bg-[#FFF8E8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                      />
+                      <input
+                        type="email"
+                        value={newStaffEmail}
+                        onChange={(e) => setNewStaffEmail(e.target.value)}
+                        placeholder="correo.mozo@gmail.com"
+                        className="h-9 px-2.5 rounded-xl bg-[#FFF8E8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!newStaffEmail.trim().includes('@')}
+                      onClick={() => {
+                        onAddAuthorizedStaff(
+                          newStaffEmail.trim(),
+                          newStaffName.trim() || newStaffEmail.trim()
+                        );
+                        setNewStaffEmail('');
+                        setNewStaffName('');
+                      }}
+                      className="w-full h-9 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
+                    >
+                      Autorizar Mozo
+                    </button>
+
+                    {authorizedStaff.length > 0 && (
+                      <div className="space-y-1.5 pt-1 max-h-36 overflow-y-auto phone-scroll">
+                        {authorizedStaff.map((staff) => (
+                          <div
+                            key={staff.email}
+                            className="flex items-center justify-between gap-2 rounded-xl bg-[#FDF2D6]/60 border border-[#D9A441]/40 px-2.5 py-1.5 text-[11px]"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-[#2B1A0E] truncate">
+                                {staff.name}
+                              </p>
+                              <p className="text-[10px] text-[#7A5A3A] truncate">
+                                {staff.email}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onToggleAuthorizedStaff(
+                                    staff.email,
+                                    !staff.active
+                                  )
+                                }
+                                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer ${
+                                  staff.active
+                                    ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
+                                    : 'bg-[#7A5A3A]/15 text-[#7A5A3A]'
+                                }`}
+                              >
+                                {staff.active ? 'Activo' : 'Pausado'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onRemoveAuthorizedStaff(staff.email)
+                                }
+                                aria-label={`Eliminar ${staff.email}`}
+                                className="w-6 h-6 rounded-lg text-[#B83227] hover:bg-[#B83227]/10 flex items-center justify-center cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {activeTab === 'menu' && (
-          <>
-            <div className="space-y-3 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
-              <div className="relative lg:w-72 shrink-0">
-                <Search className="w-4 h-4 text-[#7A5A3A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={menuQuery}
-                  onChange={(e) => setMenuQuery(e.target.value)}
-                  placeholder="Buscar plato..."
-                  className="w-full h-10 pl-10 pr-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 text-xs text-[#2B1A0E] font-semibold focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
-                />
+          {activeTab === 'menu' && (
+            <>
+              <div className="space-y-3 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
+                <div className="relative lg:w-72 shrink-0">
+                  <Search className="w-4 h-4 text-[#7A5A3A] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={menuQuery}
+                    onChange={(e) => setMenuQuery(e.target.value)}
+                    placeholder="Buscar plato..."
+                    className="w-full h-10 pl-10 pr-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 text-xs text-[#2B1A0E] font-semibold focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <CategoryTabs
+                    activeCategory={menuCategory}
+                    onSelectCategory={setMenuCategory}
+                    compact
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className="hidden lg:inline-flex min-h-[40px] px-4 py-2 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" strokeWidth={2.5} />
+                  <span>Agregar nuevo plato</span>
+                </button>
               </div>
 
-              <div className="min-w-0">
-                <CategoryTabs
-                  activeCategory={menuCategory}
-                  onSelectCategory={setMenuCategory}
-                  compact
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 lg:gap-3">
+                {filteredMenu.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-extrabold text-sm text-[#2B1A0E] truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-[11px] font-bold text-[#B84A27] tabular-nums">
+                        {item.priceBadge}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(item)}
+                        className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#D9A441]/40 text-[#2B1A0E] text-[11px] font-extrabold inline-flex items-center gap-1 hover:bg-[#D9A441] cursor-pointer"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Editar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onToggleDishAvailability(item.id)}
+                        className={`min-h-[34px] px-2.5 py-1 rounded-xl text-[11px] font-extrabold cursor-pointer transition-colors ${
+                          item.available
+                            ? 'bg-[#2E6F32] text-[#FFF8E8]'
+                            : 'bg-[#B83227] text-[#FFF8E8]'
+                        }`}
+                      >
+                        {item.available ? 'Disponible' : 'Agotado'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <button
                 type="button"
                 onClick={openAddModal}
-                className="hidden lg:inline-flex min-h-[40px] px-4 py-2 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0 whitespace-nowrap"
+                className="lg:hidden w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
               >
                 <Plus className="w-4 h-4" strokeWidth={2.5} />
                 <span>Agregar nuevo plato</span>
               </button>
-            </div>
+            </>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 lg:gap-3">
-              {filteredMenu.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 p-3 flex items-center justify-between gap-2"
+          {activeTab === 'kitchen' && (
+            <div className="space-y-3.5">
+              <div className="space-y-2.5 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPosModal(true)}
+                  className="w-full lg:w-auto min-h-[44px] px-4 lg:px-5 py-2.5 rounded-2xl bg-[#B84A27] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:bg-[#C95B34] cursor-pointer shrink-0"
                 >
-                  <div className="min-w-0">
-                    <p className="font-extrabold text-sm text-[#2B1A0E] truncate">
-                      {item.name}
-                    </p>
-                    <p className="text-[11px] font-bold text-[#B84A27] tabular-nums">
-                      {item.priceBadge}
-                    </p>
-                  </div>
+                  <Plus className="w-4 h-4" strokeWidth={2.5} />
+                  <span>Nuevo Pedido en Caja (Mesa o Delivery)</span>
+                </button>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                <div className="grid grid-cols-4 gap-1 lg:w-96">
+                  {(
+                    [
+                      { id: 'all', label: 'Todos' },
+                      { id: 'unpaid', label: 'Por cobrar' },
+                      { id: 'dine-in', label: 'Mesas' },
+                      { id: 'delivery', label: 'Delivery' },
+                    ] as const
+                  ).map((f) => (
                     <button
+                      key={f.id}
                       type="button"
-                      onClick={() => openEditModal(item)}
-                      className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#D9A441]/40 text-[#2B1A0E] text-[11px] font-extrabold inline-flex items-center gap-1 hover:bg-[#D9A441] cursor-pointer"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      Editar
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onToggleDishAvailability(item.id)}
-                      className={`min-h-[34px] px-2.5 py-1 rounded-xl text-[11px] font-extrabold cursor-pointer transition-colors ${
-                        item.available
-                          ? 'bg-[#2E6F32] text-[#FFF8E8]'
-                          : 'bg-[#B83227] text-[#FFF8E8]'
+                      onClick={() => setOrderFilter(f.id)}
+                      className={`min-h-[34px] lg:min-h-[38px] px-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border cursor-pointer truncate ${
+                        orderFilter === f.id
+                          ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
+                          : 'bg-[#FFFDF8] border-[#D9A441]/55 text-[#3B1F0E]'
                       }`}
                     >
-                      {item.available ? 'Disponible' : 'Agotado'}
+                      {f.label}
                     </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="lg:hidden w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
-            >
-              <Plus className="w-4 h-4" strokeWidth={2.5} />
-              <span>Agregar nuevo plato</span>
-            </button>
-          </>
-        )}
-
-        {activeTab === 'kitchen' && (
-          <div className="space-y-3.5">
-            {/* POS New Order Trigger + Filter Pills */}
-            <div className="space-y-2.5 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
-              <button
-                type="button"
-                onClick={() => setShowPosModal(true)}
-                className="w-full lg:w-auto min-h-[44px] px-4 lg:px-5 py-2.5 rounded-2xl bg-[#B84A27] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:bg-[#C95B34] cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4" strokeWidth={2.5} />
-                <span>Nuevo Pedido en Caja (Mesa o Delivery)</span>
-              </button>
-
-              <div className="grid grid-cols-4 gap-1 lg:w-96">
-                {(
-                  [
-                    { id: 'all', label: 'Todos' },
-                    { id: 'unpaid', label: 'Por cobrar' },
-                    { id: 'dine-in', label: 'Mesas' },
-                    { id: 'delivery', label: 'Delivery' },
-                  ] as const
-                ).map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setOrderFilter(f.id)}
-                    className={`min-h-[34px] lg:min-h-[38px] rounded-xl text-[11px] font-extrabold border cursor-pointer ${
-                      orderFilter === f.id
-                        ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                        : 'bg-[#FDF2D6] border-[#D9A441]/55 text-[#3B1F0E]'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {filteredOrders.length === 0 ? (
-              <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-6 text-center space-y-2">
-                <p className="font-serif-display text-base font-bold text-[#3B1F0E]">
-                  No hay pedidos en esta vista
-                </p>
-                <p className="text-xs text-[#7A5A3A]">
-                  Usa "Nuevo Pedido en Caja" o realiza un pedido como cliente para gestionarlo aquí.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4 items-start">
-              {filteredOrders.map((order) => {
-                const statuses: OrderStatus[] =
-                  order.mode === 'delivery'
-                    ? ['Preparando', 'En camino', 'Entregado']
-                    : ['Preparando', 'Listo', 'Entregado'];
-
-                const tableObj = order.tableNumber
-                  ? tables.find((t) => t.number === order.tableNumber)
-                  : undefined;
-
-                return (
-                  <article
-                    key={order.id}
-                    className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 p-3.5 space-y-2.5"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
-                          {order.customerLabel}
-                        </h3>
-                        <p className="text-[11px] font-bold text-[#7A5A3A]">
-                          {order.code} · {order.createdAt}
-                        </p>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="font-extrabold text-sm text-[#B84A27] tabular-nums block">
-                          {formatBs(order.total)}
-                        </span>
-                        <span
-                          className={`inline-block mt-0.5 px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                            order.paid
-                              ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
-                              : 'bg-[#B84A27]/15 text-[#B84A27]'
-                          }`}
-                        >
-                          {order.paid
-                            ? `Pagado (${order.paymentMethod})`
-                            : 'Pendiente de cobro'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-xs font-bold text-[#2B1A0E] space-y-0.5">
-                      {order.items.map((it, idx) => (
-                        <p key={idx}>
-                          • {it.quantity > 1 ? `${it.quantity}x ` : ''}
-                          {it.name} {it.sizeLabel} ({formatBs(it.price * it.quantity)})
-                        </p>
-                      ))}
-                    </div>
-
-                    {order.deliveryAddress && (
-                      <p className="text-[11px] font-semibold text-[#1E8299]">
-                        Dirección: {order.deliveryAddress} ({order.deliveryPhone})
-                      </p>
-                    )}
-
-                    {order.notes && (
-                      <div className="text-xs text-[#7A5A3A] bg-[#FFFDF8] px-3 py-1.5 rounded-xl border border-[#D9A441]/30">
-                        <span className="font-extrabold text-[#3B1F0E]">Notas: </span>
-                        {order.notes}
-                      </div>
-                    )}
-
-                    {/* Status controls */}
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-extrabold text-[#3B1F0E]">Estado:</p>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {statuses.map((st) => {
-                          const active = order.status === st;
-                          return (
-                            <button
-                              key={st}
-                              type="button"
-                              onClick={() => onUpdateOrderStatus(order.id, st)}
-                              className={`min-h-[36px] px-2 py-1 rounded-xl text-[11px] font-extrabold border transition-colors cursor-pointer ${
-                                active
-                                  ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                                  : 'bg-[#FFFDF8] border-[#D9A441]/50 text-[#7A5A3A]'
-                              }`}
-                            >
-                              {st}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Cashier & Table actions */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setTicketOrder(order)}
-                        className="min-h-[40px] px-3 py-2 rounded-xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>Ticket / WA</span>
-                      </button>
-
-                      {!order.paid && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCollectMethod('Efectivo');
-                            setCollectingOrder(order);
-                          }}
-                          className="flex-1 min-h-[40px] px-3 py-2 rounded-xl bg-[#2E6F32] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:opacity-95 cursor-pointer tabular-nums"
-                        >
-                          <Banknote className="w-4 h-4" />
-                          <span>Cobrar {formatBs(order.total)}</span>
-                        </button>
-                      )}
-
-                      {order.mode === 'dine-in' &&
-                        order.tableNumber &&
-                        tableObj?.status === 'ocupada' && (
-                          <button
-                            type="button"
-                            onClick={() => onFreeTable(order.tableNumber!)}
-                            className="flex-1 min-h-[40px] px-3 py-2 rounded-xl bg-[#FFFDF8] border border-[#3B1F0E] text-[#3B1F0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A]/30 cursor-pointer"
-                          >
-                            <Unlock className="w-3.5 h-3.5" />
-                            <span>Liberar Mesa {order.tableNumber}</span>
-                          </button>
-                        )}
-                    </div>
-                  </article>
-                );
-              })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'reports' && (
-          <div className="space-y-4">
-            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
-              {/* Sales by Category Chart */}
-              <section className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/65 p-3.5 lg:p-5 space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
-                    Ventas por categoría
-                  </h3>
-                  <span className="text-[11px] font-bold text-[#7A5A3A] tabular-nums">
-                    Total: {formatBs(totalSalesBs)}
-                  </span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {categoryReport.map((row) => (
-                    <div key={row.category} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-extrabold text-[#2B1A0E]">
-                        <span>{row.category}</span>
-                        <span className="tabular-nums">
-                          {row.percent}% ({formatBs(row.amount)})
-                        </span>
-                      </div>
-                      <div className="w-full h-3 rounded-full bg-[#E8C87A]/35 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-[#B84A27] transition-all"
-                          style={{ width: `${row.percent}%` }}
-                        />
-                      </div>
-                    </div>
                   ))}
                 </div>
-              </section>
+              </div>
 
-              {/* Inventory */}
-              <section className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/65 p-3.5 lg:p-5 space-y-2.5">
-                <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
-                  Inventario
-                </h3>
-                <div className="divide-y divide-[#D9A441]/30">
-                  {inventory.map((inv) => {
-                    const isLow = inv.status === 'Bajo stock';
+              {filteredOrders.length === 0 ? (
+                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-6 text-center space-y-2">
+                  <p className="font-serif-display text-base font-bold text-[#3B1F0E]">
+                    No hay pedidos en esta vista
+                  </p>
+                  <p className="text-xs text-[#7A5A3A]">
+                    Usa "Nuevo Pedido en Caja" o realiza un pedido como cliente para gestionarlo aquí.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4 items-start">
+                  {filteredOrders.map((order) => {
+                    const tableObj = order.tableNumber
+                      ? tables.find((t) => t.number === order.tableNumber)
+                      : undefined;
                     return (
-                      <div
-                        key={inv.id}
-                        className="py-2 flex items-center justify-between text-xs font-bold"
-                      >
-                        <span className="text-[#2B1A0E] inline-flex items-center gap-2">
-                          <span
-                            className={`w-2 h-2 rounded-full ${
-                              isLow ? 'bg-[#D9A441]' : 'bg-[#2E6F32]'
-                            }`}
-                          />
-                          {inv.name} {inv.quantity}
-                          {inv.unit}
-                        </span>
-                        <span
-                          className={`font-extrabold ${
-                            isLow ? 'text-[#B83227]' : 'text-[#2E6F32]'
-                          }`}
-                        >
-                          {inv.status}
-                        </span>
-                      </div>
+                      <OrderKdsCard
+                        key={order.id}
+                        order={order}
+                        isTableOccupied={tableObj?.status === 'ocupada'}
+                        onUpdateStatus={onUpdateOrderStatus}
+                        onOpenTicket={setTicketOrder}
+                        onStartCollect={setCollectingOrder}
+                        onFreeTable={onFreeTable}
+                      />
                     );
                   })}
                 </div>
-              </section>
+              )}
             </div>
+          )}
 
-            {reportMsg && (
-              <p className="text-xs font-bold text-[#2E6F32] bg-[#2E6F32]/15 px-3 py-2 rounded-xl text-center max-w-md mx-auto">
-                {reportMsg}
-              </p>
-            )}
+          {activeTab === 'reports' && (
+            <div className="space-y-4">
+              <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
+                <section className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3.5 lg:p-5 space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
+                      Ventas por categoría
+                    </h3>
+                    <span className="text-[11px] font-bold text-[#7A5A3A] tabular-nums">
+                      Total: {formatBs(totalSalesBs)}
+                    </span>
+                  </div>
 
-            <div className="grid grid-cols-2 gap-2.5 max-w-md lg:mx-auto">
-              <button
-                type="button"
-                onClick={handleDownloadReport}
-                className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
-              >
-                <Download className="w-4 h-4 shrink-0" />
-                <span>Descargar Reporte</span>
-              </button>
+                  <div className="space-y-2.5">
+                    {categoryReport.map((row) => (
+                      <div key={row.category} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs font-extrabold text-[#2B1A0E]">
+                          <span>{row.category}</span>
+                          <span className="tabular-nums">
+                            {row.percent}% ({formatBs(row.amount)})
+                          </span>
+                        </div>
+                        <div className="w-full h-3 rounded-full bg-[#E8C87A]/35 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[#B84A27] transition-all"
+                            style={{ width: `${row.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setInvDraft(inventory);
-                  setShowInvModal(true);
-                }}
-                className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[#FDF2D6] border border-[#3B1F0E] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A]/25 cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                <span>Actualizar Inventario</span>
-              </button>
+                <section className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3.5 lg:p-5 space-y-2.5">
+                  <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
+                    Inventario
+                  </h3>
+                  <div className="divide-y divide-[#D9A441]/30">
+                    {inventory.map((inv) => {
+                      const isLow = inv.status === 'Bajo stock';
+                      return (
+                        <div
+                          key={inv.id}
+                          className="py-2 flex items-center justify-between text-xs font-bold"
+                        >
+                          <span className="text-[#2B1A0E] tabular-nums">
+                            {inv.name} · {inv.quantity}
+                            {inv.unit}
+                          </span>
+                          <span
+                            className={`font-extrabold ${
+                              isLow ? 'text-[#B83227]' : 'text-[#2E6F32]'
+                            }`}
+                          >
+                            {inv.status}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+
+              {reportMsg && (
+                <p className="text-xs font-bold text-[#2E6F32] bg-[#2E6F32]/15 px-3 py-2 rounded-xl text-center max-w-md mx-auto">
+                  {reportMsg}
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md lg:mx-auto">
+                <button
+                  type="button"
+                  onClick={handleDownloadReport}
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>Descargar Reporte</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInvDraft(inventory);
+                    setShowInvModal(true);
+                  }}
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[#FFFDF8] border border-[#3B1F0E] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#FDF2D6] cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                  <span>Actualizar Inventario</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
 
-      {/* Modal: Collect Payment (Cobro de Mesa o Delivery en Caja) */}
-      {collectingOrder && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
-                Cobrar {collectingOrder.customerLabel}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setCollectingOrder(null)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/55 p-3 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#7A5A3A]">
-                Pedido {collectingOrder.code}
-              </span>
-              <span className="text-lg font-extrabold text-[#B84A27] tabular-nums">
-                {formatBs(collectingOrder.total)}
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-xs font-extrabold text-[#3B1F0E]">
-                Método de cobro:
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {PAYMENT_METHODS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setCollectMethod(m)}
-                    className={`min-h-[40px] px-2.5 py-1.5 rounded-xl border text-xs font-extrabold cursor-pointer ${
-                      collectMethod === m
-                        ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                        : 'bg-[#FDF2D6] border-[#D9A441]/55 text-[#2B1A0E]'
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setOpenTicketOnCollect((p) => !p)}
-              className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer pt-1"
-            >
-              <span
-                className={`w-4 h-4 rounded border flex items-center justify-center ${
-                  openTicketOnCollect
-                    ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#D9A441]'
-                    : 'border-[#7A5A3A]'
-                }`}
-              >
-                {openTicketOnCollect && <Check className="w-3 h-3" strokeWidth={3} />}
-              </span>
-              <span>Abrir Ticket (Imprimir / WhatsApp) al cobrar</span>
-            </button>
-
-            {collectingOrder.mode === 'dine-in' && collectingOrder.tableNumber && (
-              <p className="text-[11px] font-bold text-[#2E6F32] bg-[#2E6F32]/10 border border-[#2E6F32]/25 rounded-xl px-3 py-1.5">
-                Al confirmar el cobro, la Mesa {collectingOrder.tableNumber} pasará a estado Libre automáticamente.
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                const paidCopy: KitchenOrder = {
-                  ...collectingOrder,
-                  paid: true,
-                  paymentMethod: collectMethod,
-                };
-                onCollectOrderPayment(collectingOrder.id, collectMethod);
-                setCollectingOrder(null);
-                if (openTicketOnCollect) {
-                  setTicketOrder(paidCopy);
-                }
-              }}
-              className="w-full min-h-[46px] rounded-2xl bg-[#2E6F32] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Confirmar Cobro • {formatBs(collectingOrder.total)}</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Modal: Collect Payment */}
+      <CollectPaymentModal
+        order={collectingOrder}
+        onClose={() => setCollectingOrder(null)}
+        onConfirmCollect={(order, method, openTicket) => {
+          const paidCopy: KitchenOrder = {
+            ...order,
+            paid: true,
+            paymentMethod: method,
+          };
+          onCollectOrderPayment(order.id, method);
+          setCollectingOrder(null);
+          if (openTicket) {
+            setTicketOrder(paidCopy);
+          }
+        }}
+      />
 
       {/* Modal: POS New Order in Admin */}
-      {showPosModal && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-3">
-          <form
-            onSubmit={handleSubmitPosOrder}
-            className="w-full max-w-xl max-h-[90%] bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 flex flex-col gap-3 shadow-xl overflow-hidden"
-          >
-            <div className="flex items-center justify-between shrink-0">
-              <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
-                Nuevo Pedido en Caja
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowPosModal(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <PosOrderModal
+        isOpen={showPosModal}
+        title="Nuevo Pedido en Caja"
+        tables={tables}
+        menuItems={menuItems}
+        onClose={() => setShowPosModal(false)}
+        onCreatePosOrder={onCreatePosOrder}
+        onOpenTicket={setTicketOrder}
+      />
 
-            <div className="flex-1 overflow-y-auto phone-scroll space-y-3 pr-1">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPosMode('dine-in')}
-                  className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
-                    posMode === 'dine-in'
-                      ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                      : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
-                  }`}
-                >
-                  Mesa (Local)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPosMode('delivery')}
-                  className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
-                    posMode === 'delivery'
-                      ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                      : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
-                  }`}
-                >
-                  Delivery
-                </button>
-              </div>
-
-              {posMode === 'dine-in' ? (
-                <div>
-                  <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
-                    Seleccionar Mesa
-                  </label>
-                  <select
-                    value={posTable}
-                    onChange={(e) => setPosTable(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-bold text-[#2B1A0E]"
-                  >
-                    {tables.map((t) => (
-                      <option key={t.number} value={t.number}>
-                        Mesa {t.number} ({t.status === 'ocupada' ? 'Ocupada' : 'Libre'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={posAddress}
-                    onChange={(e) => setPosAddress(e.target.value)}
-                    placeholder="Dirección de entrega"
-                    className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                  />
-                  <input
-                    type="tel"
-                    required
-                    value={posPhone}
-                    onChange={(e) => setPosPhone(e.target.value)}
-                    placeholder="Teléfono"
-                    className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                  />
-                </div>
-              )}
-
-              <CategoryTabs
-                activeCategory={posCategory}
-                onSelectCategory={setPosCategory}
-                compact
-              />
-
-              <div className="space-y-1.5">
-                {menuItems
-                  .filter((m) => m.available && m.category === posCategory)
-                  .map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/45 p-2 space-y-1.5"
-                    >
-                      <p className="text-xs font-extrabold text-[#2B1A0E]">
-                        {item.name}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {item.sizes.map((sz) => (
-                          <button
-                            key={sz.id}
-                            type="button"
-                            onClick={() => addPosLine(item, sz)}
-                            className="px-2 py-1 rounded-lg bg-[#D9A441] text-[#2B1A0E] text-[10px] font-extrabold hover:bg-[#E8C87A] cursor-pointer"
-                          >
-                            + {sz.label} Bs {sz.price}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              {posItems.length > 0 && (
-                <div className="rounded-xl bg-[#FFFDF8] border border-[#B84A27]/40 p-2.5 space-y-1.5">
-                  <p className="text-xs font-extrabold text-[#B84A27]">
-                    Ítems en este pedido:
-                  </p>
-                  {posItems.map((it, idx) => (
-                    <div
-                      key={`${it.name}-${it.sizeLabel}-${idx}`}
-                      className="flex items-center justify-between text-xs font-bold"
-                    >
-                      <span className="truncate pr-2">
-                        {it.name} ({it.sizeLabel})
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => updatePosQty(idx, -1)}
-                          className="w-6 h-6 rounded-lg bg-[#FDF2D6] border border-[#D9A441] flex items-center justify-center cursor-pointer"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="tabular-nums">{it.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updatePosQty(idx, 1)}
-                          className="w-6 h-6 rounded-lg bg-[#D9A441] flex items-center justify-center cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <input
-                type="text"
-                value={posNotes}
-                onChange={(e) => setPosNotes(e.target.value)}
-                placeholder="Notas para cocina (opcional)"
-                className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 text-xs font-semibold text-[#2B1A0E]"
-              />
-
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setPosPayNow((p) => !p)}
-                  className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer"
-                >
-                  <span
-                    className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      posPayNow
-                        ? 'bg-[#2E6F32] border-[#2E6F32] text-white'
-                        : 'border-[#7A5A3A]'
-                    }`}
-                  >
-                    {posPayNow && <Check className="w-3 h-3" strokeWidth={3} />}
-                  </span>
-                  <span>Cobrar inmediatamente en caja</span>
-                </button>
-
-                {posPayNow && (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {PAYMENT_METHODS.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setPosPayMethod(m)}
-                        className={`py-1.5 px-2 rounded-lg border text-[11px] font-extrabold cursor-pointer ${
-                          posPayMethod === m
-                            ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                            : 'bg-[#FDF2D6] border-[#D9A441]/55'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setOpenTicketOnPos((p) => !p)}
-                  className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer pt-1"
-                >
-                  <span
-                    className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      openTicketOnPos
-                        ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#D9A441]'
-                        : 'border-[#7A5A3A]'
-                    }`}
-                  >
-                    {openTicketOnPos && <Check className="w-3 h-3" strokeWidth={3} />}
-                  </span>
-                  <span>Abrir Ticket (Imprimir / WhatsApp) al registrar</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={posItems.length === 0}
-              className="w-full min-h-[44px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-xs disabled:opacity-45 cursor-pointer shrink-0 tabular-nums"
-            >
-              {posPayNow
-                ? `Registrar y Cobrar • ${formatBs(posTotal)}`
-                : `Enviar a Cocina • ${formatBs(posTotal)}`}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Modal: Edit / Add Dish (Dynamic Sizes) */}
+      {/* Modal: Edit / Add Dish */}
       {(editingDish || isAddingDish) && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto flex p-4">
           <form
             onSubmit={handleSaveDishModal}
-            className="w-full max-w-md max-h-[88%] overflow-y-auto phone-scroll bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl"
+            className="my-auto mx-auto w-full max-w-md max-h-[92dvh] overflow-y-auto phone-scroll bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl"
           >
             <div className="flex items-center justify-between">
               <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
@@ -1621,7 +1175,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <select
                   value={dishCategory}
                   onChange={(e) =>
-                    handleCategoryChangeInAddModal(e.target.value as MenuCategory)
+                    handleCategoryChangeInAddModal(
+                      e.target.value as MenuCategory
+                    )
                   }
                   className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-sm font-semibold text-[#2B1A0E]"
                 >
@@ -1686,8 +1242,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
       {/* Modal: Update Inventory */}
       {showInvModal && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl">
+        <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto flex p-4">
+          <div className="my-auto mx-auto w-full max-w-md max-h-[92dvh] overflow-y-auto phone-scroll bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
               <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
                 Actualizar Inventario
@@ -1749,10 +1305,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         </div>
       )}
 
-      <TicketModal
-        order={ticketOrder}
-        onClose={() => setTicketOrder(null)}
-      />
+      <TicketModal order={ticketOrder} onClose={() => setTicketOrder(null)} />
     </div>
   );
 };

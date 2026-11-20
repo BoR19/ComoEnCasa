@@ -3,15 +3,24 @@ import {
   DishSizeOption,
   KitchenOrder,
   MenuCategory,
+  MenuItem,
   OrderLineItem,
   PaymentMethod,
+  TableItem,
 } from '../types/app';
+
+export type MenuFilterCategory = 'Todas' | MenuCategory;
 
 export const MENU_CATEGORIES: MenuCategory[] = [
   'Platos Fuertes',
   'Guisos',
   'Sopas',
   'Jugos',
+];
+
+export const MENU_FILTER_CATEGORIES: MenuFilterCategory[] = [
+  'Todas',
+  ...MENU_CATEGORIES,
 ];
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
@@ -23,6 +32,10 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
 
 export function formatBs(amount: number): string {
   return Number.isInteger(amount) ? `Bs ${amount}` : `Bs ${amount.toFixed(2)}`;
+}
+
+export function formatBsDecimal(amount: number): string {
+  return `Bs ${amount.toFixed(2)}`;
 }
 
 export function buildPriceBadge(sizes: DishSizeOption[]): string {
@@ -42,6 +55,48 @@ export function getCartTotal(cart: CartItem[]): number {
   return cart.reduce((acc, item) => acc + getCartLineTotal(item), 0);
 }
 
+export function getCartCount(cart: CartItem[]): number {
+  return cart.reduce((acc, item) => acc + item.quantity, 0);
+}
+
+export function getOrderLinesTotal(items: OrderLineItem[]): number {
+  return items.reduce((acc, it) => acc + it.price * it.quantity, 0);
+}
+
+export function getOrderLinesCount(items: OrderLineItem[]): number {
+  return items.reduce((acc, it) => acc + it.quantity, 0);
+}
+
+export function getTableStats(tables: TableItem[]): {
+  freeCount: number;
+  occupiedCount: number;
+  totalCount: number;
+  occupancyPct: number;
+} {
+  const freeCount = tables.filter((t) => t.status === 'libre').length;
+  const totalCount = tables.length;
+  const occupiedCount = totalCount - freeCount;
+  const occupancyPct =
+    totalCount > 0 ? Math.round((occupiedCount / totalCount) * 100) : 0;
+  return { freeCount, occupiedCount, totalCount, occupancyPct };
+}
+
+export function getCategoryCounts(
+  items: MenuItem[]
+): Record<MenuFilterCategory, number> {
+  const counts: Record<MenuFilterCategory, number> = {
+    Todas: items.length,
+    'Platos Fuertes': 0,
+    Guisos: 0,
+    Sopas: 0,
+    Jugos: 0,
+  };
+  for (const item of items) {
+    counts[item.category] = (counts[item.category] || 0) + 1;
+  }
+  return counts;
+}
+
 export function cartItemsToOrderLines(cart: CartItem[]): OrderLineItem[] {
   return cart.map((c) => {
     const extrasSummary = [
@@ -53,15 +108,20 @@ export function cartItemsToOrderLines(cart: CartItem[]): OrderLineItem[] {
       .filter(Boolean)
       .join(' · ');
 
-    return {
+    const line: OrderLineItem = {
       menuItemId: c.menuItemId,
       category: c.category,
       name: c.name,
       sizeLabel: c.sizeLabel,
       quantity: c.quantity,
       price: getCartLineUnitPrice(c),
-      extrasSummary: extrasSummary || undefined,
     };
+
+    if (extrasSummary) {
+      line.extrasSummary = extrasSummary;
+    }
+
+    return line;
   });
 }
 
@@ -70,6 +130,39 @@ export function getCurrentTimeLabel(): string {
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
+}
+
+export function getActiveOrderForTable(
+  orders: KitchenOrder[],
+  tables: TableItem[],
+  tableNumber: number
+): KitchenOrder | undefined {
+  const unpaid = orders.find(
+    (o) => o.mode === 'dine-in' && o.tableNumber === tableNumber && !o.paid
+  );
+  if (unpaid) return unpaid;
+
+  const tableObj = tables.find((t) => t.number === tableNumber);
+  if (tableObj?.status === 'ocupada') {
+    return orders.find(
+      (o) => o.mode === 'dine-in' && o.tableNumber === tableNumber
+    );
+  }
+  return undefined;
+}
+
+export type OrderFilterType = 'all' | 'unpaid' | 'dine-in' | 'delivery';
+
+export function filterOrdersByType(
+  orders: KitchenOrder[],
+  filter: OrderFilterType
+): KitchenOrder[] {
+  return orders.filter((o) => {
+    if (filter === 'unpaid') return !o.paid;
+    if (filter === 'dine-in') return o.mode === 'dine-in';
+    if (filter === 'delivery') return o.mode === 'delivery';
+    return true;
+  });
 }
 
 export function computeCategorySalesReport(

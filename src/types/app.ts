@@ -77,7 +77,7 @@ export interface CartItem {
 
 export type OrderMode = 'dine-in' | 'delivery';
 
-export type TableStatus = 'libre' | 'ocupada' | 'seleccionada';
+export type TableStatus = 'libre' | 'ocupada';
 
 export interface TableItem {
   number: number;

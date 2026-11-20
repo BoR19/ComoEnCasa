@@ -3,19 +3,17 @@ import { User } from 'firebase/auth';
 import {
   Banknote,
   BellRing,
-  Check,
   CheckCircle2,
   ChefHat,
   LogIn,
   LogOut,
-  Minus,
   Plus,
   Printer,
   Search,
+  ShoppingBag,
   Unlock,
   Utensils,
   UtensilsCrossed,
-  X,
 } from 'lucide-react';
 import {
   DishSizeOption,
@@ -29,10 +27,17 @@ import {
   TableItem,
 } from '../../types/app';
 import {
-  PAYMENT_METHODS,
+  OrderFilterType,
+  filterOrdersByType,
   formatBs,
+  getActiveOrderForTable,
+  getOrderLinesCount,
+  getOrderLinesTotal,
+  getTableStats,
 } from '../../utils/appHelpers';
 import { DishIllustration } from '../BrandAssets';
+import { CollectPaymentModal, OrderKdsCard } from '../OrderKdsCard';
+import { PosOrderModal } from '../PosOrderModal';
 import { CategoryTabs, MobileHeader } from '../ShellComponents';
 import { TicketModal } from '../TicketModal';
 
@@ -45,6 +50,8 @@ interface MozoScreenProps {
   firebaseUser: User | null;
   isStaff: boolean;
   authError?: string;
+  cartCount: number;
+  onOpenComanda: () => void;
   onGoogleSignIn: () => void;
   onCreatePosOrder: (payload: {
     mode: OrderMode;
@@ -55,7 +62,10 @@ interface MozoScreenProps {
     items: OrderLineItem[];
     payNowMethod?: PaymentMethod;
   }) => KitchenOrder;
-  onAppendOrderItems: (orderId: string, items: OrderLineItem[]) => KitchenOrder | undefined;
+  onAppendOrderItems: (
+    orderId: string,
+    items: OrderLineItem[]
+  ) => KitchenOrder | undefined;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
   onCollectOrderPayment: (orderId: string, method: PaymentMethod) => void;
   onDismissWaiterCall: (orderId: string) => void;
@@ -70,6 +80,8 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
   firebaseUser,
   isStaff,
   authError,
+  cartCount,
+  onOpenComanda,
   onGoogleSignIn,
   onCreatePosOrder,
   onAppendOrderItems,
@@ -82,37 +94,42 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
   const [activeTab, setActiveTab] = useState<MozoTab>('tables');
 
   // Menu search & category
-  const [menuCategory, setMenuCategory] = useState<MenuCategory>('Platos Fuertes');
+  const [menuCategory, setMenuCategory] =
+    useState<MenuCategory>('Platos Fuertes');
   const [menuQuery, setMenuQuery] = useState('');
 
   // Orders filter
-  const [orderFilter, setOrderFilter] = useState<'all' | 'unpaid' | 'dine-in' | 'delivery'>('all');
+  const [orderFilter, setOrderFilter] = useState<OrderFilterType>('all');
 
-  // Collect payment modal
-  const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(null);
-  const [collectMethod, setCollectMethod] = useState<PaymentMethod>('Efectivo');
-  const [openTicketOnCollect, setOpenTicketOnCollect] = useState(true);
-
-  // Ticket modal (Print / WhatsApp)
+  // Collect payment & Ticket modals
+  const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(
+    null
+  );
   const [ticketOrder, setTicketOrder] = useState<KitchenOrder | null>(null);
 
   // Comanda composer modal (New or Append to existing table order)
   const [showComposer, setShowComposer] = useState(false);
-  const [appendTargetOrder, setAppendTargetOrder] = useState<KitchenOrder | null>(null);
-  const [compMode, setCompMode] = useState<OrderMode>('dine-in');
-  const [compTable, setCompTable] = useState<number>(1);
-  const [compAddress, setCompAddress] = useState('');
-  const [compPhone, setCompPhone] = useState('');
-  const [compNotes, setCompNotes] = useState('');
-  const [compCategory, setCompCategory] = useState<MenuCategory>('Platos Fuertes');
+  const [appendTargetOrder, setAppendTargetOrder] =
+    useState<KitchenOrder | null>(null);
+  const [compInitialTable, setCompInitialTable] = useState<number>(1);
   const [compItems, setCompItems] = useState<OrderLineItem[]>([]);
-  const [compPayNow, setCompPayNow] = useState(false);
-  const [compPayMethod, setCompPayMethod] = useState<PaymentMethod>('Efectivo');
-  const [openTicketOnCreate, setOpenTicketOnCreate] = useState(true);
 
-  const freeTablesCount = tables.filter((t) => t.status === 'libre').length;
-  const occupiedTablesCount = tables.length - freeTablesCount;
-  const unpaidCount = kitchenOrders.filter((o) => !o.paid).length;
+  const switchTab = (next: MozoTab) => {
+    setCollectingOrder(null);
+    setShowComposer(false);
+    setAppendTargetOrder(null);
+    setTicketOrder(null);
+    setActiveTab(next);
+  };
+
+  const { freeCount: freeTablesCount, occupiedCount: occupiedTablesCount } =
+    useMemo(() => getTableStats(tables), [tables]);
+
+  const unpaidCount = useMemo(
+    () => kitchenOrders.filter((o) => !o.paid).length,
+    [kitchenOrders]
+  );
+
   const waiterRequests = useMemo(
     () => kitchenOrders.filter((o) => o.waiterRequested),
     [kitchenOrders]
@@ -126,49 +143,27 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
     });
   }, [menuItems, menuCategory, menuQuery]);
 
-  const filteredOrders = useMemo(() => {
-    return kitchenOrders.filter((o) => {
-      if (orderFilter === 'unpaid') return !o.paid;
-      if (orderFilter === 'dine-in') return o.mode === 'dine-in';
-      if (orderFilter === 'delivery') return o.mode === 'delivery';
-      return true;
-    });
-  }, [kitchenOrders, orderFilter]);
+  const filteredOrders = useMemo(
+    () => filterOrdersByType(kitchenOrders, orderFilter),
+    [kitchenOrders, orderFilter]
+  );
 
-  const getActiveOrderForTable = (tableNumber: number): KitchenOrder | undefined => {
-    return (
-      kitchenOrders.find(
-        (o) => o.mode === 'dine-in' && o.tableNumber === tableNumber && !o.paid
-      ) ||
-      kitchenOrders.find(
-        (o) => o.mode === 'dine-in' && o.tableNumber === tableNumber
-      )
-    );
-  };
+  const compTotal = useMemo(() => getOrderLinesTotal(compItems), [compItems]);
+  const compCount = useMemo(() => getOrderLinesCount(compItems), [compItems]);
 
   const openNewComanda = (tableNumber?: number) => {
     setAppendTargetOrder(null);
-    setCompMode('dine-in');
-    setCompTable(tableNumber ?? 1);
-    setCompAddress('');
-    setCompPhone('');
-    setCompNotes('');
-    setCompItems([]);
-    setCompPayNow(false);
+    setCompInitialTable(tableNumber ?? 1);
     setShowComposer(true);
   };
 
   const openAppendComanda = (order: KitchenOrder) => {
     setAppendTargetOrder(order);
-    setCompMode(order.mode);
-    setCompTable(order.tableNumber ?? 1);
-    setCompItems([]);
-    setCompNotes('');
-    setCompPayNow(false);
+    setCompInitialTable(order.tableNumber ?? 1);
     setShowComposer(true);
   };
 
-  const addLineItem = (item: MenuItem, size: DishSizeOption) => {
+  const handleQuickAddFromMenuTab = (item: MenuItem, size: DishSizeOption) => {
     if (!item.available) return;
     setCompItems((prev) => {
       const idx = prev.findIndex(
@@ -193,100 +188,66 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
     });
   };
 
-  const updateLineQty = (index: number, delta: number) => {
-    setCompItems((prev) =>
-      prev
-        .map((it, i) => (i === index ? { ...it, quantity: it.quantity + delta } : it))
-        .filter((it) => it.quantity > 0)
-    );
-  };
-
-  const compTotal = compItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
-
-  const handleQuickAddFromMenuTab = (item: MenuItem, size: DishSizeOption) => {
-    if (!item.available) return;
-    addLineItem(item, size);
-    if (!showComposer) {
-      setAppendTargetOrder(null);
-      setCompMode('dine-in');
-    }
-  };
-
-  const handleSubmitComposer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (compItems.length === 0) return;
-
-    if (appendTargetOrder) {
-      const updated = onAppendOrderItems(appendTargetOrder.id, compItems);
-      setShowComposer(false);
-      setCompItems([]);
-      setAppendTargetOrder(null);
-      if (updated && openTicketOnCreate) {
-        setTicketOrder(updated);
-      }
-      return;
-    }
-
-    const created = onCreatePosOrder({
-      mode: compMode,
-      tableNumber: compMode === 'dine-in' ? compTable : undefined,
-      deliveryAddress: compMode === 'delivery' ? compAddress : undefined,
-      deliveryPhone: compMode === 'delivery' ? compPhone : undefined,
-      notes: compNotes,
-      items: compItems,
-      payNowMethod: compPayNow ? compPayMethod : undefined,
-    });
-    setCompItems([]);
-    setCompNotes('');
-    setCompAddress('');
-    setCompPhone('');
-    setCompPayNow(false);
-    setShowComposer(false);
-    if (openTicketOnCreate) {
-      setTicketOrder(created);
-    }
-  };
-
   return (
     <div className="relative flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
       <MobileHeader
         title="Modo Mozo • Comandas"
         rightSlot={
-          <button
-            type="button"
-            onClick={onLogout}
-            aria-label="Cerrar sesión de mozo"
-            title="Cerrar sesión"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onOpenComanda}
+              aria-label="Abrir Comanda en Vivo"
+              title="Comanda en Vivo"
+              className="xl:hidden relative min-w-[40px] min-h-[40px] px-2 flex items-center justify-center rounded-xl bg-[#4A2C1A] text-[#D9A441] hover:bg-[#4A2C1A]/80 cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {cartCount > 0 && (
+                <span className="ml-1 text-[10px] font-extrabold text-[#FFF8E8] tabular-nums">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onLogout}
+              aria-label="Cerrar sesión de mozo"
+              title="Cerrar sesión"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         }
       />
 
       {/* Sub-navigation bar */}
-      <div className="bg-[#4A2C1A] px-2.5 py-2 shrink-0">
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-3 gap-1.5 lg:gap-2.5">
+      <div className="bg-[#4A2C1A] px-2 sm:px-2.5 py-2 shrink-0">
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-3 gap-1 sm:gap-1.5 lg:gap-2.5">
           {(
             [
               {
                 id: 'tables',
-                label: `Mesas (${freeTablesCount} lib.)`,
+                label: `Mesas (${freeTablesCount})`,
+                wideLabel: `Mesas (${freeTablesCount} lib.)`,
                 icon: UtensilsCrossed,
               },
               {
                 id: 'orders',
                 label: `Comandas (${unpaidCount})`,
+                wideLabel: `Comandas (${unpaidCount})`,
                 icon: ChefHat,
               },
               {
                 id: 'menu',
                 label: 'Menú',
+                wideLabel: 'Menú',
                 icon: Utensils,
               },
             ] as {
               id: MozoTab;
               label: string;
+              wideLabel: string;
               icon: React.ComponentType<{ className?: string }>;
             }[]
           ).map((tab) => {
@@ -296,15 +257,16 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`min-h-[38px] px-2 py-1.5 rounded-xl text-[11px] lg:text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+                onClick={() => switchTab(tab.id)}
+                className={`min-h-[38px] px-1.5 sm:px-2 py-1.5 rounded-xl text-[10px] sm:text-xs font-extrabold flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer min-w-0 ${
                   active
                     ? 'bg-[#D9A441] text-[#2B1A0E]'
                     : 'text-[#FFF8E8]/90 hover:bg-[#3B1F0E]'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{tab.label}</span>
+                <span className="sm:hidden truncate">{tab.label}</span>
+                <span className="hidden sm:inline truncate">{tab.wideLabel}</span>
               </button>
             );
           })}
@@ -314,7 +276,7 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-6 space-y-4">
-          {(!firebaseUser || !isStaff) ? (
+          {!firebaseUser || !isStaff ? (
             <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] p-3.5 space-y-2 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -335,7 +297,9 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                   className="px-3.5 py-2 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0"
                 >
                   <LogIn className="w-3.5 h-3.5" />
-                  <span>{firebaseUser ? 'Cambiar cuenta' : 'Conectar con Google'}</span>
+                  <span>
+                    {firebaseUser ? 'Cambiar cuenta' : 'Conectar con Google'}
+                  </span>
                 </button>
               </div>
               {authError && (
@@ -348,7 +312,9 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
             <div className="rounded-xl bg-[#2E6F32]/12 border border-[#2E6F32]/30 px-3 py-1.5 flex items-center justify-between text-[11px] font-extrabold text-[#2E6F32]">
               <span className="inline-flex items-center gap-1.5 truncate">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Sincronización en vivo activa · {firebaseUser.email}</span>
+                <span className="truncate">
+                  Sincronización en vivo activa · {firebaseUser.email}
+                </span>
               </span>
             </div>
           )}
@@ -381,7 +347,7 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                   <h2 className="font-serif-display text-xl lg:text-2xl font-bold text-[#2B1A0E]">
                     Mesas disponibles
                   </h2>
-                  <p className="text-xs font-bold text-[#7A5A3A]">
+                  <p className="text-xs font-bold text-[#7A5A3A] tabular-nums">
                     {freeTablesCount} libres · {occupiedTablesCount} ocupadas
                   </p>
                 </div>
@@ -399,7 +365,11 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
                 {tables.map((table) => {
                   const isOccupied = table.status === 'ocupada';
-                  const activeOrder = getActiveOrderForTable(table.number);
+                  const activeOrder = getActiveOrderForTable(
+                    kitchenOrders,
+                    tables,
+                    table.number
+                  );
 
                   return (
                     <div
@@ -407,7 +377,7 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                       className={`rounded-2xl border p-3.5 flex flex-col justify-between gap-2.5 transition-all ${
                         isOccupied
                           ? 'bg-[#FDF2D6] border-[#B84A27]/70'
-                          : 'bg-[#FFFDF8] border-[#D9A441]/70'
+                          : 'bg-[#FFFDF8] border-[#D9A441]/60'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1.5">
@@ -415,23 +385,18 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                           <p className="font-serif-display text-lg font-bold text-[#2B1A0E]">
                             Mesa {table.number}
                           </p>
-                          <p className="text-[11px] font-bold text-[#7A5A3A]">
+                          <p className="text-[11px] font-bold text-[#7A5A3A] tabular-nums">
                             Cap. {table.capacity} pers.
                           </p>
                         </div>
 
                         <span
-                          className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold inline-flex items-center gap-1 ${
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
                             isOccupied
                               ? 'bg-[#B83227]/15 text-[#B83227]'
                               : 'bg-[#2E6F32]/15 text-[#2E6F32]'
                           }`}
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isOccupied ? 'bg-[#B83227]' : 'bg-[#2E6F32]'
-                            }`}
-                          />
                           {isOccupied ? 'Ocupada' : 'Libre'}
                         </span>
                       </div>
@@ -448,7 +413,9 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                             <span>{activeOrder.status}</span>
                             <span
                               className={
-                                activeOrder.paid ? 'text-[#2E6F32]' : 'text-[#B84A27]'
+                                activeOrder.paid
+                                  ? 'text-[#2E6F32]'
+                                  : 'text-[#B84A27]'
                               }
                             >
                               {activeOrder.paid ? 'Pagado' : 'Sin cobrar'}
@@ -474,37 +441,34 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                         ) : (
                           <>
                             {activeOrder && (
-                              <div className="grid grid-cols-2 gap-1.5">
+                              <div className="grid grid-cols-2 gap-1 sm:gap-1.5">
                                 {!activeOrder.paid ? (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      setCollectMethod('Efectivo');
-                                      setCollectingOrder(activeOrder);
-                                    }}
-                                    className="min-h-[34px] px-2 py-1 rounded-xl bg-[#2E6F32] text-[#FFF8E8] text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                                    onClick={() => setCollectingOrder(activeOrder)}
+                                    className="min-h-[34px] px-1.5 sm:px-2 py-1 rounded-xl bg-[#2E6F32] text-[#FFF8E8] text-[10px] sm:text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                                   >
-                                    <Banknote className="w-3.5 h-3.5" />
-                                    <span>Cobrar</span>
+                                    <Banknote className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                                    <span className="truncate">Cobrar</span>
                                   </button>
                                 ) : (
                                   <button
                                     type="button"
                                     onClick={() => onFreeTable(table.number)}
-                                    className="min-h-[34px] px-2 py-1 rounded-xl bg-[#FFF8E8] border border-[#3B1F0E] text-[#3B1F0E] text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                                    className="min-h-[34px] px-1.5 sm:px-2 py-1 rounded-xl bg-[#FFF8E8] border border-[#3B1F0E] text-[#3B1F0E] text-[10px] sm:text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                                   >
-                                    <Unlock className="w-3 h-3" />
-                                    <span>Liberar</span>
+                                    <Unlock className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">Liberar</span>
                                   </button>
                                 )}
 
                                 <button
                                   type="button"
                                   onClick={() => setTicketOrder(activeOrder)}
-                                  className="min-h-[34px] px-2 py-1 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
+                                  className="min-h-[34px] px-1.5 sm:px-2 py-1 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-[10px] sm:text-[11px] font-extrabold flex items-center justify-center gap-1 cursor-pointer"
                                 >
-                                  <Printer className="w-3 h-3" />
-                                  <span>Ticket</span>
+                                  <Printer className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">Ticket</span>
                                 </button>
                               </div>
                             )}
@@ -557,10 +521,10 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                       key={f.id}
                       type="button"
                       onClick={() => setOrderFilter(f.id)}
-                      className={`min-h-[36px] rounded-xl text-[11px] font-extrabold border cursor-pointer ${
+                      className={`min-h-[36px] px-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border cursor-pointer truncate ${
                         orderFilter === f.id
                           ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                          : 'bg-[#FDF2D6] border-[#D9A441]/55 text-[#3B1F0E]'
+                          : 'bg-[#FFFDF8] border-[#D9A441]/55 text-[#3B1F0E]'
                       }`}
                     >
                       {f.label}
@@ -581,142 +545,20 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4 items-start">
                   {filteredOrders.map((order) => {
-                    const statuses: OrderStatus[] =
-                      order.mode === 'delivery'
-                        ? ['Preparando', 'En camino', 'Entregado']
-                        : ['Preparando', 'Listo', 'Entregado'];
-
                     const tableObj = order.tableNumber
                       ? tables.find((t) => t.number === order.tableNumber)
                       : undefined;
-
                     return (
-                      <article
+                      <OrderKdsCard
                         key={order.id}
-                        className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 p-3.5 space-y-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
-                              {order.customerLabel}
-                            </h3>
-                            <p className="text-[11px] font-bold text-[#7A5A3A]">
-                              {order.code} · {order.createdAt}
-                            </p>
-                          </div>
-
-                          <div className="text-right shrink-0">
-                            <span className="font-extrabold text-sm text-[#B84A27] tabular-nums block">
-                              {formatBs(order.total)}
-                            </span>
-                            <span
-                              className={`inline-block mt-0.5 px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                                order.paid
-                                  ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
-                                  : 'bg-[#B84A27]/15 text-[#B84A27]'
-                              }`}
-                            >
-                              {order.paid
-                                ? `Pagado (${order.paymentMethod})`
-                                : 'Pendiente de cobro'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="text-xs font-bold text-[#2B1A0E] space-y-0.5">
-                          {order.items.map((it, idx) => (
-                            <p key={idx}>
-                              • {it.quantity > 1 ? `${it.quantity}x ` : ''}
-                              {it.name} {it.sizeLabel} ({formatBs(it.price * it.quantity)})
-                            </p>
-                          ))}
-                        </div>
-
-                        {order.deliveryAddress && (
-                          <p className="text-[11px] font-semibold text-[#1E8299]">
-                            Dirección: {order.deliveryAddress} ({order.deliveryPhone})
-                          </p>
-                        )}
-
-                        {order.notes && (
-                          <div className="text-xs text-[#7A5A3A] bg-[#FFFDF8] px-3 py-1.5 rounded-xl border border-[#D9A441]/30">
-                            <span className="font-extrabold text-[#3B1F0E]">Notas: </span>
-                            {order.notes}
-                          </div>
-                        )}
-
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-extrabold text-[#3B1F0E]">Estado:</p>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {statuses.map((st) => {
-                              const active = order.status === st;
-                              return (
-                                <button
-                                  key={st}
-                                  type="button"
-                                  onClick={() => onUpdateOrderStatus(order.id, st)}
-                                  className={`min-h-[34px] px-2 py-1 rounded-xl text-[11px] font-extrabold border transition-colors cursor-pointer ${
-                                    active
-                                      ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                                      : 'bg-[#FFFDF8] border-[#D9A441]/50 text-[#7A5A3A]'
-                                  }`}
-                                >
-                                  {st}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setTicketOrder(order)}
-                            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                            <span>Ticket / WA</span>
-                          </button>
-
-                          {!order.paid && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => openAppendComanda(order)}
-                                className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-[#3B1F0E] font-extrabold text-xs flex items-center justify-center gap-1 hover:bg-[#E8C87A]/25 cursor-pointer"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Agregar</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCollectMethod('Efectivo');
-                                  setCollectingOrder(order);
-                                }}
-                                className="flex-1 min-h-[38px] px-3 py-1.5 rounded-xl bg-[#2E6F32] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:opacity-95 cursor-pointer tabular-nums"
-                              >
-                                <Banknote className="w-4 h-4" />
-                                <span>Cobrar {formatBs(order.total)}</span>
-                              </button>
-                            </>
-                          )}
-
-                          {order.mode === 'dine-in' &&
-                            order.tableNumber &&
-                            tableObj?.status === 'ocupada' && (
-                              <button
-                                type="button"
-                                onClick={() => onFreeTable(order.tableNumber!)}
-                                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#FFFDF8] border border-[#3B1F0E] text-[#3B1F0E] font-extrabold text-xs flex items-center justify-center gap-1 hover:bg-[#E8C87A]/30 cursor-pointer"
-                              >
-                                <Unlock className="w-3.5 h-3.5" />
-                                <span>Liberar Mesa {order.tableNumber}</span>
-                              </button>
-                            )}
-                        </div>
-                      </article>
+                        order={order}
+                        isTableOccupied={tableObj?.status === 'ocupada'}
+                        onUpdateStatus={onUpdateOrderStatus}
+                        onOpenTicket={setTicketOrder}
+                        onStartCollect={setCollectingOrder}
+                        onFreeTable={onFreeTable}
+                        onAppendItems={openAppendComanda}
+                      />
                     );
                   })}
                 </div>
@@ -750,9 +592,11 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
 
               {compItems.length > 0 && (
                 <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] p-3 flex flex-wrap items-center justify-between gap-2 shadow-sm">
-                  <span className="text-xs font-extrabold">
-                    Borrador de comanda: {compItems.reduce((a, b) => a + b.quantity, 0)} ítems ·{' '}
-                    <span className="text-[#D9A441] tabular-nums">{formatBs(compTotal)}</span>
+                  <span className="text-xs font-extrabold tabular-nums">
+                    Borrador de comanda: {compCount} ítems ·{' '}
+                    <span className="text-[#D9A441]">
+                      {formatBs(compTotal)}
+                    </span>
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -780,13 +624,17 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
                 {filteredMenu.map((item) => (
                   <article
                     key={item.id}
-                    className={`rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 p-3 flex flex-col justify-between gap-2.5 ${
+                    className={`rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 flex flex-col justify-between gap-2.5 ${
                       !item.available ? 'opacity-65' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-16 h-14 rounded-xl overflow-hidden shrink-0 border border-[#D9A441]/40">
-                        <DishIllustration visualType={item.visualType} dishId={item.id} name={item.name} />
+                        <DishIllustration
+                          visualType={item.visualType}
+                          dishId={item.id}
+                          name={item.name}
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
@@ -831,349 +679,43 @@ export const MozoScreen: React.FC<MozoScreenProps> = ({
       </div>
 
       {/* Modal: Cobrar Comanda */}
-      {collectingOrder && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
-                Cobrar {collectingOrder.customerLabel}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setCollectingOrder(null)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/55 p-3 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#7A5A3A]">
-                Comanda {collectingOrder.code}
-              </span>
-              <span className="text-lg font-extrabold text-[#B84A27] tabular-nums">
-                {formatBs(collectingOrder.total)}
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-xs font-extrabold text-[#3B1F0E]">
-                Método de cobro:
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {PAYMENT_METHODS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setCollectMethod(m)}
-                    className={`min-h-[40px] px-2.5 py-1.5 rounded-xl border text-xs font-extrabold cursor-pointer ${
-                      collectMethod === m
-                        ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                        : 'bg-[#FDF2D6] border-[#D9A441]/55 text-[#2B1A0E]'
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setOpenTicketOnCollect((p) => !p)}
-              className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer pt-1"
-            >
-              <span
-                className={`w-4 h-4 rounded border flex items-center justify-center ${
-                  openTicketOnCollect
-                    ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#D9A441]'
-                    : 'border-[#7A5A3A]'
-                }`}
-              >
-                {openTicketOnCollect && <Check className="w-3 h-3" strokeWidth={3} />}
-              </span>
-              <span>Abrir Ticket (Imprimir / WhatsApp) al cobrar</span>
-            </button>
-
-            {collectingOrder.mode === 'dine-in' && collectingOrder.tableNumber && (
-              <p className="text-[11px] font-bold text-[#2E6F32] bg-[#2E6F32]/10 border border-[#2E6F32]/25 rounded-xl px-3 py-1.5">
-                Al confirmar el cobro, la Mesa {collectingOrder.tableNumber} pasará a estado Libre automáticamente.
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                const paidCopy: KitchenOrder = {
-                  ...collectingOrder,
-                  paid: true,
-                  paymentMethod: collectMethod,
-                };
-                onCollectOrderPayment(collectingOrder.id, collectMethod);
-                setCollectingOrder(null);
-                if (openTicketOnCollect) {
-                  setTicketOrder(paidCopy);
-                }
-              }}
-              className="w-full min-h-[46px] rounded-2xl bg-[#2E6F32] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Confirmar Cobro • {formatBs(collectingOrder.total)}</span>
-            </button>
-          </div>
-        </div>
-      )}
+      <CollectPaymentModal
+        order={collectingOrder}
+        onClose={() => setCollectingOrder(null)}
+        onConfirmCollect={(order, method, openTicket) => {
+          const paidCopy: KitchenOrder = {
+            ...order,
+            paid: true,
+            paymentMethod: method,
+          };
+          onCollectOrderPayment(order.id, method);
+          setCollectingOrder(null);
+          if (openTicket) {
+            setTicketOrder(paidCopy);
+          }
+        }}
+      />
 
       {/* Modal: Nueva Comanda / Agregar Platos */}
-      {showComposer && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-3">
-          <form
-            onSubmit={handleSubmitComposer}
-            className="w-full max-w-xl max-h-[90%] bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 flex flex-col gap-3 shadow-xl overflow-hidden"
-          >
-            <div className="flex items-center justify-between shrink-0">
-              <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
-                {appendTargetOrder
-                  ? `Agregar platos · ${appendTargetOrder.customerLabel} (${appendTargetOrder.code})`
-                  : 'Nueva Comanda de Mozo'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowComposer(false);
-                  setAppendTargetOrder(null);
-                }}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto phone-scroll space-y-3 pr-1">
-              {!appendTargetOrder && (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCompMode('dine-in')}
-                      className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
-                        compMode === 'dine-in'
-                          ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                          : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
-                      }`}
-                    >
-                      Mesa (Local)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCompMode('delivery')}
-                      className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
-                        compMode === 'delivery'
-                          ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                          : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
-                      }`}
-                    >
-                      Delivery
-                    </button>
-                  </div>
-
-                  {compMode === 'dine-in' ? (
-                    <div>
-                      <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
-                        Seleccionar Mesa
-                      </label>
-                      <select
-                        value={compTable}
-                        onChange={(e) => setCompTable(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-bold text-[#2B1A0E]"
-                      >
-                        {tables.map((t) => (
-                          <option key={t.number} value={t.number}>
-                            Mesa {t.number} ({t.status === 'ocupada' ? 'Ocupada' : 'Libre'})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={compAddress}
-                        onChange={(e) => setCompAddress(e.target.value)}
-                        placeholder="Dirección de entrega"
-                        className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                      />
-                      <input
-                        type="tel"
-                        required
-                        value={compPhone}
-                        onChange={(e) => setCompPhone(e.target.value)}
-                        placeholder="Teléfono / WhatsApp"
-                        className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-
-              <CategoryTabs
-                activeCategory={compCategory}
-                onSelectCategory={setCompCategory}
-                compact
-              />
-
-              <div className="space-y-1.5">
-                {menuItems
-                  .filter((m) => m.available && m.category === compCategory)
-                  .map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/45 p-2 space-y-1.5"
-                    >
-                      <p className="text-xs font-extrabold text-[#2B1A0E]">
-                        {item.name}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {item.sizes.map((sz) => (
-                          <button
-                            key={sz.id}
-                            type="button"
-                            onClick={() => addLineItem(item, sz)}
-                            className="px-2 py-1 rounded-lg bg-[#D9A441] text-[#2B1A0E] text-[10px] font-extrabold hover:bg-[#E8C87A] cursor-pointer"
-                          >
-                            + {sz.label} Bs {sz.price}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              {compItems.length > 0 && (
-                <div className="rounded-xl bg-[#FFFDF8] border border-[#B84A27]/40 p-2.5 space-y-1.5">
-                  <p className="text-xs font-extrabold text-[#B84A27]">
-                    Ítems en esta comanda:
-                  </p>
-                  {compItems.map((it, idx) => (
-                    <div
-                      key={`${it.name}-${it.sizeLabel}-${idx}`}
-                      className="flex items-center justify-between text-xs font-bold"
-                    >
-                      <span className="truncate pr-2">
-                        {it.name} ({it.sizeLabel})
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => updateLineQty(idx, -1)}
-                          className="w-6 h-6 rounded-lg bg-[#FDF2D6] border border-[#D9A441] flex items-center justify-center cursor-pointer"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="tabular-nums">{it.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateLineQty(idx, 1)}
-                          className="w-6 h-6 rounded-lg bg-[#D9A441] flex items-center justify-center cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!appendTargetOrder && (
-                <>
-                  <input
-                    type="text"
-                    value={compNotes}
-                    onChange={(e) => setCompNotes(e.target.value)}
-                    placeholder="Notas para cocina (opcional)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 text-xs font-semibold text-[#2B1A0E]"
-                  />
-
-                  <div className="space-y-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setCompPayNow((p) => !p)}
-                      className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer"
-                    >
-                      <span
-                        className={`w-4 h-4 rounded border flex items-center justify-center ${
-                          compPayNow
-                            ? 'bg-[#2E6F32] border-[#2E6F32] text-white'
-                            : 'border-[#7A5A3A]'
-                        }`}
-                      >
-                        {compPayNow && <Check className="w-3 h-3" strokeWidth={3} />}
-                      </span>
-                      <span>Cobrar inmediatamente</span>
-                    </button>
-
-                    {compPayNow && (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {PAYMENT_METHODS.map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => setCompPayMethod(m)}
-                            className={`py-1.5 px-2 rounded-lg border text-[11px] font-extrabold cursor-pointer ${
-                              compPayMethod === m
-                                ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                                : 'bg-[#FDF2D6] border-[#D9A441]/55'
-                            }`}
-                          >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setOpenTicketOnCreate((p) => !p)}
-                className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer pt-1"
-              >
-                <span
-                  className={`w-4 h-4 rounded border flex items-center justify-center ${
-                    openTicketOnCreate
-                      ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#D9A441]'
-                      : 'border-[#7A5A3A]'
-                  }`}
-                >
-                  {openTicketOnCreate && <Check className="w-3 h-3" strokeWidth={3} />}
-                </span>
-                <span>Abrir Ticket (Imprimir / WhatsApp) al guardar</span>
-              </button>
-            </div>
-
-            <button
-              type="submit"
-              disabled={compItems.length === 0}
-              className="w-full min-h-[44px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-xs disabled:opacity-45 cursor-pointer shrink-0 tabular-nums"
-            >
-              {appendTargetOrder
-                ? `Agregar a ${appendTargetOrder.customerLabel} • ${formatBs(compTotal)}`
-                : compPayNow
-                ? `Registrar y Cobrar • ${formatBs(compTotal)}`
-                : `Enviar Comanda a Cocina • ${formatBs(compTotal)}`}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <TicketModal
-        order={ticketOrder}
-        onClose={() => setTicketOrder(null)}
+      <PosOrderModal
+        isOpen={showComposer}
+        title="Nueva Comanda de Mozo"
+        tables={tables}
+        menuItems={menuItems}
+        initialTable={compInitialTable}
+        appendTargetOrder={appendTargetOrder}
+        draftItems={compItems}
+        onClose={() => {
+          setShowComposer(false);
+          setAppendTargetOrder(null);
+        }}
+        onCreatePosOrder={onCreatePosOrder}
+        onAppendOrderItems={onAppendOrderItems}
+        onOpenTicket={setTicketOrder}
+        onClearDraftItems={() => setCompItems([])}
       />
+
+      <TicketModal order={ticketOrder} onClose={() => setTicketOrder(null)} />
     </div>
   );
 };

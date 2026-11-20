@@ -125,8 +125,8 @@ export const TableQrScreen: React.FC<TableQrScreenProps> = ({
     <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
       <MobileHeader title="Escanea el QR" onBack={onBack} />
 
-      <div className="flex-1 overflow-y-auto phone-scroll flex items-center">
-        <div className="max-w-3xl mx-auto w-full px-5 lg:px-8 py-6 flex flex-col lg:grid lg:grid-cols-2 lg:gap-10 items-center justify-center text-center space-y-4 lg:space-y-0">
+      <div className="flex-1 overflow-y-auto phone-scroll flex flex-col">
+        <div className="my-auto max-w-3xl mx-auto w-full px-5 lg:px-8 py-6 flex flex-col lg:grid lg:grid-cols-2 lg:gap-10 items-center justify-center text-center space-y-4 lg:space-y-0">
           <div className="flex flex-col items-center space-y-3">
             <OfficialLogo size="md" />
             <div className="space-y-1">
@@ -265,7 +265,7 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
 
             {/* Estado, Resumen & Desktop Actions */}
             <div className="space-y-4 lg:col-span-5">
-              <div className="flex items-center justify-between gap-2 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-[#2B1A0E]">Estado:</span>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs">

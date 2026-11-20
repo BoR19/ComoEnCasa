@@ -9,7 +9,11 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import { MenuCategory, ScreenId } from '../types/app';
-import { MENU_CATEGORIES } from '../utils/appHelpers';
+import {
+  MENU_CATEGORIES,
+  MENU_FILTER_CATEGORIES,
+  MenuFilterCategory,
+} from '../utils/appHelpers';
 
 interface MobileHeaderProps {
   title: string;
@@ -29,8 +33,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onCartClick,
 }) => {
   return (
-    <header className="sticky top-0 z-30 h-14 bg-[#3B1F0E] text-[#FFF8E8] px-3 flex items-center justify-between shrink-0 shadow-sm border-b border-[#D9A441]/25">
-      <div className="w-11 flex items-center justify-start">
+    <header className="sticky top-0 z-30 h-14 bg-[#3B1F0E] text-[#FFF8E8] px-2.5 sm:px-3 flex items-center justify-between gap-2 shrink-0 shadow-sm border-b border-[#D9A441]/25">
+      <div className="min-w-[44px] flex items-center justify-start shrink-0">
         {onBack && (
           <button
             type="button"
@@ -43,11 +47,11 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         )}
       </div>
 
-      <h1 className="font-serif-display text-lg font-bold tracking-wide text-[#FFF8E8] text-center truncate px-2">
+      <h1 className="flex-1 min-w-0 font-serif-display text-base sm:text-lg font-bold tracking-wide text-[#FFF8E8] text-center truncate px-1">
         {title}
       </h1>
 
-      <div className="w-11 flex items-center justify-end">
+      <div className="min-w-[44px] flex items-center justify-end shrink-0">
         {rightSlot
           ? rightSlot
           : showCartBadge && onCartClick && (
@@ -70,20 +74,24 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   );
 };
 
-interface CategoryTabsProps {
-  activeCategory: MenuCategory;
-  onSelectCategory: (cat: MenuCategory) => void;
+interface CategoryTabsProps<T extends MenuFilterCategory = MenuCategory> {
+  activeCategory: T;
+  onSelectCategory: (cat: T) => void;
   compact?: boolean;
+  includeAll?: boolean;
 }
 
-export const CategoryTabs: React.FC<CategoryTabsProps> = ({
+export function CategoryTabs<T extends MenuFilterCategory = MenuCategory>({
   activeCategory,
   onSelectCategory,
   compact = false,
-}) => {
+  includeAll = false,
+}: CategoryTabsProps<T>) {
+  const list = (includeAll ? MENU_FILTER_CATEGORIES : MENU_CATEGORIES) as T[];
+
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-      {MENU_CATEGORIES.map((category) => {
+      {list.map((category) => {
         const isActive = activeCategory === category;
         return (
           <button
@@ -91,11 +99,13 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             type="button"
             onClick={() => onSelectCategory(category)}
             className={`${
-              compact ? 'min-h-[34px] px-3 text-[11px]' : 'min-h-[38px] px-3.5 text-xs'
-            } py-1.5 rounded-2xl font-extrabold whitespace-nowrap shrink-0 border transition-colors cursor-pointer ${
+              compact
+                ? 'min-h-[34px] px-3 text-[11px]'
+                : 'min-h-[38px] px-3.5 text-xs'
+            } py-1.5 rounded-full font-extrabold whitespace-nowrap shrink-0 border transition-colors duration-150 cursor-pointer ${
               isActive
                 ? 'bg-[#B84A27] text-[#FFF8E8] border-[#B84A27] shadow-xs'
-                : 'bg-[#FDF2D6] text-[#3B1F0E] border-[#D9A441]/55 hover:bg-[#E8C87A]/35'
+                : 'bg-[#FFFDF8] text-[#3B1F0E] border-[#D9A441]/55 hover:bg-[#FDF2D6]'
             }`}
           >
             {category}
@@ -104,7 +114,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
       })}
     </div>
   );
-};
+}
 
 interface BottomNavProps {
   currentScreen: ScreenId;
@@ -158,9 +168,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Navegación principal"
-      className="lg:hidden sticky bottom-0 z-30 bg-[#3B1F0E] border-t border-[#D9A441]/30 px-2 py-1.5 shrink-0"
+      className="lg:hidden sticky bottom-0 z-30 bg-[#3B1F0E] border-t border-[#D9A441]/30 px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shrink-0"
     >
-      <div className="grid grid-cols-5 items-center">
+      <div className="max-w-2xl mx-auto grid grid-cols-5 items-center">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchScreens.includes(currentScreen);
@@ -175,12 +185,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   : 'text-[#D9A441]/80 hover:text-[#E8C87A]'
               }`}
             >
-              <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-              {item.id === 'favorites' && favoritesCount > 0 && (
-                <span className="absolute top-1 right-3.5 min-w-[14px] h-[14px] px-1 rounded-full bg-[#B84A27] text-[#FFF8E8] text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none">
-                  {favoritesCount}
-                </span>
-              )}
+              <span className="relative inline-flex items-center justify-center">
+                <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                {item.id === 'favorites' && favoritesCount > 0 && (
+                  <span className="absolute -top-1 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#B84A27] text-[#FFF8E8] text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none">
+                    {favoritesCount}
+                  </span>
+                )}
+              </span>
               <span className="text-[10px] font-bold tracking-tight whitespace-nowrap">
                 {item.label}
               </span>

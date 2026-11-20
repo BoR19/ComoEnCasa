@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { LogIn, X } from 'lucide-react';
+import { LogIn, ShoppingBag, X } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
+import { AppUserRole, LiveCartPanel } from './components/LiveCartPanel';
 import { BottomNav } from './components/ShellComponents';
 import { AdminLoginScreen, AdminPanelScreen } from './components/screens/AdminScreens';
 import { CartScreen } from './components/screens/CartScreen';
@@ -41,6 +42,7 @@ import {
   collectOrderPaymentInFirestore,
   createOrderInFirestore,
   customerPayOrderInFirestore,
+  deleteOrderInFirestore,
   freeTableInFirestore,
   rateOrderInFirestore,
   removeAuthorizedStaffInFirestore,
@@ -56,6 +58,7 @@ import {
   subscribeStaffConfig,
   subscribeTables,
   toggleAuthorizedStaffInFirestore,
+  updateOrderItemsInFirestore,
   updateOrderStatusInFirestore,
   upsertMenuItemInFirestore,
 } from './services/firestoreService';
@@ -78,8 +81,11 @@ import {
 import {
   cartItemsToOrderLines,
   formatBs,
+  getActiveOrderForTable,
+  getCartCount,
   getCartTotal,
   getCurrentTimeLabel,
+  getOrderLinesTotal,
 } from './utils/appHelpers';
 
 export default function App() {
@@ -98,8 +104,9 @@ export default function App() {
   const isStaff = isAdminUser || isMozoStaff;
   const popupInFlightRef = useRef<boolean>(false);
 
-  // Customer Google Sign-In modal prompt (triggered on order send / payment if unsigned)
+  // Customer Google Sign-In modal prompt & slide-over cart drawer
   const [showGooglePrompt, setShowGooglePrompt] = useState<boolean>(false);
+  const [showCartDrawer, setShowCartDrawer] = useState<boolean>(false);
   const pendingAuthActionRef = useRef<((user: User) => void) | null>(null);
 
   // Global reactive app state (hydrated & synced in real time via Firestore)
@@ -129,6 +136,13 @@ export default function App() {
   const [isMozoAuthenticated, setIsMozoAuthenticated] = useState<boolean>(false);
   const [mozoPin, setMozoPin] = useState<string>('1234');
   const [toastMsg, setToastMsg] = useState<string>('');
+
+  const userRole: AppUserRole = isAdminAuthenticated
+    ? 'admin'
+    : isMozoAuthenticated
+    ? 'mozo'
+    : 'customer';
+  const isStaffSession = userRole !== 'customer';
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -171,6 +185,9 @@ export default function App() {
   useEffect(() => {
     if (isAdminUser && currentScreen === 'admin-login') {
       setIsAdminAuthenticated(true);
+      setShowCartDrawer(false);
+      setShowGooglePrompt(false);
+      pendingAuthActionRef.current = null;
       setNavDirection(1);
       setHistory((prev) => (prev[prev.length - 1] === 'admin-panel' ? prev : [...prev, 'admin-panel']));
     }
@@ -283,11 +300,19 @@ export default function App() {
       return;
     }
     setAuthError('');
+    setShowCartDrawer(false);
     pendingAuthActionRef.current = action;
     setShowGooglePrompt(true);
   };
 
+  const closeActiveOverlays = () => {
+    setShowCartDrawer(false);
+    setShowGooglePrompt(false);
+    pendingAuthActionRef.current = null;
+  };
+
   const navigate = (screen: ScreenId) => {
+    closeActiveOverlays();
     let target = screen;
     if (target === 'admin-panel' && !isAdminAuthenticated) {
       target = 'admin-login';
@@ -305,6 +330,7 @@ export default function App() {
   };
 
   const goBack = () => {
+    closeActiveOverlays();
     setNavDirection(-1);
     setHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : ['welcome']));
   };
@@ -317,10 +343,7 @@ export default function App() {
     [menuItems, selectedDishId]
   );
 
-  const cartCount = useMemo(
-    () => cart.reduce((acc, item) => acc + item.quantity, 0),
-    [cart]
-  );
+  const cartCount = useMemo(() => getCartCount(cart), [cart]);
 
   const cartTotal = useMemo(() => getCartTotal(cart), [cart]);
 
@@ -329,17 +352,13 @@ export default function App() {
       const byId = kitchenOrders.find(
         (o) => o.id === activeTableOrderId && o.tableNumber === selectedTable
       );
-      if (byId) return byId;
+      const tableObj = tables.find((t) => t.number === selectedTable);
+      if (byId && (!byId.paid || tableObj?.status === 'ocupada')) {
+        return byId;
+      }
     }
-    return (
-      kitchenOrders.find(
-        (o) => o.mode === 'dine-in' && o.tableNumber === selectedTable && !o.paid
-      ) ||
-      kitchenOrders.find(
-        (o) => o.mode === 'dine-in' && o.tableNumber === selectedTable
-      )
-    );
-  }, [kitchenOrders, activeTableOrderId, selectedTable]);
+    return getActiveOrderForTable(kitchenOrders, tables, selectedTable);
+  }, [kitchenOrders, tables, activeTableOrderId, selectedTable]);
 
   const activeDeliveryOrder = useMemo(() => {
     if (activeDeliveryOrderId) {
@@ -402,10 +421,6 @@ export default function App() {
       ];
     });
     showToast(`${item.name} (${size.label}) agregado al carrito`);
-  };
-
-  const handleQuickAdd = (item: MenuItem) => {
-    handleAddToCart(item, item.sizes[0], []);
   };
 
   const handleUpdateCartQuantity = (cartItemId: string, delta: number) => {
@@ -484,15 +499,17 @@ export default function App() {
     navigate('cart');
   };
 
-  const executeDineInOrder = (user: User) => {
+  const executeDineInOrder = (ownerUid: string, stayInWorkspace = false) => {
     const lines = cartItemsToOrderLines(cart);
     const existingUnpaid = kitchenOrders.find(
       (o) =>
         o.mode === 'dine-in' &&
         o.tableNumber === selectedTable &&
         !o.paid &&
-        (isStaff || o.customerUid === user.uid)
+        (isStaffSession || isStaff || o.customerUid === ownerUid)
     );
+
+    const canSyncCloud = Boolean(firebaseUser && firebaseUser.emailVerified);
 
     if (existingUnpaid) {
       const updatedItems = [...existingUnpaid.items, ...lines];
@@ -510,23 +527,25 @@ export default function App() {
         )
       );
       setActiveTableOrderId(existingUnpaid.id);
-      void appendOrderItemsInFirestore({
-        orderId: existingUnpaid.id,
-        items: updatedItems,
-        total: updatedTotal,
-        status: 'Preparando',
-      });
+      if (canSyncCloud) {
+        void appendOrderItemsInFirestore({
+          orderId: existingUnpaid.id,
+          items: updatedItems,
+          total: updatedTotal,
+          status: 'Preparando',
+        });
+      }
     } else {
       const newOrderId = `ord-mesa-${Date.now()}`;
       const newOrder: KitchenOrder = {
         id: newOrderId,
         code: buildOrderCode(kitchenOrders.length),
-        customerUid: user.uid,
+        customerUid: ownerUid,
         mode: 'dine-in',
         tableNumber: selectedTable,
         customerLabel: `Mesa ${selectedTable}`,
         items: lines,
-        notes: 'Pedido desde mesa',
+        notes: isStaffSession ? 'Tomado desde Comanda en Vivo' : 'Pedido desde mesa',
         status: 'Preparando',
         total: cartTotal,
         estimatedMinutes: 15,
@@ -543,29 +562,45 @@ export default function App() {
         )
       );
 
-      void createOrderInFirestore({
-        order: newOrder,
-        customerUid: user.uid,
-        occupyTableIfNeeded: {
-          tableNumber: selectedTable,
-          capacity: tableObj?.capacity || 4,
-          isCurrentlyFree: tableObj?.status === 'libre',
-          isStaff,
-        },
-      });
+      if (canSyncCloud) {
+        void createOrderInFirestore({
+          order: newOrder,
+          customerUid: ownerUid,
+          occupyTableIfNeeded: {
+            tableNumber: selectedTable,
+            capacity: tableObj?.capacity || 4,
+            isCurrentlyFree: tableObj?.status === 'libre',
+            isStaff: isStaff || isStaffSession,
+          },
+        });
+      }
     }
 
     setCart([]);
-    showToast(`Pedido enviado a Cocina · Mesa ${selectedTable}`);
-    navigate('tables-order');
+    if (!canSyncCloud && isStaffSession) {
+      showToast('Conecta Google autorizado para sincronizar en la nube');
+    } else {
+      showToast(`Pedido enviado a Cocina · Mesa ${selectedTable}`);
+    }
+    if (!stayInWorkspace) {
+      navigate('tables-order');
+    }
   };
 
   const handleCartProceedOrder = () => {
     if (cart.length === 0) return;
 
     if (orderMode === 'dine-in') {
+      if (isStaffSession) {
+        const uid =
+          firebaseUser && firebaseUser.emailVerified
+            ? firebaseUser.uid
+            : 'local-staff';
+        executeDineInOrder(uid, true);
+        return;
+      }
       requireVerifiedCustomer((user) => {
-        executeDineInOrder(user);
+        executeDineInOrder(user.uid, false);
       });
     } else {
       navigate('delivery-info');
@@ -763,7 +798,7 @@ export default function App() {
     items: OrderLineItem[];
     payNowMethod?: PaymentMethod;
   }): KitchenOrder => {
-    const total = payload.items.reduce((acc, it) => acc + it.price * it.quantity, 0);
+    const total = getOrderLinesTotal(payload.items);
     const newId = `ord-pos-${Date.now()}`;
     const ownerUid = firebaseUser?.uid || 'local-staff';
     const newOrder: KitchenOrder = {
@@ -859,7 +894,7 @@ export default function App() {
     const existing = kitchenOrders.find((o) => o.id === orderId);
     if (!existing) return undefined;
 
-    const extraTotal = newItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
+    const extraTotal = getOrderLinesTotal(newItems);
     const updatedItems = [...existing.items, ...newItems];
     const updatedTotal = existing.total + extraTotal;
     const updatedStatus: OrderStatus =
@@ -889,7 +924,94 @@ export default function App() {
     return updatedOrder;
   };
 
+  const handleUpdateOrderItemQty = (
+    orderId: string,
+    itemIndex: number,
+    delta: number
+  ) => {
+    if (!isStaffSession) return;
+    const target = kitchenOrders.find((o) => o.id === orderId);
+    if (!target || target.paid) return;
+    const currentItem = target.items[itemIndex];
+    if (!currentItem) return;
+
+    const nextQty = currentItem.quantity + delta;
+    let updatedItems: OrderLineItem[];
+    if (nextQty <= 0) {
+      if (target.items.length <= 1) {
+        showToast('El pedido debe tener al menos 1 platillo');
+        return;
+      }
+      updatedItems = target.items.filter((_, idx) => idx !== itemIndex);
+    } else {
+      updatedItems = target.items.map((it, idx) =>
+        idx === itemIndex ? { ...it, quantity: nextQty } : it
+      );
+    }
+
+    const updatedTotal = getOrderLinesTotal(updatedItems);
+    setKitchenOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? { ...o, items: updatedItems, total: updatedTotal }
+          : o
+      )
+    );
+
+    if (firebaseUser && isStaff) {
+      void updateOrderItemsInFirestore({
+        orderId,
+        items: updatedItems,
+        total: updatedTotal,
+      });
+    }
+  };
+
+  const handleDeleteOrder = (order: KitchenOrder) => {
+    if (!isAdminAuthenticated) return;
+
+    let tableNumberToFree: number | undefined;
+    if (order.mode === 'dine-in' && order.tableNumber) {
+      const tableNum = order.tableNumber;
+      const hasOtherUnpaidOnTable = kitchenOrders.some(
+        (o) =>
+          o.id !== order.id &&
+          o.mode === 'dine-in' &&
+          o.tableNumber === tableNum &&
+          !o.paid
+      );
+      if (!hasOtherUnpaidOnTable) {
+        tableNumberToFree = tableNum;
+        setTables((prev) =>
+          prev.map((t) =>
+            t.number === tableNum ? { ...t, status: 'libre' } : t
+          )
+        );
+      }
+    }
+
+    setKitchenOrders((prev) => prev.filter((o) => o.id !== order.id));
+    if (activeTableOrderId === order.id) setActiveTableOrderId(null);
+    if (activeDeliveryOrderId === order.id) setActiveDeliveryOrderId(null);
+    if (lastPaidOrderId === order.id) setLastPaidOrderId(null);
+
+    if (firebaseUser && isAdminUser) {
+      void deleteOrderInFirestore({
+        orderId: order.id,
+        isDelivery: order.mode === 'delivery',
+        tableNumberToFree,
+      });
+    }
+
+    showToast(
+      tableNumberToFree
+        ? `Pedido ${order.code} anulado · Mesa ${tableNumberToFree} liberada`
+        : `Pedido ${order.code} anulado`
+    );
+  };
+
   const handleAdminLogout = async () => {
+    closeActiveOverlays();
     await handleGoogleSignOut();
     setIsAdminAuthenticated(false);
     setNavDirection(-1);
@@ -898,6 +1020,7 @@ export default function App() {
   };
 
   const handleMozoLoginSuccess = () => {
+    closeActiveOverlays();
     setIsMozoAuthenticated(true);
     setNavDirection(1);
     setHistory((prev) => [...prev, 'mozo-panel']);
@@ -905,6 +1028,7 @@ export default function App() {
   };
 
   const handleMozoLogout = () => {
+    closeActiveOverlays();
     setIsMozoAuthenticated(false);
     setNavDirection(-1);
     setHistory(['welcome']);
@@ -926,6 +1050,21 @@ export default function App() {
     currentScreen !== 'admin-login' &&
     currentScreen !== 'mozo-panel';
 
+  const showRightCartPanel = isStaffSession
+    ? currentScreen !== 'admin-login'
+    : currentScreen === 'menu' ||
+      currentScreen === 'search' ||
+      currentScreen === 'favorites' ||
+      currentScreen === 'dish-detail' ||
+      currentScreen === 'customize' ||
+      currentScreen === 'cart' ||
+      currentScreen === 'tables-select' ||
+      currentScreen === 'tables-qr' ||
+      currentScreen === 'tables-order' ||
+      currentScreen === 'delivery-info' ||
+      currentScreen === 'delivery-tracking' ||
+      currentScreen === 'delivery-confirm';
+
   const paymentTotal =
     paymentContext === 'table' ? activeTableOrder?.total ?? 0 : cartTotal;
 
@@ -939,32 +1078,64 @@ export default function App() {
       ? 'Gracias por tu pedido Delivery'
       : `Gracias, Mesa ${lastPaidOrder?.tableNumber ?? selectedTable}`;
 
+  const renderLiveCartPanel = (onCloseDrawer?: () => void) => (
+    <LiveCartPanel
+      userRole={userRole}
+      cart={cart}
+      menuItems={menuItems}
+      kitchenOrders={kitchenOrders}
+      orderMode={orderMode}
+      selectedTable={selectedTable}
+      tables={tables}
+      deliveryInfo={deliveryInfo}
+      activeTableOrder={activeTableOrder}
+      onChangeOrderMode={(m) => setOrderMode(m)}
+      onSelectTable={handleSelectTable}
+      onOpenTableQr={() => navigate('tables-qr')}
+      onOpenTableOrder={() => navigate('tables-order')}
+      onOpenDeliveryInfo={() => navigate('delivery-info')}
+      onGoMenu={() => navigate('menu')}
+      onPayAtTable={() => {
+        setOrderMode('dine-in');
+        setPaymentContext('table');
+        navigate('payment-methods');
+      }}
+      onUpdateQuantity={handleUpdateCartQuantity}
+      onChangeItemSize={handleChangeCartItemSize}
+      onRemoveItem={handleRemoveCartItem}
+      onClearCart={() => setCart([])}
+      onProceedOrder={handleCartProceedOrder}
+      onUpdateOrderStatus={handleUpdateOrderStatus}
+      onUpdateOrderItemQty={handleUpdateOrderItemQty}
+      onCollectOrderPayment={handleCollectOrderPayment}
+      onCallWaiter={handleCallWaiter}
+      onDismissWaiterCall={handleDismissWaiterCall}
+      onFreeTable={handleFreeTable}
+      onDeleteOrder={handleDeleteOrder}
+      onClose={onCloseDrawer}
+    />
+  );
+
   return (
-    <div className="h-screen w-full linen-backdrop flex flex-col lg:flex-row lg:p-4 lg:gap-4 overflow-hidden">
-      {/* Desktop Live Dashboard & Navigation Sidebar (PC & Large Screens) */}
+    <div className="h-dvh w-full flex flex-col lg:flex-row overflow-hidden bg-[#FFF8E8]">
+      {/* Desktop Far-Left Compact Icon Rail */}
       <DesktopSidebar
         currentScreen={currentScreen}
         onNavigate={navigate}
-        orderMode={orderMode}
-        onChangeOrderMode={(m) => setOrderMode(m)}
         selectedTable={selectedTable}
-        tables={tables}
         cartCount={cartCount}
-        cartTotal={cartTotal}
         favoritesCount={favoriteIds.length}
-        kitchenOrders={kitchenOrders}
-        activeTableOrder={activeTableOrder}
-        activeDeliveryOrder={activeDeliveryOrder}
+        firebaseUser={firebaseUser}
         isAdminAuthenticated={isAdminAuthenticated}
         isMozoAuthenticated={isMozoAuthenticated}
       />
 
-      {/* Main Responsive App Frame (Full-screen on mobile, full desktop workspace on PC) */}
-      <main className="relative flex-1 h-full bg-[#FFF8E8] lg:rounded-[24px] shadow-2xl lg:border-2 lg:border-[#3B1F0E]/20 overflow-hidden flex flex-col">
+      {/* Main Responsive App Frame */}
+      <main className="relative flex-1 min-w-0 h-full bg-[#FFF8E8] overflow-hidden flex flex-col">
         {/* Global Feedback Toast */}
         {toastMsg && (
-          <div className="absolute top-16 left-4 right-4 z-50 pointer-events-none flex justify-center">
-            <div className="px-3.5 py-2 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] text-xs font-extrabold shadow-lg text-center">
+          <div className="absolute top-14 sm:top-16 left-3 right-3 z-50 pointer-events-none flex justify-center">
+            <div className="max-w-md px-3.5 py-2 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] text-xs font-extrabold shadow-lg text-center">
               {toastMsg}
             </div>
           </div>
@@ -1030,19 +1201,24 @@ export default function App() {
                   mode={currentScreen}
                   menuItems={menuItems}
                   favoriteIds={favoriteIds}
+                  cart={cart}
                   cartCount={cartCount}
                   orderMode={orderMode}
                   selectedTable={selectedTable}
+                  isLiveSynced={Boolean(firebaseUser)}
                   onBack={goBack}
                   onSelectItem={(item) => {
                     setSelectedDishId(item.id);
                     navigate('dish-detail');
                   }}
-                  onQuickAdd={handleQuickAdd}
+                  onAddToCart={(item, size) => handleAddToCart(item, size, [])}
+                  onUpdateCartQuantity={handleUpdateCartQuantity}
                   onToggleFavorite={handleToggleFavorite}
                   onOpenCustomize={() => navigate('customize')}
-                  onOpenCart={() => navigate('cart')}
+                  onOpenCart={() => setShowCartDrawer(true)}
                   onOpenTables={() => navigate('tables-select')}
+                  onOpenTableQr={() => navigate('tables-qr')}
+                  onNavigateMode={(m) => navigate(m)}
                 />
               )}
 
@@ -1070,12 +1246,17 @@ export default function App() {
 
               {currentScreen === 'cart' && (
                 <CartScreen
+                  userRole={userRole}
                   cart={cart}
+                  cartCount={cartCount}
                   menuItems={menuItems}
+                  kitchenOrders={kitchenOrders}
+                  tables={tables}
                   orderMode={orderMode}
                   selectedTable={selectedTable}
                   onBack={goBack}
                   onChangeOrderMode={(m) => setOrderMode(m)}
+                  onSelectTable={handleSelectTable}
                   onEditTable={() => navigate('tables-select')}
                   onUpdateQuantity={handleUpdateCartQuantity}
                   onChangeItemSize={handleChangeCartItemSize}
@@ -1083,6 +1264,25 @@ export default function App() {
                   onClearCart={() => setCart([])}
                   onProceedOrder={handleCartProceedOrder}
                   onGoMenu={() => navigate('menu')}
+                  onOpenComandaDrawer={() => setShowCartDrawer(true)}
+                  onUpdateOrderStatus={handleUpdateOrderStatus}
+                  onCollectOrderPayment={handleCollectOrderPayment}
+                  onFreeTable={handleFreeTable}
+                  onCreatePosOrder={handleCreatePosOrder}
+                  onCallWaiter={handleCallWaiter}
+                  onPayTableOrder={(ord) => {
+                    if (ord.mode === 'dine-in' && ord.tableNumber) {
+                      setOrderMode('dine-in');
+                      setSelectedTable(ord.tableNumber);
+                      setActiveTableOrderId(ord.id);
+                      setPaymentContext('table');
+                      navigate('payment-methods');
+                    } else {
+                      setOrderMode('delivery');
+                      setActiveDeliveryOrderId(ord.id);
+                      navigate('delivery-tracking');
+                    }
+                  }}
                 />
               )}
 
@@ -1248,6 +1448,8 @@ export default function App() {
                   inventory={inventory}
                   authorizedStaff={authorizedStaff}
                   adminEmail={firebaseUser?.email}
+                  cartCount={cartCount}
+                  onOpenComanda={() => setShowCartDrawer(true)}
                   onToggleDishAvailability={(id) => {
                     const idx = menuItems.findIndex((m) => m.id === id);
                     if (idx < 0) return;
@@ -1331,6 +1533,8 @@ export default function App() {
                   firebaseUser={firebaseUser}
                   isStaff={isStaff}
                   authError={authError}
+                  cartCount={cartCount}
+                  onOpenComanda={() => setShowCartDrawer(true)}
                   onGoogleSignIn={() => void handleGoogleSignIn()}
                   onCreatePosOrder={handleCreatePosOrder}
                   onAppendOrderItems={handleAppendOrderItems}
@@ -1347,8 +1551,8 @@ export default function App() {
 
         {/* Customer Google Sign-In Modal for live order sync */}
         {showGooglePrompt && (
-          <div className="absolute inset-0 z-50 bg-black/65 flex items-center justify-center p-4">
-            <div className="w-full max-w-sm rounded-3xl bg-[#FFF8E8] border-2 border-[#D9A441] p-5 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 bg-black/65 overflow-y-auto flex p-4">
+            <div className="my-auto mx-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll rounded-3xl bg-[#FFF8E8] border-2 border-[#D9A441] p-5 shadow-2xl space-y-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
@@ -1391,6 +1595,30 @@ export default function App() {
           </div>
         )}
 
+        {/* Quick <XL Comanda trigger on lg (1024px–1279px) screens without a dedicated header Comanda button */}
+        {showRightCartPanel &&
+          currentScreen !== 'menu' &&
+          currentScreen !== 'search' &&
+          currentScreen !== 'favorites' &&
+          currentScreen !== 'cart' &&
+          currentScreen !== 'admin-panel' &&
+          currentScreen !== 'mozo-panel' && (
+            <button
+              type="button"
+              onClick={() => setShowCartDrawer(true)}
+              aria-label="Abrir Comanda en Vivo"
+              className="hidden lg:inline-flex xl:hidden fixed bottom-5 right-5 z-30 min-h-[42px] px-3.5 py-2 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] shadow-lg text-xs font-extrabold items-center gap-2 hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4 text-[#D9A441]" />
+              <span>Comanda</span>
+              {cartCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#B84A27] text-[#FFF8E8] text-[10px] font-extrabold tabular-nums leading-none">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          )}
+
         {/* Shared Bottom Nav on interior client/panel screens */}
         {showBottomNav && (
           <BottomNav
@@ -1400,6 +1628,42 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Persistent Desktop Right Comanda Panel (XL+) */}
+      {showRightCartPanel && (
+        <aside
+          aria-label="Comanda en vivo"
+          className="hidden xl:flex w-[340px] 2xl:w-[370px] shrink-0 h-full border-l border-[#D9A441]/30 flex-col overflow-hidden"
+        >
+          {renderLiveCartPanel()}
+        </aside>
+      )}
+
+      {/* Responsive Slide-Over Comanda Drawer (< XL: mobile, tablet & compact laptop) */}
+      <AnimatePresence>
+        {showCartDrawer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="xl:hidden fixed inset-0 z-50 bg-black/55 flex justify-end"
+            onClick={() => setShowCartDrawer(false)}
+          >
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Comanda deslizable"
+              className="w-[min(100vw,24rem)] h-full max-h-dvh shadow-2xl border-l border-[#D9A441]/40 overflow-hidden"
+            >
+              {renderLiveCartPanel(() => setShowCartDrawer(false))}
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -132,11 +132,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   });
 
   return (
-    <div className="relative flex-1 flex flex-col justify-between bg-[#3B1F0E] text-[#FFF8E8] px-6 py-10 overflow-hidden">
+    <div className="relative flex-1 flex flex-col justify-between bg-[#3B1F0E] text-[#FFF8E8] px-5 sm:px-6 py-6 sm:py-8 lg:py-10 overflow-y-auto phone-scroll min-h-0">
       <VintageCorners color="#D9A441" opacity={0.55} />
 
       {/* Top Logo & Welcome Copy (stacked on mobile, balanced 2-column stage on PC) */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center pt-4 lg:max-w-4xl lg:w-full lg:mx-auto lg:grid lg:grid-cols-2 lg:gap-12 lg:text-left">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center pt-2 lg:max-w-4xl lg:w-full lg:mx-auto lg:grid lg:grid-cols-2 lg:gap-12 lg:text-left">
         <div className="flex flex-col items-center lg:items-center">
           <button
             type="button"
@@ -165,15 +165,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         </div>
 
         <div className="w-full flex flex-col items-center lg:items-start">
-          <h1 className="font-serif-display text-3xl lg:text-4xl font-bold text-[#FFF8E8] mt-6 lg:mt-0 tracking-tight">
+          <h1 className="font-serif-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#FFF8E8] mt-4 sm:mt-6 lg:mt-0 tracking-tight">
             ¡Bienvenido!
           </h1>
-          <p className="mt-3 text-[15px] lg:text-base leading-relaxed text-[#FFF8E8]/90 max-w-[270px] lg:max-w-md font-medium">
+          <p className="mt-2 sm:mt-3 text-sm sm:text-[15px] lg:text-base leading-relaxed text-[#FFF8E8]/90 max-w-[270px] lg:max-w-md font-medium">
             Disfruta de la auténtica comida tradicional, hecha como en casa.
           </p>
 
           {/* Primary Action Buttons */}
-          <div className="w-full max-w-sm mt-8 space-y-3.5">
+          <div className="w-full max-w-sm mt-6 sm:mt-8 space-y-3">
             <button
               type="button"
               onClick={onSelectDineIn}
@@ -219,8 +219,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
       {/* Modal: Términos y Privacidad */}
       {showLegalModal && (
-        <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-5">
-          <div className="w-full max-w-md bg-[#FFF8E8] text-[#2B1A0E] rounded-2xl border border-[#D9A441] p-5 shadow-xl">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="my-auto w-full max-w-md bg-[#FFF8E8] text-[#2B1A0E] rounded-2xl border border-[#D9A441] p-5 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
                 Términos y Privacidad
@@ -252,12 +252,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       {/* Modal: Acceso Mozo (4-digit PIN Login / Logout) */}
       {showMozoModal && (
         <div
-          className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-label="Acceso Mozo"
         >
-          <div className="w-full max-w-sm bg-[#FFF8E8] text-[#2B1A0E] rounded-3xl border-2 border-[#D9A441] p-5 shadow-2xl space-y-4">
+          <div className="my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[#FFF8E8] text-[#2B1A0E] rounded-3xl border-2 border-[#D9A441] p-4 sm:p-5 shadow-2xl space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-[#3B1F0E] text-[#D9A441] flex items-center justify-center">

@@ -51,6 +51,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <p className="text-xs lg:text-sm text-[#7A5A3A]">
               {orderMode === 'dine-in'
                 ? `Comiendo en el local · Mesa ${selectedTable}`
+                : orderMode === 'takeaway'
+                ? 'Modo Para Llevar activo'
                 : 'Modo Delivery activo'}
             </p>
 

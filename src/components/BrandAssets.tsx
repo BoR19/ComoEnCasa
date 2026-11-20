@@ -163,6 +163,17 @@ const DISH_PHOTO_BY_VISUAL_TYPE: Record<MenuItem['visualType'], string> = {
   'jugo-linaza': DISH_PHOTO_BY_ID['jugo-de-linaza'],
 };
 
+export function getDishPhotoUrl(
+  visualType: MenuItem['visualType'],
+  dishId?: string
+): string {
+  return (
+    (dishId && DISH_PHOTO_BY_ID[dishId]) ||
+    DISH_PHOTO_BY_VISUAL_TYPE[visualType] ||
+    DISH_PHOTO_BY_ID['pollo-al-horno']
+  );
+}
+
 export const DishIllustration: React.FC<{
   visualType: MenuItem['visualType'];
   dishId?: string;
@@ -170,10 +181,7 @@ export const DishIllustration: React.FC<{
   className?: string;
 }> = ({ visualType, dishId, name, className = 'w-full h-full' }) => {
   const [failed, setFailed] = React.useState(false);
-  const src =
-    (dishId && DISH_PHOTO_BY_ID[dishId]) ||
-    DISH_PHOTO_BY_VISUAL_TYPE[visualType] ||
-    DISH_PHOTO_BY_ID['pollo-al-horno'];
+  const src = getDishPhotoUrl(visualType, dishId);
 
   React.useEffect(() => {
     setFailed(false);

@@ -13,6 +13,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import { ScreenId } from '../types/app';
+import { AppUserRole } from './LiveCartPanel';
 import { AppIcon } from './BrandAssets';
 
 interface DesktopSidebarProps {
@@ -22,8 +23,10 @@ interface DesktopSidebarProps {
   cartCount: number;
   favoritesCount: number;
   firebaseUser: FirebaseUser | null;
+  userRole: AppUserRole;
   isAdminAuthenticated: boolean;
   isMozoAuthenticated: boolean;
+  onGoMozoComandas: () => void;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -33,8 +36,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   cartCount,
   favoritesCount,
   firebaseUser,
+  userRole,
   isAdminAuthenticated,
   isMozoAuthenticated,
+  onGoMozoComandas,
 }) => {
   const navItems: {
     id: ScreenId;
@@ -92,6 +97,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     },
   ];
 
+  const visibleNavItems =
+    userRole === 'admin'
+      ? navItems.filter((item) => item.id !== 'cart')
+      : navItems;
+
   return (
     <aside
       aria-label="Barra lateral de navegación"
@@ -114,7 +124,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
       {/* Center Vertical Icon Rail */}
       <nav className="flex-1 w-full overflow-y-auto phone-scroll py-3 space-y-1.5 flex flex-col items-center">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const active = item.match.includes(currentScreen);
 
@@ -159,9 +169,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         {isMozoAuthenticated && (
           <button
             type="button"
-            onClick={() => onNavigate('mozo-panel')}
+            onClick={onGoMozoComandas}
             className={`w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors duration-150 cursor-pointer ${
-              currentScreen === 'mozo-panel'
+              userRole === 'mozo' && currentScreen === 'cart'
                 ? 'bg-[#D9A441] text-[#2B1A0E] shadow-xs'
                 : 'bg-[#2E6F32]/85 text-[#FFF8E8] hover:bg-[#2E6F32]'
             }`}

@@ -1,5 +1,5 @@
 import { KitchenOrder } from '../types/app';
-import { formatBs } from './appHelpers';
+import { formatBs, getTakeawayCustomerName } from './appHelpers';
 
 export type TicketPaperSize = '80mm' | '58mm' | 'carta';
 
@@ -31,6 +31,8 @@ export function buildWhatsAppTicketText(
   const modeLabel =
     order.mode === 'dine-in'
       ? `Comer en el local (${order.tableNumber ? `Mesa ${order.tableNumber}` : order.customerLabel})`
+      : order.mode === 'takeaway'
+      ? `Para Llevar • ${getTakeawayCustomerName(order)}`
       : 'Delivery a domicilio';
 
   const statusPayment = order.paid
@@ -46,11 +48,20 @@ export function buildWhatsAppTicketText(
     `*Modalidad:* ${modeLabel}`,
   ];
 
+  if (order.pickupNote) {
+    lines.push(`*Retiro / Tel:* ${order.pickupNote}`);
+  }
   if (order.deliveryAddress) {
     lines.push(`*Dirección:* ${order.deliveryAddress}`);
   }
   if (order.deliveryPhone) {
     lines.push(`*Teléfono:* ${order.deliveryPhone}`);
+  }
+  if (
+    order.confirmationCode &&
+    (order.mode === 'takeaway' || order.mode === 'delivery')
+  ) {
+    lines.push(`*Código de entrega:* ${order.confirmationCode}`);
   }
 
   lines.push(`*Estado pedido:* ${order.status}`);
@@ -89,6 +100,8 @@ export function buildPlainTextTicket(order: KitchenOrder): string {
   const modeLabel =
     order.mode === 'dine-in'
       ? `Mesa ${order.tableNumber ?? ''}`.trim()
+      : order.mode === 'takeaway'
+      ? 'Para Llevar'
       : 'Delivery';
   const payLabel = order.paid
     ? `PAGADO (${order.paymentMethod || 'Confirmado'})`
@@ -103,14 +116,23 @@ export function buildPlainTextTicket(order: KitchenOrder): string {
     `Ticket : ${order.code}`,
     `Fecha  : ${dateLabel} ${order.createdAt}`,
     `Tipo   : ${modeLabel}`,
-    `Cliente: ${order.customerLabel}`,
+    `Cliente: ${order.mode === 'takeaway' ? getTakeawayCustomerName(order) : order.customerLabel}`,
   ];
 
+  if (order.pickupNote) {
+    lines.push(`Retiro : ${order.pickupNote}`);
+  }
   if (order.deliveryAddress) {
     lines.push(`Dir.   : ${order.deliveryAddress}`);
   }
   if (order.deliveryPhone) {
     lines.push(`Tel.   : ${order.deliveryPhone}`);
+  }
+  if (
+    order.confirmationCode &&
+    (order.mode === 'takeaway' || order.mode === 'delivery')
+  ) {
+    lines.push(`PIN Ent: ${order.confirmationCode}`);
   }
 
   lines.push(`Pago   : ${payLabel}`);

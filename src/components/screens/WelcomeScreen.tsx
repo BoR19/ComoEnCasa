@@ -3,13 +3,16 @@ import { User } from 'firebase/auth';
 import {
   Bike,
   CheckCircle2,
+  Clock,
   Delete,
   KeyRound,
   LogIn,
   LogOut,
+  ShoppingBag,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
+import { TakeawayInfo } from '../../types/app';
 import { OfficialLogo, VintageCorners } from '../BrandAssets';
 
 interface WelcomeScreenProps {
@@ -17,29 +20,39 @@ interface WelcomeScreenProps {
   isMozoLoggedIn: boolean;
   firebaseUser: User | null;
   isStaff: boolean;
+  takeawayInfo: TakeawayInfo;
   onGoogleSignIn: () => void;
   onMozoLoginSuccess: () => void;
   onMozoLogout: () => void;
-  onGoMozoPanel: () => void;
+  onGoMozoComandas: () => void;
   onSelectDineIn: () => void;
+  onSelectTakeaway: (info: TakeawayInfo) => void;
   onSelectDelivery: () => void;
   onGoAdminLogin: () => void;
 }
+
+const PICKUP_TIME_CHIPS = ['15 min', '30 min', '45 min'];
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   mozoPin,
   isMozoLoggedIn,
   firebaseUser,
   isStaff,
+  takeawayInfo,
   onGoogleSignIn,
   onMozoLoginSuccess,
   onMozoLogout,
-  onGoMozoPanel,
+  onGoMozoComandas,
   onSelectDineIn,
+  onSelectTakeaway,
   onSelectDelivery,
   onGoAdminLogin,
 }) => {
   const [showLegalModal, setShowLegalModal] = useState(false);
+  const [showTakeawayModal, setShowTakeawayModal] = useState(false);
+  const [takeawayNameDraft, setTakeawayNameDraft] = useState('');
+  const [takeawayPickupDraft, setTakeawayPickupDraft] = useState('');
+  const [takeawayError, setTakeawayError] = useState('');
 
   // 5-tap secret trigger on OfficialLogo for Mozo PIN popup
   const [logoTapCount, setLogoTapCount] = useState(0);
@@ -131,6 +144,49 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   });
 
+  const openTakeawayModal = () => {
+    const defaultName =
+      takeawayInfo.customerName.trim() ||
+      firebaseUser?.displayName?.split(' ')[0] ||
+      '';
+    setTakeawayNameDraft(defaultName);
+    setTakeawayPickupDraft(takeawayInfo.pickupNote);
+    setTakeawayError('');
+    setShowTakeawayModal(true);
+  };
+
+  const applyPickupChip = (chip: string) => {
+    const label = `Retira en ${chip}`;
+    setTakeawayPickupDraft((prev) => {
+      const cleaned = prev
+        .replace(/Retira en \d+\s*min\s*·?\s*/gi, '')
+        .trim();
+      return cleaned ? `${label} · ${cleaned}` : label;
+    });
+  };
+
+  const handleConfirmTakeaway = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = takeawayNameDraft.trim();
+    if (!cleanName) {
+      setTakeawayError('Ingresa tu nombre para identificar tu pedido.');
+      return;
+    }
+    setShowTakeawayModal(false);
+    onSelectTakeaway({
+      customerName: cleanName.slice(0, 80),
+      pickupNote: takeawayPickupDraft.trim().slice(0, 120),
+    });
+  };
+
+  const handleBrowseTakeawayMenu = () => {
+    setShowTakeawayModal(false);
+    onSelectTakeaway({
+      customerName: takeawayNameDraft.trim().slice(0, 80),
+      pickupNote: takeawayPickupDraft.trim().slice(0, 120),
+    });
+  };
+
   return (
     <div className="relative flex-1 flex flex-col justify-between bg-[#3B1F0E] text-[#FFF8E8] px-5 sm:px-6 py-6 sm:py-8 lg:py-10 overflow-y-auto phone-scroll min-h-0">
       <VintageCorners color="#D9A441" opacity={0.55} />
@@ -156,7 +212,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           {isMozoLoggedIn && (
             <button
               type="button"
-              onClick={onGoMozoPanel}
+              onClick={onGoMozoComandas}
               className="mt-3 px-3.5 py-1.5 rounded-xl bg-[#D9A441]/20 border border-[#D9A441] text-[#E8C87A] text-xs font-extrabold hover:bg-[#D9A441]/30 cursor-pointer"
             >
               Sesión Mozo activa • Ir a Comandas
@@ -177,7 +233,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <button
               type="button"
               onClick={onSelectDineIn}
-              className="w-full min-h-[54px] px-5 py-3.5 rounded-2xl bg-[#FFF8E8] text-[#2B1A0E] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#FFF6E0] active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full min-h-[52px] px-5 py-3.5 rounded-2xl bg-[#FFF8E8] text-[#2B1A0E] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#FFF6E0] active:scale-[0.98] transition-all cursor-pointer"
             >
               <UtensilsCrossed className="w-5 h-5 text-[#3B1F0E]" strokeWidth={2.2} />
               <span>Comer en el local</span>
@@ -185,8 +241,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
             <button
               type="button"
+              onClick={openTakeawayModal}
+              className="w-full min-h-[52px] px-5 py-3.5 rounded-2xl bg-[#E64833] text-[#FFF8E8] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#D43D29] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <ShoppingBag className="w-5 h-5 text-[#FFF8E8]" strokeWidth={2.2} />
+              <span>Para Llevar</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onSelectDelivery}
-              className="w-full min-h-[54px] px-5 py-3.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full min-h-[52px] px-5 py-3.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Bike className="w-5 h-5 text-[#2B1A0E]" strokeWidth={2.3} />
               <span>Delivery</span>
@@ -216,6 +281,132 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           Acceso Administrador
         </button>
       </footer>
+
+      {/* Modal: Pedido Para Llevar (Retiro en local) */}
+      {showTakeawayModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pedido Para Llevar"
+          onClick={() => setShowTakeawayModal(false)}
+        >
+          <form
+            onSubmit={handleConfirmTakeaway}
+            onClick={(e) => e.stopPropagation()}
+            className="my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[#1E1E1E] text-[#FFF8E8] rounded-3xl border border-[#D9A441]/50 p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#E64833] text-[#FFF8E8] flex items-center justify-center shrink-0">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-serif-display text-lg font-bold text-[#FFF8E8] leading-tight">
+                    Pedido Para Llevar
+                  </h2>
+                  <p className="text-[11px] font-semibold text-[#E8C87A]/80">
+                    Retiro directo en el restaurante
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowTakeawayModal(false)}
+                aria-label="Cerrar"
+                className="w-8 h-8 rounded-xl bg-[#2A2A2A] flex items-center justify-center text-[#FFF8E8]/80 hover:text-[#FFF8E8] cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label
+                  htmlFor="welcome-takeaway-name"
+                  className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-[#E8C87A] mb-1.5"
+                >
+                  <span>¿A qué nombre va el pedido? *</span>
+                </label>
+                <input
+                  id="welcome-takeaway-name"
+                  type="text"
+                  autoFocus
+                  maxLength={80}
+                  value={takeawayNameDraft}
+                  onChange={(e) => {
+                    setTakeawayError('');
+                    setTakeawayNameDraft(e.target.value);
+                  }}
+                  placeholder="Ej. Carlos"
+                  className={`w-full h-11 px-3.5 rounded-xl bg-[#141414] border text-sm font-bold text-[#FFF8E8] placeholder:text-[#FFF8E8]/35 focus:outline-none focus:ring-2 focus:ring-[#E64833] ${
+                    takeawayError ? 'border-[#E64833]' : 'border-[#2E2E2E]'
+                  }`}
+                />
+                {takeawayError && (
+                  <p className="text-[11px] font-bold text-[#E64833] mt-1">
+                    {takeawayError}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="welcome-takeaway-pickup"
+                  className="block text-[11px] font-extrabold uppercase tracking-wider text-[#FFF8E8]/70 mb-1.5"
+                >
+                  Teléfono / Hora de retiro (opcional)
+                </label>
+                <input
+                  id="welcome-takeaway-pickup"
+                  type="text"
+                  maxLength={120}
+                  value={takeawayPickupDraft}
+                  onChange={(e) => setTakeawayPickupDraft(e.target.value)}
+                  placeholder="Ej. Retira en 15 min · 71234567"
+                  className="w-full h-10 px-3.5 rounded-xl bg-[#141414] border border-[#2E2E2E] text-xs font-semibold text-[#FFF8E8] placeholder:text-[#FFF8E8]/35 focus:outline-none focus:ring-2 focus:ring-[#D9A441]"
+                />
+
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#E8C87A]/75 mr-0.5">
+                    <Clock className="w-3 h-3" />
+                    Rápido:
+                  </span>
+                  {PICKUP_TIME_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => applyPickupChip(chip)}
+                      className="px-2.5 py-1 rounded-lg bg-[#2A2A2A] border border-[#3A3A3A] text-[10px] font-extrabold text-[#E8C87A] hover:border-[#D9A441] cursor-pointer"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="submit"
+                className="w-full min-h-[46px] rounded-2xl bg-[#E64833] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-[#D43D29] active:scale-[0.98] transition-all cursor-pointer shadow-md"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Ir a la Carta · Para Llevar</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBrowseTakeawayMenu}
+                className="w-full min-h-[40px] rounded-2xl bg-[#2A2A2A] text-[#FFF8E8]/85 font-bold text-xs hover:text-[#FFF8E8] hover:bg-[#333333] cursor-pointer transition-colors"
+              >
+                Explorar Carta primero
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Modal: Términos y Privacidad */}
       {showLegalModal && (
@@ -290,12 +481,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 type="button"
                 onClick={() => {
                   setShowMozoModal(false);
-                  onGoMozoPanel();
+                  onGoMozoComandas();
                 }}
                 className="w-full min-h-[42px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
               >
                 <UtensilsCrossed className="w-4 h-4" />
-                <span>Entrar al Panel de Mozo</span>
+                <span>Entrar a Comandas</span>
               </button>
             )}
 

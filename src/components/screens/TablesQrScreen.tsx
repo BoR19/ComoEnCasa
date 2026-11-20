@@ -19,6 +19,7 @@ import { TicketModal } from '../TicketModal';
 interface TableSelectScreenProps {
   tables: TableItem[];
   selectedTable: number;
+  allowOccupiedSelection?: boolean;
   onSelectTable: (tableNumber: number) => void;
   onConfirmTable: () => void;
   onBack: () => void;
@@ -27,6 +28,7 @@ interface TableSelectScreenProps {
 export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
   tables,
   selectedTable,
+  allowOccupiedSelection = false,
   onSelectTable,
   onConfirmTable,
   onBack,
@@ -50,13 +52,15 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
                 <button
                   key={table.number}
                   type="button"
-                  disabled={isOccupied}
+                  disabled={isOccupied && !allowOccupiedSelection}
                   onClick={() => onSelectTable(table.number)}
                   className={`min-h-[76px] lg:min-h-[104px] p-3 rounded-2xl border text-center flex flex-col items-center justify-center gap-1.5 transition-all ${
                     isSelected
                       ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E] shadow-sm cursor-pointer'
                       : isOccupied
-                      ? 'bg-[#FDF2D6]/65 border-[#B83227]/35 text-[#2B1A0E]/75 cursor-not-allowed'
+                      ? allowOccupiedSelection
+                        ? 'bg-[#FDF2D6] border-[#B83227]/60 text-[#2B1A0E] hover:border-[#B84A27] cursor-pointer'
+                        : 'bg-[#FDF2D6]/65 border-[#B83227]/35 text-[#2B1A0E]/75 cursor-not-allowed'
                       : 'bg-[#FDF2D6] border-[#D9A441]/70 text-[#2B1A0E] hover:border-[#B84A27] cursor-pointer'
                   }`}
                 >

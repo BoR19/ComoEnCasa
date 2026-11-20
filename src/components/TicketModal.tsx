@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { KitchenOrder } from '../types/app';
-import { formatBs } from '../utils/appHelpers';
+import { formatBs, getTakeawayCustomerName } from '../utils/appHelpers';
 import {
   TicketPaperSize,
   buildPlainTextTicket,
@@ -32,7 +32,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
 
   useEffect(() => {
     if (!order) return;
-    setWhatsappPhone(order.deliveryPhone || '');
+    const takeawayPhone =
+      order.mode === 'takeaway' && order.pickupNote
+        ? order.pickupNote.match(/\b[67]\d{7}\b/)?.[0] || ''
+        : '';
+    setWhatsappPhone(order.deliveryPhone || takeawayPhone);
     setCopied(false);
   }, [order]);
 
@@ -200,12 +204,20 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-[#7A5A3A] font-bold">Modalidad:</span>
-                  <span className="font-extrabold">
+                  <span className="font-extrabold text-right">
                     {order.mode === 'dine-in'
                       ? `Local (${order.tableNumber ? `Mesa ${order.tableNumber}` : order.customerLabel})`
+                      : order.mode === 'takeaway'
+                      ? `Para Llevar • ${getTakeawayCustomerName(order)}`
                       : 'Delivery'}
                   </span>
                 </div>
+                {order.pickupNote && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[#7A5A3A] font-bold shrink-0">Retiro / Tel:</span>
+                    <span className="font-bold text-right">{order.pickupNote}</span>
+                  </div>
+                )}
                 {order.deliveryAddress && (
                   <div className="flex justify-between gap-2">
                     <span className="text-[#7A5A3A] font-bold shrink-0">Dirección:</span>
@@ -218,6 +230,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                     <span className="font-bold tabular-nums">{order.deliveryPhone}</span>
                   </div>
                 )}
+                {order.confirmationCode &&
+                  (order.mode === 'takeaway' || order.mode === 'delivery') && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-[#7A5A3A] font-bold">
+                        Código entrega:
+                      </span>
+                      <span className="font-mono font-extrabold tracking-wider text-[#B84A27] tabular-nums">
+                        {order.confirmationCode}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex justify-between gap-2">
                   <span className="text-[#7A5A3A] font-bold">Estado:</span>
                   <span className="font-extrabold">

@@ -138,29 +138,92 @@ export function getActiveOrderForTable(
   tableNumber: number
 ): KitchenOrder | undefined {
   const unpaid = orders.find(
-    (o) => o.mode === 'dine-in' && o.tableNumber === tableNumber && !o.paid
+    (o) =>
+      o.mode === 'dine-in' &&
+      o.tableNumber === tableNumber &&
+      o.status !== 'Cobrado' &&
+      !o.paid
   );
   if (unpaid) return unpaid;
 
   const tableObj = tables.find((t) => t.number === tableNumber);
   if (tableObj?.status === 'ocupada') {
     return orders.find(
-      (o) => o.mode === 'dine-in' && o.tableNumber === tableNumber
+      (o) =>
+        o.mode === 'dine-in' &&
+        o.tableNumber === tableNumber &&
+        o.status !== 'Cobrado'
     );
   }
   return undefined;
 }
 
-export type OrderFilterType = 'all' | 'unpaid' | 'dine-in' | 'delivery';
+export function getTakeawayCustomerName(
+  order: Pick<KitchenOrder, 'customerLabel'>
+): string {
+  return (
+    order.customerLabel.replace(/^Para\s+Llevar\s*•\s*/i, '').trim() ||
+    order.customerLabel
+  );
+}
+
+export function generateConfirmationCode(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+export function requiresDeliveryPin(order: KitchenOrder): boolean {
+  return (
+    (order.mode === 'takeaway' || order.mode === 'delivery') &&
+    Boolean(order.confirmationCode) &&
+    order.status !== 'Entregado' &&
+    order.status !== 'Cobrado'
+  );
+}
+
+export type OrderFilterType =
+  | 'active'
+  | 'dine-in'
+  | 'takeaway'
+  | 'delivery'
+  | 'kitchen'
+  | 'served'
+  | 'collected';
+
+export const ORDER_FILTER_TABS: { id: OrderFilterType; label: string }[] = [
+  { id: 'active', label: 'Activas' },
+  { id: 'dine-in', label: 'Mesas' },
+  { id: 'takeaway', label: 'Para Llevar' },
+  { id: 'delivery', label: 'Delivery' },
+  { id: 'kitchen', label: 'En Fogones' },
+  { id: 'served', label: 'Servido' },
+  { id: 'collected', label: 'Historial / Pagados' },
+];
+
+export function isOrderSettled(order: KitchenOrder): boolean {
+  return Boolean(order.paid) || order.status === 'Cobrado';
+}
 
 export function filterOrdersByType(
   orders: KitchenOrder[],
   filter: OrderFilterType
 ): KitchenOrder[] {
   return orders.filter((o) => {
-    if (filter === 'unpaid') return !o.paid;
+    const settled = isOrderSettled(o);
+    if (filter === 'collected') return settled;
+    if (settled) return false;
     if (filter === 'dine-in') return o.mode === 'dine-in';
+    if (filter === 'takeaway') return o.mode === 'takeaway';
     if (filter === 'delivery') return o.mode === 'delivery';
+    if (filter === 'kitchen') {
+      return (
+        o.status === 'Preparando' ||
+        o.status === 'Listo' ||
+        o.status === 'En camino'
+      );
+    }
+    if (filter === 'served') {
+      return o.status === 'Entregado';
+    }
     return true;
   });
 }

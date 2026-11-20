@@ -37,16 +37,19 @@ import {
 } from '../../types/app';
 import {
   MENU_CATEGORIES,
-  OrderFilterType,
   buildPriceBadge,
   computeCategorySalesReport,
-  filterOrdersByType,
   formatBs,
   getTableStats,
 } from '../../utils/appHelpers';
+import {
+  ImageBackupProgress,
+  downloadMenuCsvOnly,
+  downloadMenuFullBackupZip,
+} from '../../utils/menuImageBackup';
 import { OfficialLogo } from '../BrandAssets';
-import { CollectPaymentModal, OrderKdsCard } from '../OrderKdsCard';
-import { PosOrderModal } from '../PosOrderModal';
+import { CollectPaymentModal } from '../CollectPaymentModal';
+import { OrdersBoard } from '../OrdersBoard';
 import { CategoryTabs, MobileHeader } from '../ShellComponents';
 import { TicketModal } from '../TicketModal';
 
@@ -184,6 +187,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
 };
 
 interface AdminPanelScreenProps {
+  isAdmin: boolean;
   menuItems: MenuItem[];
   kitchenOrders: KitchenOrder[];
   tables: TableItem[];
@@ -191,15 +195,29 @@ interface AdminPanelScreenProps {
   authorizedStaff: AuthorizedStaffItem[];
   adminEmail?: string | null;
   cartCount: number;
+  orderMode: OrderMode;
+  selectedTable: number;
+  linkedTakeawayOrderId: string | null;
+  linkedDeliveryOrderId: string | null;
   onOpenComanda: () => void;
+  onLoadOrderToLivePanel: (
+    order: KitchenOrder,
+    options?: { openDrawerOnCompact?: boolean; goToMenu?: boolean }
+  ) => void;
   onToggleDishAvailability: (id: string) => void;
   onSaveDishEdit: (updated: MenuItem) => void;
   onAddNewDish: (newItem: MenuItem) => void;
-  onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  onUpdateOrderStatus: (
+    orderId: string,
+    status: OrderStatus,
+    verificationCode?: string
+  ) => void;
   onCollectOrderPayment: (orderId: string, method: PaymentMethod) => void;
   onCreatePosOrder: (payload: {
     mode: OrderMode;
     tableNumber?: number;
+    customerName?: string;
+    pickupNote?: string;
     deliveryAddress?: string;
     deliveryPhone?: string;
     notes: string;
@@ -219,6 +237,7 @@ interface AdminPanelScreenProps {
 }
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
+  isAdmin,
   menuItems,
   kitchenOrders,
   tables,
@@ -226,7 +245,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   authorizedStaff,
   adminEmail,
   cartCount,
+  orderMode,
+  selectedTable,
+  linkedTakeawayOrderId,
+  linkedDeliveryOrderId,
   onOpenComanda,
+  onLoadOrderToLivePanel,
   onToggleDishAvailability,
   onSaveDishEdit,
   onAddNewDish,
@@ -256,7 +280,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [menuCategory, setMenuCategory] =
     useState<MenuCategory>('Platos Fuertes');
   const [menuQuery, setMenuQuery] = useState('');
-  const [orderFilter, setOrderFilter] = useState<OrderFilterType>('all');
 
   // Dish Edit / Add Modal
   const [editingDish, setEditingDish] = useState<MenuItem | null>(null);
@@ -267,28 +290,73 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [dishSizePrices, setDishSizePrices] = useState<DishSizeOption[]>([]);
   const [dishDesc, setDishDesc] = useState('');
 
-  // Collect Payment Modal
+  // Collect Payment & Ticket Modals (Dashboard Recent Activity)
   const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(
     null
   );
-
-  // Ticket Print / WhatsApp Modal
   const [ticketOrder, setTicketOrder] = useState<KitchenOrder | null>(null);
 
-  // Admin POS New Order Modal
-  const [showPosModal, setShowPosModal] = useState(false);
+  // Trigger signal for OrdersBoard POS New Order modal
+  const [openKitchenPosSignal, setOpenKitchenPosSignal] = useState(0);
 
   // Inventory modal
   const [showInvModal, setShowInvModal] = useState(false);
   const [invDraft, setInvDraft] = useState<InventoryItem[]>(inventory);
   const [reportMsg, setReportMsg] = useState('');
 
+  // Admin-only Menu Backup (.zip with imagenes/ + carta-menu.csv, or .csv only)
+  const [isBackingUpImages, setIsBackingUpImages] = useState(false);
+  const [backupProgress, setBackupProgress] =
+    useState<ImageBackupProgress | null>(null);
+  const [backupSummary, setBackupSummary] = useState('');
+
+  const handleDownloadFullBackupZip = async () => {
+    if (!isAdmin || isBackingUpImages || menuItems.length === 0) return;
+    setIsBackingUpImages(true);
+    setBackupSummary('');
+    setBackupProgress({
+      phase: 'downloading',
+      current: 0,
+      total: menuItems.length,
+      currentName: 'Iniciando descarga...',
+      percent: 0,
+      downloadedCount: 0,
+      fallbackCount: 0,
+    });
+    try {
+      const result = await downloadMenuFullBackupZip(menuItems, (prog) => {
+        setBackupProgress(prog);
+      });
+      setBackupSummary(
+        `Respaldo completo descargado: ${result.downloadedCount}/${result.total} imágenes en imagenes/ + carta-menu.csv${
+          result.fallbackCount > 0
+            ? ` (${result.fallbackCount} URLs en lista-imagenes.txt)`
+            : ''
+        }.`
+      );
+    } catch {
+      setBackupSummary(
+        'Ocurrió un error al generar el respaldo .zip. Intenta nuevamente.'
+      );
+    } finally {
+      setIsBackingUpImages(false);
+      setBackupProgress(null);
+    }
+  };
+
+  const handleDownloadCsvOnly = () => {
+    if (!isAdmin || menuItems.length === 0) return;
+    downloadMenuCsvOnly(menuItems);
+    setBackupSummary(
+      `Excel descargado: carta-menu.csv (${menuItems.length} platos y bebidas).`
+    );
+  };
+
   const switchTab = (next: AdminTab) => {
     setEditingDish(null);
     setIsAddingDish(false);
     setCollectingOrder(null);
     setTicketOrder(null);
-    setShowPosModal(false);
     setShowInvModal(false);
     setActiveTab(next);
   };
@@ -334,11 +402,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       return item.category === menuCategory;
     });
   }, [menuItems, menuCategory, menuQuery]);
-
-  const filteredOrders = useMemo(
-    () => filterOrdersByType(kitchenOrders, orderFilter),
-    [kitchenOrders, orderFilter]
-  );
 
   const openEditModal = (dish: MenuItem) => {
     setIsAddingDish(false);
@@ -633,7 +696,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         Sin pedidos registrados aún
                       </p>
                       <p className="text-[11px] text-[#7A5A3A]">
-                        Crea un pedido desde Cliente (Mesa o Delivery) o desde Cocina/Caja.
+                        Crea un pedido desde Cliente (Mesa, Para Llevar o Delivery) o desde Cocina/Caja.
                       </p>
                     </div>
                   ) : (
@@ -711,13 +774,80 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     type="button"
                     onClick={() => {
                       switchTab('kitchen');
-                      setShowPosModal(true);
+                      setOpenKitchenPosSignal((n) => n + 1);
                     }}
                     className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
                   >
                     <Plus className="w-4 h-4" strokeWidth={2.5} />
                     <span>Nuevo Pedido / Cobro en Caja</span>
                   </button>
+
+                  {/* Ajustes / Configuración (Admin-Only Discrete Backup Tool) */}
+                  {isAdmin && (
+                    <div className="rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A] p-3.5 space-y-2.5 text-[#F5F5F5]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold tracking-wide text-[#E5E5E5] inline-flex items-center gap-1.5">
+                          <Download className="w-3.5 h-3.5 text-[#A3A3A3]" />
+                          <span>Ajustes · Respaldo de Carta</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-[#A3A3A3] tabular-nums">
+                          {menuItems.length} ítems
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          type="button"
+                          disabled={isBackingUpImages}
+                          onClick={() => void handleDownloadFullBackupZip()}
+                          className="flex-1 min-h-[38px] px-3 py-2 rounded-xl bg-[#2A2A2A] hover:bg-[#343434] border border-[#3A3A3A] text-[#F5F5F5] text-[11px] font-bold flex items-center justify-center gap-1.5 disabled:opacity-55 cursor-pointer transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5 text-[#D4D4D4] shrink-0" />
+                          <span>
+                            {isBackingUpImages
+                              ? `Exportando ${backupProgress?.percent ?? 0}%`
+                              : 'Exportar Respaldo Completo (.zip)'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isBackingUpImages}
+                          onClick={handleDownloadCsvOnly}
+                          className="min-h-[38px] px-3 py-2 rounded-xl bg-[#141414] hover:bg-[#252525] border border-[#2A2A2A] text-[#D4D4D4] text-[11px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-55 cursor-pointer transition-colors shrink-0"
+                        >
+                          <span>Solo exportar Excel .csv</span>
+                        </button>
+                      </div>
+
+                      {backupProgress && (
+                        <div className="space-y-1 pt-0.5">
+                          <div className="flex items-center justify-between text-[10px] font-semibold text-[#D4D4D4] gap-2">
+                            <span className="truncate">
+                              {backupProgress.phase === 'compressing'
+                                ? backupProgress.currentName
+                                : `(${backupProgress.current}/${backupProgress.total}) ${backupProgress.currentName}`}
+                            </span>
+                            <span className="tabular-nums shrink-0 text-[#F5F5F5]">
+                              {backupProgress.percent}%
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-[#141414] overflow-hidden border border-[#2A2A2A]">
+                            <div
+                              className="h-full rounded-full bg-[#D9A441] transition-all duration-150"
+                              style={{ width: `${backupProgress.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {backupSummary && !isBackingUpImages && (
+                        <p className="text-[11px] font-semibold text-[#A3E6A8] bg-[#141414] border border-[#2A2A2A] px-2.5 py-1.5 rounded-xl">
+                          {backupSummary}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -936,72 +1066,29 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           )}
 
           {activeTab === 'kitchen' && (
-            <div className="space-y-3.5">
-              <div className="space-y-2.5 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowPosModal(true)}
-                  className="w-full lg:w-auto min-h-[44px] px-4 lg:px-5 py-2.5 rounded-2xl bg-[#B84A27] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xs hover:bg-[#C95B34] cursor-pointer shrink-0"
-                >
-                  <Plus className="w-4 h-4" strokeWidth={2.5} />
-                  <span>Nuevo Pedido en Caja (Mesa o Delivery)</span>
-                </button>
-
-                <div className="grid grid-cols-4 gap-1 lg:w-96">
-                  {(
-                    [
-                      { id: 'all', label: 'Todos' },
-                      { id: 'unpaid', label: 'Por cobrar' },
-                      { id: 'dine-in', label: 'Mesas' },
-                      { id: 'delivery', label: 'Delivery' },
-                    ] as const
-                  ).map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setOrderFilter(f.id)}
-                      className={`min-h-[34px] lg:min-h-[38px] px-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border cursor-pointer truncate ${
-                        orderFilter === f.id
-                          ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                          : 'bg-[#FFFDF8] border-[#D9A441]/55 text-[#3B1F0E]'
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {filteredOrders.length === 0 ? (
-                <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-6 text-center space-y-2">
-                  <p className="font-serif-display text-base font-bold text-[#3B1F0E]">
-                    No hay pedidos en esta vista
-                  </p>
-                  <p className="text-xs text-[#7A5A3A]">
-                    Usa "Nuevo Pedido en Caja" o realiza un pedido como cliente para gestionarlo aquí.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4 items-start">
-                  {filteredOrders.map((order) => {
-                    const tableObj = order.tableNumber
-                      ? tables.find((t) => t.number === order.tableNumber)
-                      : undefined;
-                    return (
-                      <OrderKdsCard
-                        key={order.id}
-                        order={order}
-                        isTableOccupied={tableObj?.status === 'ocupada'}
-                        onUpdateStatus={onUpdateOrderStatus}
-                        onOpenTicket={setTicketOrder}
-                        onStartCollect={setCollectingOrder}
-                        onFreeTable={onFreeTable}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <OrdersBoard
+              userRole="admin"
+              orders={kitchenOrders}
+              tables={tables}
+              menuItems={menuItems}
+              orderMode={orderMode}
+              selectedTable={selectedTable}
+              linkedTakeawayOrderId={linkedTakeawayOrderId}
+              linkedDeliveryOrderId={linkedDeliveryOrderId}
+              newOrderLabel="Nuevo Pedido en Caja"
+              openNewOrderSignal={openKitchenPosSignal}
+              onSelectOrderCard={(order) =>
+                onLoadOrderToLivePanel(order, { openDrawerOnCompact: true })
+              }
+              onAddDishesToOrder={(order) =>
+                onLoadOrderToLivePanel(order, { goToMenu: true })
+              }
+              onUpdateOrderStatus={onUpdateOrderStatus}
+              onCollectOrderPayment={onCollectOrderPayment}
+              onDismissWaiterCall={onDismissWaiterCall}
+              onFreeTable={onFreeTable}
+              onCreatePosOrder={onCreatePosOrder}
+            />
           )}
 
           {activeTab === 'reports' && (
@@ -1100,13 +1187,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         </div>
       </div>
 
-      {/* Modal: Collect Payment */}
+      {/* Modal: Collect Payment (Dashboard Recent Activity) */}
       <CollectPaymentModal
         order={collectingOrder}
         onClose={() => setCollectingOrder(null)}
         onConfirmCollect={(order, method, openTicket) => {
           const paidCopy: KitchenOrder = {
             ...order,
+            status: 'Cobrado',
             paid: true,
             paymentMethod: method,
           };
@@ -1116,17 +1204,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             setTicketOrder(paidCopy);
           }
         }}
-      />
-
-      {/* Modal: POS New Order in Admin */}
-      <PosOrderModal
-        isOpen={showPosModal}
-        title="Nuevo Pedido en Caja"
-        tables={tables}
-        menuItems={menuItems}
-        onClose={() => setShowPosModal(false)}
-        onCreatePosOrder={onCreatePosOrder}
-        onOpenTicket={setTicketOrder}
       />
 
       {/* Modal: Edit / Add Dish */}

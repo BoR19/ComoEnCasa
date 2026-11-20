@@ -35,6 +35,7 @@ interface MenuScreenProps {
   cartCount: number;
   orderMode: OrderMode;
   selectedTable: number;
+  takeawayCustomerName?: string;
   isLiveSynced: boolean;
   onBack: () => void;
   onSelectItem: (item: MenuItem) => void;
@@ -56,6 +57,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
   cartCount,
   orderMode,
   selectedTable,
+  takeawayCustomerName,
   isLiveSynced,
   onBack,
   onSelectItem,
@@ -244,6 +246,10 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
             <p className="text-[11px] font-semibold text-[#7A5A3A] truncate">
               {orderMode === 'dine-in'
                 ? `Comer en el local · Mesa ${selectedTable}`
+                : orderMode === 'takeaway'
+                ? `Para Llevar · ${
+                    takeawayCustomerName?.trim() || 'Retiro en local'
+                  }`
                 : 'Modo Delivery · Envío a domicilio'}
             </p>
           </div>
@@ -299,12 +305,16 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
             {/* Mobile Context & Search Controls */}
             <div className="lg:hidden space-y-3">
               <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/55 text-xs">
-                <span className="font-bold text-[#2B1A0E]">
+                <span className="font-bold text-[#2B1A0E] truncate">
                   {orderMode === 'dine-in'
                     ? `Comer en el local · Mesa ${selectedTable}`
+                    : orderMode === 'takeaway'
+                    ? `Para Llevar · ${
+                        takeawayCustomerName?.trim() || 'Retiro en local'
+                      }`
                     : 'Modo Delivery · Envío a domicilio'}
                 </span>
-                {orderMode === 'dine-in' && (
+                {orderMode === 'dine-in' ? (
                   <button
                     type="button"
                     onClick={onOpenTables}
@@ -312,7 +322,15 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                   >
                     Cambiar mesa
                   </button>
-                )}
+                ) : orderMode === 'takeaway' ? (
+                  <button
+                    type="button"
+                    onClick={onOpenCart}
+                    className="font-extrabold text-[#B84A27] underline decoration-[#B84A27]/60 cursor-pointer whitespace-nowrap"
+                  >
+                    Ver comanda
+                  </button>
+                ) : null}
               </div>
 
               <div className="relative">

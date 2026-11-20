@@ -102,20 +102,22 @@ service cloud.firestore {
         ]) &&
         data.keys().hasOnly([
           'id', 'code', 'customerUid', 'mode', 'tableNumber', 'customerLabel',
-          'items', 'notes', 'status', 'total', 'estimatedMinutes',
+          'pickupNote', 'confirmationCode', 'items', 'notes', 'status', 'total', 'estimatedMinutes',
           'createdAtLabel', 'deliveredAtLabel', 'paid', 'paymentMethod',
           'waiterRequested', 'ratingStars', 'createdAt', 'updatedAt'
         ]) &&
         isValidId(data.id) &&
         data.code is string && data.code.size() >= 2 && data.code.size() <= 20 &&
         data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128 &&
-        data.mode in ['dine-in', 'delivery'] &&
+        data.mode in ['dine-in', 'takeaway', 'delivery'] &&
         (!('tableNumber' in data) || (data.tableNumber is number && data.tableNumber >= 1 && data.tableNumber <= 50)) &&
         data.customerLabel is string && data.customerLabel.size() >= 1 && data.customerLabel.size() <= 80 &&
+        (!('pickupNote' in data) || (data.pickupNote is string && data.pickupNote.size() <= 120)) &&
+        (!('confirmationCode' in data) || (data.confirmationCode is string && data.confirmationCode.size() == 4 && data.confirmationCode.matches('^[0-9]{4}$'))) &&
         data.items is list && data.items.size() >= 1 && data.items.size() <= 50 &&
         data.items[0] is map &&
         data.notes is string && data.notes.size() <= 300 &&
-        data.status in ['Preparando', 'Listo', 'En camino', 'Entregado'] &&
+        data.status in ['Preparando', 'Listo', 'En camino', 'Entregado', 'Cobrado'] &&
         data.total is number && data.total > 0 && data.total <= 50000 &&
         data.estimatedMinutes is number && data.estimatedMinutes >= 1 && data.estimatedMinutes <= 180 &&
         data.createdAtLabel is string && data.createdAtLabel.size() >= 1 && data.createdAtLabel.size() <= 20 &&
@@ -211,6 +213,7 @@ service cloud.firestore {
         isValidOrder(incoming()) &&
         incoming().id == orderId &&
         incoming().createdAt == request.time &&
+        (!(incoming().mode in ['takeaway', 'delivery']) || ('confirmationCode' in incoming())) &&
         (
           isStaff() ||
           (
@@ -229,12 +232,14 @@ service cloud.firestore {
         incoming().customerUid == existing().customerUid &&
         incoming().createdAt == existing().createdAt &&
         incoming().mode == existing().mode &&
+        (!('confirmationCode' in existing()) || ('confirmationCode' in incoming() && incoming().confirmationCode == existing().confirmationCode)) &&
         (
           isAdmin() ||
           (
             isStaff() &&
+            existing().status != 'Cobrado' &&
             incoming().diff(existing()).affectedKeys().hasOnly([
-              'items', 'total', 'notes', 'status', 'deliveredAtLabel',
+              'items', 'total', 'notes', 'pickupNote', 'status', 'deliveredAtLabel',
               'paid', 'paymentMethod', 'waiterRequested', 'updatedAt'
             ])
           ) ||

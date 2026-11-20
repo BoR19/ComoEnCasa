@@ -3,6 +3,7 @@ import {
   Bike,
   Check,
   CheckCircle2,
+  KeyRound,
   MapPin,
   MessageCircle,
   Phone,
@@ -247,17 +248,19 @@ export const DeliveryTrackingScreen: React.FC<DeliveryTrackingScreenProps> = ({
 
   const isPreparingDone = true;
   const isOnTheWayDone =
-    order.status === 'En camino' || order.status === 'Entregado';
-  const isDeliveredDone = order.status === 'Entregado';
+    order.status === 'En camino' ||
+    order.status === 'Entregado' ||
+    order.status === 'Cobrado';
+  const isDeliveredDone =
+    order.status === 'Entregado' || order.status === 'Cobrado';
 
-  const advanceTracking = () => {
-    if (order.status === 'Preparando' || order.status === 'Listo') {
+  const handleTrackingAction = () => {
+    if (isDeliveredDone) {
+      onGoConfirm();
+    } else if (order.status === 'Preparando' || order.status === 'Listo') {
       onUpdateOrderStatus('En camino');
-    } else if (order.status === 'En camino') {
-      onUpdateOrderStatus('Entregado');
-      onGoConfirm();
     } else {
-      onGoConfirm();
+      setShowTicket(true);
     }
   };
 
@@ -429,6 +432,25 @@ export const DeliveryTrackingScreen: React.FC<DeliveryTrackingScreenProps> = ({
                 </div>
               </section>
 
+              {order.confirmationCode && (
+                <div className="rounded-2xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#D9A441]/55 p-3.5 flex items-center justify-between gap-3 shadow-sm">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#E8C87A] inline-flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-[#D9A441] shrink-0" />
+                      <span>Código de entrega</span>
+                    </p>
+                    <p className="text-[11px] text-[#FFF8E8]/75 mt-0.5 leading-snug">
+                      {isDeliveredDone
+                        ? 'Entrega verificada con éxito.'
+                        : 'Entrega este código de 4 dígitos al repartidor al recibir tu pedido.'}
+                    </p>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-[#141414] border border-[#D9A441]/60 font-mono text-lg font-extrabold tracking-widest text-[#D9A441] tabular-nums shrink-0">
+                    {order.confirmationCode}
+                  </span>
+                </div>
+              )}
+
               <div className="text-center py-1 rounded-2xl bg-[#FDF2D6]/60 border border-[#D9A441]/30">
                 <p className="text-[11px] font-bold text-[#7A5A3A]">Tiempo estimado</p>
                 <p className="font-serif-display text-2xl font-bold text-[#2B1A0E] tabular-nums">
@@ -448,14 +470,16 @@ export const DeliveryTrackingScreen: React.FC<DeliveryTrackingScreenProps> = ({
 
                 <button
                   type="button"
-                  onClick={advanceTracking}
+                  onClick={handleTrackingAction}
                   className="w-full min-h-[42px] px-4 py-2 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#4A2C1A] cursor-pointer"
                 >
                   <MessageCircle className="w-3.5 h-3.5 text-[#D9A441]" />
                   <span>
-                    {order.status === 'Preparando' || order.status === 'Listo'
+                    {isDeliveredDone
+                      ? 'Ver confirmación y calificar'
+                      : order.status === 'Preparando' || order.status === 'Listo'
                       ? 'Marcar En camino'
-                      : 'Confirmar pedido entregado'}
+                      : 'Ver Ticket y Código de entrega'}
                   </span>
                 </button>
               </div>
@@ -476,14 +500,16 @@ export const DeliveryTrackingScreen: React.FC<DeliveryTrackingScreenProps> = ({
 
         <button
           type="button"
-          onClick={advanceTracking}
+          onClick={handleTrackingAction}
           className="w-full min-h-[42px] px-4 py-2 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#4A2C1A] cursor-pointer"
         >
           <MessageCircle className="w-3.5 h-3.5 text-[#D9A441]" />
           <span>
-            {order.status === 'Preparando' || order.status === 'Listo'
+            {isDeliveredDone
+              ? 'Ver confirmación y calificar'
+              : order.status === 'Preparando' || order.status === 'Listo'
               ? 'Marcar En camino'
-              : 'Confirmar pedido entregado'}
+              : 'Ver Ticket y Código de entrega'}
           </span>
         </button>
       </div>

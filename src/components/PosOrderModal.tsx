@@ -23,24 +23,19 @@ interface PosOrderModalProps {
   tables: TableItem[];
   menuItems: MenuItem[];
   initialTable?: number;
-  appendTargetOrder?: KitchenOrder | null;
-  draftItems?: OrderLineItem[];
   onClose: () => void;
   onCreatePosOrder: (payload: {
     mode: OrderMode;
     tableNumber?: number;
+    customerName?: string;
+    pickupNote?: string;
     deliveryAddress?: string;
     deliveryPhone?: string;
     notes: string;
     items: OrderLineItem[];
     payNowMethod?: PaymentMethod;
   }) => KitchenOrder;
-  onAppendOrderItems?: (
-    orderId: string,
-    items: OrderLineItem[]
-  ) => KitchenOrder | undefined;
   onOpenTicket?: (order: KitchenOrder) => void;
-  onClearDraftItems?: () => void;
 }
 
 export const PosOrderModal: React.FC<PosOrderModalProps> = ({
@@ -49,16 +44,14 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
   tables,
   menuItems,
   initialTable = 1,
-  appendTargetOrder = null,
-  draftItems = [],
   onClose,
   onCreatePosOrder,
-  onAppendOrderItems,
   onOpenTicket,
-  onClearDraftItems,
 }) => {
   const [mode, setMode] = useState<OrderMode>('dine-in');
   const [tableNumber, setTableNumber] = useState<number>(initialTable);
+  const [customerName, setCustomerName] = useState('');
+  const [pickupNote, setPickupNote] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
@@ -70,20 +63,16 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    if (appendTargetOrder) {
-      setMode(appendTargetOrder.mode);
-      setTableNumber(appendTargetOrder.tableNumber ?? initialTable);
-      setItems([]);
-    } else {
-      setMode('dine-in');
-      setTableNumber(initialTable);
-      setItems(draftItems);
-    }
+    setMode('dine-in');
+    setTableNumber(initialTable);
+    setItems([]);
+    setCustomerName('');
+    setPickupNote('');
     setAddress('');
     setPhone('');
     setNotes('');
     setPayNow(false);
-  }, [isOpen, appendTargetOrder, initialTable, draftItems]);
+  }, [isOpen, initialTable]);
 
   const total = useMemo(() => getOrderLinesTotal(items), [items]);
 
@@ -133,25 +122,17 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
     e.preventDefault();
     if (items.length === 0) return;
 
-    if (appendTargetOrder && onAppendOrderItems) {
-      const updated = onAppendOrderItems(appendTargetOrder.id, items);
-      onClose();
-      if (updated && openTicketOnSave && onOpenTicket) {
-        onOpenTicket(updated);
-      }
-      return;
-    }
-
     const created = onCreatePosOrder({
       mode,
       tableNumber: mode === 'dine-in' ? tableNumber : undefined,
+      customerName: mode === 'takeaway' ? customerName : undefined,
+      pickupNote: mode === 'takeaway' ? pickupNote : undefined,
       deliveryAddress: mode === 'delivery' ? address : undefined,
       deliveryPhone: mode === 'delivery' ? phone : undefined,
       notes,
       items,
       payNowMethod: payNow ? payMethod : undefined,
     });
-    onClearDraftItems?.();
     onClose();
     if (openTicketOnSave && onOpenTicket) {
       onOpenTicket(created);
@@ -166,9 +147,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
       >
         <div className="flex items-center justify-between shrink-0">
           <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
-            {appendTargetOrder
-              ? `Agregar platos · ${appendTargetOrder.customerLabel} (${appendTargetOrder.code})`
-              : title}
+            {title}
           </h3>
           <button
             type="button"
@@ -181,71 +160,98 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto phone-scroll space-y-3 pr-1">
-          {!appendTargetOrder && (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMode('dine-in')}
-                  className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
-                    mode === 'dine-in'
-                      ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                      : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
-                  }`}
-                >
-                  Mesa (Local)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('delivery')}
-                  className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
-                    mode === 'delivery'
-                      ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                      : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
-                  }`}
-                >
-                  Delivery
-                </button>
-              </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              onClick={() => setMode('dine-in')}
+              className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
+                mode === 'dine-in'
+                  ? 'bg-[#3B1F0E] text-[#FFF8E8]'
+                  : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
+              }`}
+            >
+              Mesa (Local)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('takeaway')}
+              className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
+                mode === 'takeaway'
+                  ? 'bg-[#3B1F0E] text-[#FFF8E8]'
+                  : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
+              }`}
+            >
+              Para Llevar
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('delivery')}
+              className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
+                mode === 'delivery'
+                  ? 'bg-[#3B1F0E] text-[#FFF8E8]'
+                  : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
+              }`}
+            >
+              Delivery
+            </button>
+          </div>
 
-              {mode === 'dine-in' ? (
-                <div>
-                  <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
-                    Seleccionar Mesa
-                  </label>
-                  <select
-                    value={tableNumber}
-                    onChange={(e) => setTableNumber(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-bold text-[#2B1A0E]"
-                  >
-                    {tables.map((t) => (
-                      <option key={t.number} value={t.number}>
-                        Mesa {t.number} ({t.status === 'ocupada' ? 'Ocupada' : 'Libre'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Dirección de entrega"
-                    className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                  />
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Teléfono / WhatsApp"
-                    className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
-                  />
-                </div>
-              )}
-            </>
+          {mode === 'dine-in' ? (
+            <div>
+              <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
+                Seleccionar Mesa
+              </label>
+              <select
+                value={tableNumber}
+                onChange={(e) => setTableNumber(Number(e.target.value))}
+                className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-bold text-[#2B1A0E]"
+              >
+                {tables.map((t) => (
+                  <option key={t.number} value={t.number}>
+                    Mesa {t.number} ({t.status === 'ocupada' ? 'Ocupada' : 'Libre'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : mode === 'takeaway' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                required
+                maxLength={80}
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Nombre del cliente (Ej. Carlos) *"
+                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+              />
+              <input
+                type="text"
+                maxLength={120}
+                value={pickupNote}
+                onChange={(e) => setPickupNote(e.target.value)}
+                placeholder="Teléfono / Hora retiro (opcional)"
+                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                required
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Dirección de entrega"
+                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+              />
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Teléfono / WhatsApp"
+                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+              />
+            </div>
           )}
 
           <CategoryTabs
@@ -316,55 +322,51 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
             </div>
           )}
 
-          {!appendTargetOrder && (
-            <>
-              <input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notas para cocina (opcional)"
-                className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 text-xs font-semibold text-[#2B1A0E]"
-              />
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notas para cocina (opcional)"
+            className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 text-xs font-semibold text-[#2B1A0E]"
+          />
 
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setPayNow((p) => !p)}
-                  className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer"
-                >
-                  <span
-                    className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      payNow
-                        ? 'bg-[#2E6F32] border-[#2E6F32] text-white'
-                        : 'border-[#7A5A3A]'
+          <div className="space-y-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setPayNow((p) => !p)}
+              className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer"
+            >
+              <span
+                className={`w-4 h-4 rounded border flex items-center justify-center ${
+                  payNow
+                    ? 'bg-[#2E6F32] border-[#2E6F32] text-white'
+                    : 'border-[#7A5A3A]'
+                }`}
+              >
+                {payNow && <Check className="w-3 h-3" strokeWidth={3} />}
+              </span>
+              <span>Cobrar inmediatamente en caja</span>
+            </button>
+
+            {payNow && (
+              <div className="grid grid-cols-2 gap-1.5">
+                {PAYMENT_METHODS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setPayMethod(m)}
+                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-extrabold cursor-pointer ${
+                      payMethod === m
+                        ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
+                        : 'bg-[#FDF2D6] border-[#D9A441]/55'
                     }`}
                   >
-                    {payNow && <Check className="w-3 h-3" strokeWidth={3} />}
-                  </span>
-                  <span>Cobrar inmediatamente en caja</span>
-                </button>
-
-                {payNow && (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {PAYMENT_METHODS.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setPayMethod(m)}
-                        className={`py-1.5 px-2 rounded-lg border text-[11px] font-extrabold cursor-pointer ${
-                          payMethod === m
-                            ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                            : 'bg-[#FDF2D6] border-[#D9A441]/55'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                    {m}
+                  </button>
+                ))}
               </div>
-            </>
-          )}
+            )}
+          </div>
 
           <button
             type="button"
@@ -389,9 +391,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
           disabled={items.length === 0}
           className="w-full min-h-[44px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-xs disabled:opacity-45 cursor-pointer shrink-0 tabular-nums"
         >
-          {appendTargetOrder
-            ? `Agregar a ${appendTargetOrder.customerLabel} • ${formatBs(total)}`
-            : payNow
+          {payNow
             ? `Registrar y Cobrar • ${formatBs(total)}`
             : `Enviar Comanda a Cocina • ${formatBs(total)}`}
         </button>

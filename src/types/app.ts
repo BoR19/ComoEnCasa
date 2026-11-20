@@ -17,8 +17,7 @@ export type ScreenId =
   | 'payment-confirm'
   | 'profile'
   | 'admin-login'
-  | 'admin-panel'
-  | 'mozo-panel';
+  | 'admin-panel';
 
 export type MenuCategory = 'Platos Fuertes' | 'Guisos' | 'Sopas' | 'Jugos';
 
@@ -75,7 +74,7 @@ export interface CartItem {
   customSummary?: string;
 }
 
-export type OrderMode = 'dine-in' | 'delivery';
+export type OrderMode = 'dine-in' | 'takeaway' | 'delivery';
 
 export type TableStatus = 'libre' | 'ocupada';
 
@@ -85,7 +84,12 @@ export interface TableItem {
   capacity: number;
 }
 
-export type OrderStatus = 'Preparando' | 'Listo' | 'En camino' | 'Entregado';
+export type OrderStatus =
+  | 'Preparando'
+  | 'Listo'
+  | 'En camino'
+  | 'Entregado'
+  | 'Cobrado';
 
 export type PaymentMethod = 'Efectivo' | 'QR' | 'Transferencia Bancaria' | 'Tarjeta';
 
@@ -106,6 +110,8 @@ export interface KitchenOrder {
   mode: OrderMode;
   tableNumber?: number;
   customerLabel: string;
+  pickupNote?: string;
+  confirmationCode?: string;
   deliveryAddress?: string;
   deliveryPhone?: string;
   items: OrderLineItem[];
@@ -119,6 +125,11 @@ export interface KitchenOrder {
   paymentMethod?: PaymentMethod;
   waiterRequested?: boolean;
   ratingStars?: number;
+}
+
+export interface TakeawayInfo {
+  customerName: string;
+  pickupNote: string;
 }
 
 export interface DeliveryInfo {

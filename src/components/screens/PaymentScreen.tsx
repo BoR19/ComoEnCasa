@@ -4,6 +4,7 @@ import {
   Building2,
   CheckCircle2,
   CreditCard,
+  KeyRound,
   Printer,
   QrCode,
 } from 'lucide-react';
@@ -214,6 +215,25 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
               {customerThanks}
             </p>
           </div>
+
+          {paidOrder &&
+            (paidOrder.mode === 'takeaway' || paidOrder.mode === 'delivery') &&
+            paidOrder.confirmationCode && (
+              <div className="w-full rounded-2xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#D9A441]/55 p-3.5 flex items-center justify-between gap-3 text-left shadow-sm">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#E8C87A] inline-flex items-center gap-1">
+                    <KeyRound className="w-3.5 h-3.5 text-[#D9A441] shrink-0" />
+                    <span>Código de entrega</span>
+                  </p>
+                  <p className="text-[11px] text-[#FFF8E8]/75 mt-0.5 leading-snug">
+                    Muestra este código al personal al recibir tu pedido.
+                  </p>
+                </div>
+                <span className="px-3 py-1.5 rounded-xl bg-[#141414] border border-[#D9A441]/60 font-mono text-lg font-extrabold tracking-widest text-[#D9A441] tabular-nums shrink-0">
+                  {paidOrder.confirmationCode}
+                </span>
+              </div>
+            )}
 
           <div className="w-full pt-4 space-y-2.5">
             {onTrackDelivery && (

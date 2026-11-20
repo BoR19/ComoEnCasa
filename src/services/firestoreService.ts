@@ -261,6 +261,11 @@ export function subscribeOrders(
           mode: data.mode,
           tableNumber: typeof data.tableNumber === 'number' ? data.tableNumber : undefined,
           customerLabel: data.customerLabel,
+          pickupNote: typeof data.pickupNote === 'string' ? data.pickupNote : undefined,
+          confirmationCode:
+            typeof data.confirmationCode === 'string'
+              ? data.confirmationCode
+              : undefined,
           items: Array.isArray(data.items) ? data.items : [],
           notes: typeof data.notes === 'string' ? data.notes : '',
           status: data.status,
@@ -425,6 +430,16 @@ export async function createOrderInFirestore(params: {
     if (order.mode === 'dine-in' && typeof order.tableNumber === 'number') {
       orderDoc.tableNumber = order.tableNumber;
     }
+    if (order.mode === 'takeaway' && order.pickupNote && order.pickupNote.trim()) {
+      orderDoc.pickupNote = order.pickupNote.trim().slice(0, 120);
+    }
+    if (
+      (order.mode === 'takeaway' || order.mode === 'delivery') &&
+      order.confirmationCode &&
+      /^[0-9]{4}$/.test(order.confirmationCode.trim())
+    ) {
+      orderDoc.confirmationCode = order.confirmationCode.trim();
+    }
     if (order.paymentMethod) {
       orderDoc.paymentMethod = order.paymentMethod;
     }
@@ -558,6 +573,7 @@ export async function collectOrderPaymentInFirestore(params: {
   try {
     const batch = writeBatch(db);
     batch.update(doc(db, 'orders', params.orderId), {
+      status: 'Cobrado',
       paid: true,
       paymentMethod: params.method,
       waiterRequested: false,

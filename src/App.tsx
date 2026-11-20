@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { LogIn, ShoppingBag, X } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
@@ -26,7 +27,7 @@ import {
 } from './components/screens/TablesQrScreen';
 import { WelcomeScreen } from './components/screens/WelcomeScreen';
 import { useRestaurant } from './context/RestaurantContext';
-import { getTakeawayCustomerName } from './utils/appHelpers';
+import { getTakeawayCustomerName, isOrderSettled } from './utils/appHelpers';
 
 export default function App() {
   const shouldReduceMotion = useReducedMotion();
@@ -167,6 +168,11 @@ export default function App() {
       ? `Gracias, ${getTakeawayCustomerName(lastPaidOrder)}`
       : `Gracias, Mesa ${lastPaidOrder?.tableNumber ?? selectedTable}`;
 
+  const activeOrdersCount = useMemo(
+    () => kitchenOrders.filter((o) => !isOrderSettled(o)).length,
+    [kitchenOrders]
+  );
+
   const goMozoComandas = () => {
     setActiveRole('mozo');
     navigate('cart');
@@ -227,8 +233,10 @@ export default function App() {
       <DesktopSidebar
         currentScreen={currentScreen}
         onNavigate={navigate}
+        orderMode={orderMode}
         selectedTable={selectedTable}
         cartCount={cartCount}
+        activeOrdersCount={activeOrdersCount}
         favoritesCount={favoriteIds.length}
         firebaseUser={firebaseUser}
         userRole={userRole}
@@ -673,6 +681,7 @@ export default function App() {
             currentScreen={currentScreen}
             onNavigate={navigate}
             favoritesCount={favoriteIds.length}
+            cartCount={cartCount}
           />
         )}
       </main>

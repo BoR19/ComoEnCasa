@@ -120,12 +120,14 @@ interface BottomNavProps {
   currentScreen: ScreenId;
   onNavigate: (screen: ScreenId) => void;
   favoritesCount?: number;
+  cartCount?: number;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   currentScreen,
   onNavigate,
   favoritesCount = 0,
+  cartCount = 0,
 }) => {
   const navItems: {
     id: ScreenId;
@@ -170,26 +172,39 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       aria-label="Navegación principal"
       className="lg:hidden sticky bottom-0 z-30 bg-[#3B1F0E] border-t border-[#D9A441]/30 px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shrink-0"
     >
-      <div className="max-w-2xl mx-auto grid grid-cols-5 items-center">
+      <div className="max-w-2xl mx-auto grid grid-cols-5 items-center gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchScreens.includes(currentScreen);
+          const badgeCount =
+            item.id === 'favorites'
+              ? favoritesCount
+              : item.id === 'menu'
+              ? cartCount
+              : 0;
           return (
             <button
               key={item.id}
               type="button"
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onNavigate(item.id)}
-              className={`relative min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+              className={`relative min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
                 isActive
-                  ? 'text-[#E8C87A] bg-[#4A2C1A]'
-                  : 'text-[#D9A441]/80 hover:text-[#E8C87A]'
+                  ? 'text-[#FFF8E8] bg-[#E64833]'
+                  : 'text-[#D9A441]/80 hover:bg-[#4A2C1A] hover:text-[#E8C87A]'
               }`}
             >
               <span className="relative inline-flex items-center justify-center">
                 <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
-                {item.id === 'favorites' && favoritesCount > 0 && (
-                  <span className="absolute -top-1 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#B84A27] text-[#FFF8E8] text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none">
-                    {favoritesCount}
+                {badgeCount > 0 && (
+                  <span
+                    className={`absolute -top-1 -right-2.5 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none ${
+                      item.id === 'menu'
+                        ? 'bg-[#D9A441] text-[#2B1A0E]'
+                        : 'bg-[#B84A27] text-[#FFF8E8]'
+                    }`}
+                  >
+                    {badgeCount}
                   </span>
                 )}
               </span>

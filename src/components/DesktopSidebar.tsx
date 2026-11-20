@@ -3,7 +3,6 @@ import { User as FirebaseUser } from 'firebase/auth';
 import {
   Bike,
   ChefHat,
-  Cloud,
   Heart,
   Home,
   QrCode,
@@ -12,15 +11,17 @@ import {
   User,
   UtensilsCrossed,
 } from 'lucide-react';
-import { ScreenId } from '../types/app';
-import { AppUserRole } from './LiveCartPanel';
+import { OrderMode, ScreenId } from '../types/app';
 import { AppIcon } from './BrandAssets';
+import { AppUserRole } from './LiveCartPanel';
 
 interface DesktopSidebarProps {
   currentScreen: ScreenId;
   onNavigate: (screen: ScreenId) => void;
+  orderMode: OrderMode;
   selectedTable: number;
   cartCount: number;
+  activeOrdersCount: number;
   favoritesCount: number;
   firebaseUser: FirebaseUser | null;
   userRole: AppUserRole;
@@ -29,11 +30,24 @@ interface DesktopSidebarProps {
   onGoMozoComandas: () => void;
 }
 
+interface SidebarNavItem {
+  id: ScreenId;
+  label: string;
+  title: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  match: ScreenId[];
+  badge?: string | number;
+  accentBadge?: boolean;
+  showVerifiedDot?: boolean;
+}
+
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   currentScreen,
   onNavigate,
+  orderMode,
   selectedTable,
   cartCount,
+  activeOrdersCount,
   favoritesCount,
   firebaseUser,
   userRole,
@@ -41,89 +55,118 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   isMozoAuthenticated,
   onGoMozoComandas,
 }) => {
-  const navItems: {
-    id: ScreenId;
-    label: string;
-    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-    match: ScreenId[];
-    badge?: string | number;
-    accentBadge?: boolean;
-  }[] = [
+  const isVerifiedUser = Boolean(firebaseUser?.emailVerified);
+  const comandaBadge =
+    userRole === 'mozo'
+      ? cartCount > 0
+        ? cartCount
+        : activeOrdersCount > 0
+        ? activeOrdersCount
+        : undefined
+      : cartCount > 0
+      ? cartCount
+      : undefined;
+
+  const navItems: SidebarNavItem[] = [
     {
       id: 'welcome',
       label: 'Inicio',
+      title: 'Inicio · Modo de pedido',
       icon: Home,
       match: ['welcome'],
     },
     {
       id: 'menu',
       label: 'Carta',
+      title: 'Carta Digital',
       icon: UtensilsCrossed,
       match: ['menu', 'search', 'dish-detail', 'customize'],
     },
     {
       id: 'tables-select',
       label: 'Mesas',
+      title:
+        orderMode === 'dine-in'
+          ? `Mapa de Mesas (Mesa ${selectedTable} activa)`
+          : 'Mapa de Mesas y QR',
       icon: QrCode,
       match: ['tables-select', 'tables-qr', 'tables-order'],
-      badge: `M${selectedTable}`,
+      badge: orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
     },
     {
       id: 'delivery-tracking',
       label: 'Delivery',
+      title: 'Seguimiento Delivery',
       icon: Bike,
       match: ['delivery-info', 'delivery-tracking', 'delivery-confirm'],
+      accentBadge: orderMode === 'delivery',
     },
     {
       id: 'favorites',
       label: 'Favoritos',
+      title: 'Platos Favoritos',
       icon: Heart,
       match: ['favorites'],
       badge: favoritesCount > 0 ? favoritesCount : undefined,
     },
     {
       id: 'cart',
-      label: 'Comanda',
+      label: userRole === 'mozo' ? 'Comandas' : 'Comanda',
+      title:
+        userRole === 'mozo'
+          ? 'Tablero de Comandas y Cocina'
+          : 'Tu Comanda y Carrito',
       icon: ShoppingBag,
       match: ['cart', 'payment-methods', 'payment-qr', 'payment-confirm'],
-      badge: cartCount > 0 ? cartCount : undefined,
-      accentBadge: cartCount > 0,
+      badge: comandaBadge,
+      accentBadge: cartCount > 0 || (userRole === 'mozo' && activeOrdersCount > 0),
     },
     {
       id: 'profile',
       label: 'Perfil',
+      title: isVerifiedUser
+        ? `Perfil conectado (${firebaseUser?.email || 'Google'})`
+        : 'Perfil y Cuenta',
       icon: User,
       match: ['profile'],
+      showVerifiedDot: isVerifiedUser,
     },
   ];
 
+  // Admin manages orders inside Cocina/Caja (admin-panel), so hide duplicate Comanda link
   const visibleNavItems =
     userRole === 'admin'
       ? navItems.filter((item) => item.id !== 'cart')
       : navItems;
 
+  const isAdminRoute =
+    currentScreen === 'admin-panel' || currentScreen === 'admin-login';
+
   return (
     <aside
       aria-label="Barra lateral de navegación"
-      className="hidden lg:flex w-[84px] shrink-0 flex-col items-center justify-between bg-[#3B1F0E] text-[#FFF8E8] py-3.5 px-2 border-r border-[#D9A441]/25 select-none"
+      className="hidden lg:flex w-[86px] shrink-0 flex-col items-center justify-between bg-[#3B1F0E] text-[#FFF8E8] py-3.5 px-2 border-r border-[#D9A441]/25 select-none"
     >
       {/* Top Brand Mark */}
       <button
         type="button"
         onClick={() => onNavigate('welcome')}
         title="Inicio · Como en Casa"
-        className="flex flex-col items-center gap-1 group cursor-pointer focus:outline-none"
+        className="w-full flex flex-col items-center gap-1.5 group cursor-pointer rounded-xl py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441]"
       >
         <div className="rounded-2xl ring-2 ring-[#D9A441]/45 group-hover:ring-[#D9A441] transition-all">
           <AppIcon size="md" />
         </div>
-        <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#D9A441] text-center leading-tight mt-0.5">
+        <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#D9A441] text-center leading-tight">
           Como en Casa
         </span>
       </button>
 
-      {/* Center Vertical Icon Rail */}
-      <nav className="flex-1 w-full overflow-y-auto phone-scroll py-3 space-y-1.5 flex flex-col items-center">
+      {/* Primary Destination Rail */}
+      <nav
+        aria-label="Secciones principales"
+        className="flex-1 w-full overflow-y-auto phone-scroll py-3 space-y-1 flex flex-col items-center"
+      >
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const active = item.match.includes(currentScreen);
@@ -132,79 +175,96 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
             <button
               key={item.id}
               type="button"
+              title={item.title}
+              aria-current={active ? 'page' : undefined}
               onClick={() => onNavigate(item.id)}
-              className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors duration-150 cursor-pointer ${
+              className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
                 active
-                  ? 'bg-[#B84A27] text-[#FFF8E8] shadow-xs'
+                  ? 'bg-[#E64833] text-[#FFF8E8] shadow-xs'
                   : 'text-[#E8C87A]/80 hover:bg-[#4A2C1A] hover:text-[#FFF8E8]'
               }`}
             >
-              <Icon
-                className={`w-[18px] h-[18px] shrink-0 ${
-                  active ? 'text-[#FFF8E8]' : 'text-[#D9A441]'
-                }`}
-                strokeWidth={active ? 2.4 : 2}
-              />
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#D9A441]"
+                />
+              )}
+
+              <span className="relative inline-flex items-center justify-center">
+                <Icon
+                  className={`w-[18px] h-[18px] shrink-0 transition-colors ${
+                    active ? 'text-[#FFF8E8]' : 'text-[#D9A441]'
+                  }`}
+                  strokeWidth={active ? 2.4 : 2}
+                />
+
+                {item.badge !== undefined && (
+                  <span
+                    className={`absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none border ${
+                      item.accentBadge
+                        ? 'bg-[#D9A441] text-[#2B1A0E] border-[#3B1F0E]'
+                        : active
+                        ? 'bg-[#3B1F0E] text-[#FFF8E8] border-[#FFF8E8]/25'
+                        : 'bg-[#4A2C1A] text-[#E8C87A] border-[#D9A441]/35'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+
+                {item.badge === undefined && item.showVerifiedDot && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[#2E9E5B] ring-2 ring-[#3B1F0E]"
+                  />
+                )}
+
+                {item.badge === undefined &&
+                  !item.showVerifiedDot &&
+                  item.accentBadge && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full bg-[#D9A441] ring-2 ring-[#3B1F0E]"
+                    />
+                  )}
+              </span>
+
               <span className="text-[10px] font-bold leading-none whitespace-nowrap">
                 {item.label}
               </span>
-
-              {item.badge !== undefined && (
-                <span
-                  className={`absolute top-1 right-1.5 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none ${
-                    item.accentBadge
-                      ? 'bg-[#D9A441] text-[#2B1A0E]'
-                      : active
-                      ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                      : 'bg-[#4A2C1A] text-[#E8C87A] border border-[#D9A441]/30'
-                  }`}
-                >
-                  {item.badge}
-                </span>
-              )}
             </button>
           );
         })}
+      </nav>
 
+      {/* Bottom Role Switcher (Separated from Primary Nav) */}
+      <div className="w-full pt-2.5 border-t border-[#D9A441]/20 flex flex-col items-center gap-1.5 shrink-0">
         {isMozoAuthenticated && (
           <button
             type="button"
             onClick={onGoMozoComandas}
-            className={`w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors duration-150 cursor-pointer ${
-              userRole === 'mozo' && currentScreen === 'cart'
-                ? 'bg-[#D9A441] text-[#2B1A0E] shadow-xs'
-                : 'bg-[#2E6F32]/85 text-[#FFF8E8] hover:bg-[#2E6F32]'
+            title={
+              userRole === 'mozo'
+                ? 'Modo Mozo activo · Ir a Comandas'
+                : 'Cambiar a modo Mozo'
+            }
+            className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
+              userRole === 'mozo'
+                ? 'bg-[#2E6F32] border-[#5AC761]/55 text-[#FFF8E8] shadow-xs'
+                : 'bg-[#4A2C1A] border-[#D9A441]/25 text-[#FFF8E8]/85 hover:border-[#5AC761]/60 hover:text-[#FFF8E8]'
             }`}
           >
-            <ChefHat className="w-[18px] h-[18px] shrink-0" />
+            <ChefHat
+              className={`w-4 h-4 shrink-0 ${
+                userRole === 'mozo' ? 'text-[#FFF8E8]' : 'text-[#5AC761]'
+              }`}
+            />
             <span className="text-[10px] font-extrabold leading-none whitespace-nowrap">
               Mozo
             </span>
           </button>
         )}
-      </nav>
-
-      {/* Bottom Sync + Admin Role Access */}
-      <div className="w-full pt-2.5 border-t border-[#D9A441]/20 flex flex-col items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={() => onNavigate('profile')}
-          title={
-            firebaseUser
-              ? `Sincronizado: ${firebaseUser.email}`
-              : 'Conectar cuenta Google'
-          }
-          className="w-full py-1.5 rounded-xl flex flex-col items-center gap-1 text-[#E8C87A]/80 hover:bg-[#4A2C1A] transition-colors cursor-pointer"
-        >
-          <Cloud
-            className={`w-4 h-4 ${
-              firebaseUser ? 'text-[#2E9E5B]' : 'text-[#E8C87A]/70'
-            }`}
-          />
-          <span className="text-[9px] font-bold leading-none">
-            {firebaseUser ? 'Sync OK' : 'Cuenta'}
-          </span>
-        </button>
 
         <button
           type="button"
@@ -213,22 +273,30 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           }
           title={
             isAdminAuthenticated
-              ? 'Ir al Panel Administrador'
+              ? 'Panel Administrador · Cocina y Caja'
               : 'Acceso Administrador'
           }
-          className={`w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${
-            currentScreen === 'admin-panel' || currentScreen === 'admin-login'
-              ? 'bg-[#D9A441] text-[#2B1A0E]'
-              : 'bg-[#4A2C1A] text-[#FFF8E8] border border-[#D9A441]/30 hover:border-[#D9A441]/70'
+          aria-current={isAdminRoute ? 'page' : undefined}
+          className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
+            isAdminRoute || userRole === 'admin'
+              ? 'bg-[#D9A441] border-[#D9A441] text-[#2B1A0E]'
+              : 'bg-[#4A2C1A] border-[#D9A441]/30 text-[#FFF8E8] hover:border-[#D9A441]/70'
           }`}
         >
-          <ShieldCheck
-            className={`w-4 h-4 ${
-              currentScreen === 'admin-panel' || currentScreen === 'admin-login'
-                ? 'text-[#2B1A0E]'
-                : 'text-[#D9A441]'
-            }`}
-          />
+          <span className="relative inline-flex items-center justify-center">
+            <ShieldCheck
+              className={`w-4 h-4 shrink-0 ${
+                isAdminRoute || userRole === 'admin'
+                  ? 'text-[#2B1A0E]'
+                  : 'text-[#D9A441]'
+              }`}
+            />
+            {isAdminAuthenticated && activeOrdersCount > 0 && (
+              <span className="absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-[#E64833] text-[#FFF8E8] text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none border border-[#3B1F0E]">
+                {activeOrdersCount}
+              </span>
+            )}
+          </span>
           <span className="text-[10px] font-extrabold leading-none">
             Admin
           </span>

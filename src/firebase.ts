@@ -40,10 +40,6 @@ const resolvedFirebaseConfig = {
     'VITE_FIREBASE_AUTH_DOMAIN',
     rawAppletConfig.authDomain
   ),
-  firestoreDatabaseId: pickConfigValue(
-    'VITE_FIREBASE_DATABASE_ID',
-    rawAppletConfig.firestoreDatabaseId
-  ),
   storageBucket: pickConfigValue(
     'VITE_FIREBASE_STORAGE_BUCKET',
     rawAppletConfig.storageBucket
@@ -65,9 +61,6 @@ function detectMissingConfigError(): UserFriendlyFirebaseError | null {
     missing.push('Project ID');
   }
   if (!resolvedFirebaseConfig.appId) missing.push('App ID');
-  if (!resolvedFirebaseConfig.firestoreDatabaseId) {
-    missing.push('Firestore Database ID');
-  }
 
   if (missing.length === 0) return null;
 
@@ -86,7 +79,6 @@ export const firebaseConfigError: UserFriendlyFirebaseError | null =
 export const firebaseProjectInfo = {
   projectId: resolvedFirebaseConfig.projectId,
   authDomain: resolvedFirebaseConfig.authDomain,
-  databaseId: resolvedFirebaseConfig.firestoreDatabaseId,
 };
 
 let appInstance: FirebaseApp;
@@ -276,11 +268,9 @@ export function formatFirebaseErrorForUser(
   }
 
   if (code === 'resource-exhausted') {
-    const upgradeUrl =
-      resolvedFirebaseConfig.projectId &&
-      resolvedFirebaseConfig.firestoreDatabaseId
-        ? `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId}/firestore/databases/${resolvedFirebaseConfig.firestoreDatabaseId}/data?openUpgradeDialog=true`
-        : 'https://console.firebase.google.com/';
+    const upgradeUrl = resolvedFirebaseConfig.projectId
+      ? `https://console.firebase.google.com/project/${resolvedFirebaseConfig.projectId}/firestore/data?openUpgradeDialog=true`
+      : 'https://console.firebase.google.com/';
     return {
       code,
       title: 'Límite diario de Firebase alcanzado',
@@ -316,11 +306,9 @@ export function formatFirebaseErrorForUser(
     return {
       code,
       title: 'Base de datos o registro no encontrado',
-      message: `${contextLabel}: no se encontró la base de datos "${
-        resolvedFirebaseConfig.firestoreDatabaseId || '(default)'
-      }" o el documento en Firestore.`,
+      message: `${contextLabel}: no se encontró la base de datos (default) o el documento en Firestore.`,
       actionHint:
-        'Verifica en Firebase Console → Firestore Database que la base de datos exista con ese nombre.',
+        'Verifica en Firebase Console → Firestore Database que la base de datos (default) esté creada.',
     };
   }
 

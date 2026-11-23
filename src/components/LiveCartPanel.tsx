@@ -265,7 +265,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             )}
           </div>
           <p className="text-[11px] text-[var(--ink-muted)] mt-0.5 truncate">
-            Como en Casa · Tupiza
+            Como en Casa Tupiza
           </p>
         </div>
 
@@ -344,7 +344,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     ? getActiveOrderForTable(kitchenOrders, tables, t.number)
                     : undefined;
                   const suffix = tblOrder
-                    ? `Ocupada · ${formatBs(tblOrder.total)}`
+                    ? `Ocupada ${formatBs(tblOrder.total)}`
                     : t.status === 'ocupada'
                     ? 'Ocupada'
                     : 'Libre';
@@ -1097,55 +1097,25 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
         )}
 
         {/* Draft Cart Items (New / Additional dishes to add to Table, Takeaway or Delivery) */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[11px] font-bold text-[var(--ink-muted)]">
-              {inspectedOrder && !inspectedOrder.paid
-                ? orderMode === 'dine-in'
-                  ? `Agregar platos a Mesa ${selectedTable}`
-                  : `Agregar platos a ${inspectedOrder.code}`
-                : 'Borrador de pedido'}
-            </h3>
-            {cartCount > 0 && (
-              <span className="text-[11px] font-bold text-[var(--accent-primary)] tabular-nums">
-                {cartCount} {cartCount === 1 ? 'ítem' : 'ítems'}
-              </span>
-            )}
-          </div>
-
-          {cart.length === 0 ? (
-            <div className="rounded-2xl bg-[var(--bg-surface)] border border-dashed border-[var(--border-subtle)] p-4 flex flex-col items-center justify-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-primary)]">
-                <ShoppingBag className="w-5 h-5" />
-              </div>
-              <p className="text-xs font-bold text-[var(--ink-primary)]">
-                Sin platos en el borrador
-              </p>
-              <p className="text-[11px] text-[var(--ink-muted)] leading-relaxed">
-                Toca{' '}
-                <span className="font-bold text-[var(--accent-primary)]">+ Añadir</span>{' '}
-                en la carta para armar o sumar platos a{' '}
-                {orderMode === 'dine-in'
-                  ? 'esta mesa'
-                  : orderMode === 'takeaway'
-                  ? linkedTakeawayOrder
-                    ? `este pedido (${linkedTakeawayOrder.code})`
-                    : 'este pedido Para llevar'
-                  : linkedDeliveryOrder
-                  ? `este Delivery (${linkedDeliveryOrder.code})`
-                  : 'este pedido'}
-                .
-              </p>
-              <button
-                type="button"
-                onClick={onGoMenu}
-                className="px-3 py-1.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-              >
-                Ir a Carta Digital
-              </button>
+        {/* Draft Cart Items (New / Additional dishes to add to Table, Takeaway or Delivery) - Shown only when cart has items */}
+        {cart.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[11px] font-bold text-[var(--ink-muted)]">
+                {inspectedOrder && !inspectedOrder.paid
+                  ? orderMode === 'dine-in'
+                    ? `Agregar platos a Mesa ${selectedTable}`
+                    : `Agregar platos a ${inspectedOrder.code}`
+                  : 'Borrador de pedido'}
+              </h3>
+              {cartCount > 0 && (
+                <span className="text-[11px] font-bold text-[var(--accent-primary)] tabular-nums">
+                  {cartCount} {cartCount === 1 ? 'ítem' : 'ítems'}
+                </span>
+              )}
             </div>
-          ) : (
-            cart.map((item) => {
+
+            {cart.map((item) => {
               const sourceMenu = menuItems.find(
                 (m) => m.id === item.menuItemId
               );
@@ -1239,37 +1209,39 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                   </div>
                 </article>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
 
       {/* Totals & Checkout Actions Footer */}
       <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3 shrink-0">
-        <div className="space-y-1.5 text-xs">
-          <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
-            <span>
-              Borrador ({cartCount} {cartCount === 1 ? 'ítem' : 'ítems'})
-            </span>
-            <span className="text-[var(--ink-primary)] tabular-nums">
-              {formatBsDecimal(total)}
-            </span>
+        {cart.length > 0 && (
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
+              <span>
+                Borrador ({cartCount} {cartCount === 1 ? 'ítem' : 'ítems'})
+              </span>
+              <span className="text-[var(--ink-primary)] tabular-nums">
+                {formatBsDecimal(total)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
+              <span>Envío / Servicio</span>
+              <span className="text-[var(--status-ok)] font-bold tabular-nums">
+                Bs 0.00 (Gratis)
+              </span>
+            </div>
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
+              <span className="text-sm font-bold text-[var(--ink-primary)]">
+                Total a enviar
+              </span>
+              <span className="text-lg font-bold text-[var(--accent-primary)] tabular-nums">
+                {formatBsDecimal(total)}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
-            <span>Envío / Servicio</span>
-            <span className="text-[var(--status-ok)] font-bold tabular-nums">
-              Bs 0.00 (Gratis)
-            </span>
-          </div>
-          <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
-            <span className="text-sm font-bold text-[var(--ink-primary)]">
-              Total a enviar
-            </span>
-            <span className="text-lg font-bold text-[var(--accent-primary)] tabular-nums">
-              {formatBsDecimal(total)}
-            </span>
-          </div>
-        </div>
+        )}
 
         <button
           type="button"

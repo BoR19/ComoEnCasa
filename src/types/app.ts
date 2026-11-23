@@ -79,7 +79,10 @@ export type OrderMode = 'dine-in' | 'takeaway' | 'delivery';
 export type TableStatus = 'libre' | 'ocupada';
 
 export interface TableItem {
+  id?: string;
   number: number;
+  name?: string;
+  zone?: string;
   status: TableStatus;
   capacity: number;
 }

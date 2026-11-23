@@ -195,7 +195,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* Centered 3-Block Minimalist Welcome Container */}
         <div className="my-auto w-full max-w-xl lg:max-w-3xl mx-auto flex flex-col gap-6 sm:gap-8">
           {/* Bloque 1: Cabecera de identidad */}
-          <header className="flex flex-col items-start min-w-0">
+          <header className="flex flex-col items-center text-center min-w-0">
             <div className="w-full flex flex-col items-center text-center gap-2">
               <button
                 type="button"
@@ -228,11 +228,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               )}
             </div>
 
-            <h1 className="mt-5 font-serif-display text-[1.75rem] sm:text-4xl lg:text-[2.65rem] font-bold text-[var(--ink-primary)] leading-[1.12] tracking-tight min-w-0 [overflow-wrap:break-word]">
+            <h1 className="mt-5 text-center mx-auto font-serif-display text-[1.75rem] sm:text-4xl lg:text-[2.65rem] font-bold text-[var(--ink-primary)] leading-[1.12] tracking-tight min-w-0 [overflow-wrap:break-word]">
               Cocina tradicional de Tupiza, hecha al día
             </h1>
 
-            <p className="mt-2.5 text-sm sm:text-base text-[var(--ink-muted)] leading-relaxed max-w-xl">
+            <p className="mt-2.5 text-center mx-auto text-sm sm:text-base text-[var(--ink-muted)] leading-relaxed max-w-xl">
               Elige cómo prefieres disfrutar nuestros platos caseros y sopas del día con precios claros en Bs.
             </p>
           </header>

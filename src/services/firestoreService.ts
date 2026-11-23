@@ -137,12 +137,15 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
 
     if (tableSnap.empty) {
       INITIAL_TABLES.forEach((tbl) => {
-        batch.set(doc(db, 'tables', `mesa-${tbl.number}`), {
+        const docPayload: Record<string, unknown> = {
           number: tbl.number,
           status: tbl.status === 'ocupada' ? 'ocupada' : 'libre',
           capacity: tbl.capacity,
           updatedAt: serverTimestamp(),
-        });
+        };
+        if (tbl.name) docPayload.name = tbl.name.slice(0, 80);
+        if (tbl.zone) docPayload.zone = tbl.zone.slice(0, 40);
+        batch.set(doc(db, 'tables', `mesa-${tbl.number}`), docPayload);
       });
       hasWrites = true;
     }
@@ -225,8 +228,20 @@ export function subscribeTables(
       }
       const list: TableItem[] = snapshot.docs.map((d) => {
         const data = d.data();
+        const num = Number(data.number);
+        const zone =
+          typeof data.zone === 'string' && data.zone.trim()
+            ? data.zone.trim()
+            : 'Salón';
+        const name =
+          typeof data.name === 'string' && data.name.trim()
+            ? data.name.trim()
+            : `Mesa ${num}`;
         return {
-          number: Number(data.number),
+          id: d.id,
+          number: num,
+          name,
+          zone,
           status: data.status === 'ocupada' ? 'ocupada' : 'libre',
           capacity: Number(data.capacity) || 4,
         };
@@ -616,6 +631,69 @@ export async function freeTableInFirestore(tableNumber: number): Promise<void> {
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `tables/mesa-${tableNumber}`);
+  }
+}
+
+export async function createTableInFirestore(table: TableItem): Promise<void> {
+  const tableId = `mesa-${table.number}`;
+  try {
+    const payload: Record<string, unknown> = {
+      number: Math.max(1, Math.min(99, Math.round(table.number))),
+      status: table.status === 'ocupada' ? 'ocupada' : 'libre',
+      capacity: Math.max(1, Math.min(30, Math.round(table.capacity))),
+      updatedAt: serverTimestamp(),
+    };
+    if (table.name && table.name.trim()) {
+      payload.name = table.name.trim().slice(0, 80);
+    }
+    if (table.zone && table.zone.trim()) {
+      payload.zone = table.zone.trim().slice(0, 40);
+    }
+    await setDoc(doc(db, 'tables', tableId), payload);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `tables/${tableId}`);
+  }
+}
+
+export async function deleteTableInFirestore(tableNumber: number): Promise<void> {
+  const tableId = `mesa-${tableNumber}`;
+  try {
+    await deleteDoc(doc(db, 'tables', tableId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `tables/${tableId}`);
+  }
+}
+
+export async function moveTableOrderInFirestore(params: {
+  orderIds: string[];
+  fromTableNumber: number;
+  toTableNumber: number;
+  toCustomerLabel: string;
+}): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'tables', `mesa-${params.fromTableNumber}`), {
+      status: 'libre',
+      updatedAt: serverTimestamp(),
+    });
+    batch.update(doc(db, 'tables', `mesa-${params.toTableNumber}`), {
+      status: 'ocupada',
+      updatedAt: serverTimestamp(),
+    });
+    params.orderIds.forEach((orderId) => {
+      batch.update(doc(db, 'orders', orderId), {
+        tableNumber: params.toTableNumber,
+        customerLabel: params.toCustomerLabel.slice(0, 80),
+        updatedAt: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.UPDATE,
+      `tables/mesa-${params.fromTableNumber}->mesa-${params.toTableNumber}`
+    );
   }
 }
 

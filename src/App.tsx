@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { LogIn, ShoppingBag, X } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { LiveCartPanel } from './components/LiveCartPanel';
 import { BottomNav } from './components/ShellComponents';
+import { hasSplashPlayedInSession, SplashScreen } from './components/SplashScreen';
 import { AdminLoginScreen, AdminPanelScreen } from './components/screens/AdminScreens';
 import { CartScreen } from './components/screens/CartScreen';
 import { CustomizeDishScreen } from './components/screens/CustomizeDishScreen';
@@ -36,6 +37,13 @@ import {
 
 export default function App() {
   const shouldReduceMotion = useReducedMotion();
+  const [showSplash, setShowSplash] = useState<boolean>(
+    () => !hasSplashPlayedInSession()
+  );
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
   const [isMobileViewport, setIsMobileViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 767px)').matches
@@ -127,6 +135,9 @@ export default function App() {
     handleCollectOrderPayment,
     handleCreatePosOrder,
     handleFreeTable,
+    handleCreateTable,
+    handleDeleteTable,
+    handleMoveTableOrder,
     handleSelectTakeawayOrder,
     handleSelectDeliveryOrder,
     loadOrderIntoLivePanel,
@@ -147,9 +158,11 @@ export default function App() {
   const showBottomNav =
     currentScreen !== 'welcome' && currentScreen !== 'admin-login';
 
-  const showRightCartPanel = isStaffSession
-    ? currentScreen !== 'admin-login'
-    : currentScreen === 'menu' ||
+  const showRightCartPanel =
+    currentScreen !== 'welcome' &&
+    currentScreen !== 'admin-login' &&
+    (isStaffSession ||
+      currentScreen === 'menu' ||
       currentScreen === 'search' ||
       currentScreen === 'favorites' ||
       currentScreen === 'dish-detail' ||
@@ -160,7 +173,7 @@ export default function App() {
       currentScreen === 'tables-order' ||
       currentScreen === 'delivery-info' ||
       currentScreen === 'delivery-tracking' ||
-      currentScreen === 'delivery-confirm';
+      currentScreen === 'delivery-confirm');
 
   const paymentTotal =
     paymentContext === 'table'
@@ -486,10 +499,15 @@ export default function App() {
               {currentScreen === 'tables-select' && (
                 <TableSelectScreen
                   tables={tables}
+                  orders={kitchenOrders}
                   selectedTable={selectedTable}
+                  userRole={userRole}
                   allowOccupiedSelection={isStaffSession}
                   onSelectTable={handleSelectTable}
-                  onConfirmTable={() => {
+                  onConfirmTable={(tableNum) => {
+                    if (typeof tableNum === 'number') {
+                      handleSelectTable(tableNum);
+                    }
                     setOrderMode('dine-in');
                     if (isStaffSession) {
                       navigate('menu');
@@ -497,6 +515,9 @@ export default function App() {
                       navigate('tables-qr');
                     }
                   }}
+                  onCreateTable={handleCreateTable}
+                  onDeleteTable={handleDeleteTable}
+                  onMoveTableOrder={handleMoveTableOrder}
                   onBack={goBack}
                 />
               )}
@@ -669,6 +690,7 @@ export default function App() {
                   onAddAuthorizedStaff={handleAddAuthorizedStaff}
                   onToggleAuthorizedStaff={handleToggleAuthorizedStaff}
                   onRemoveAuthorizedStaff={handleRemoveAuthorizedStaff}
+                  onGoTables={() => navigate('tables-select')}
                   onLogout={() => void handleAdminLogout()}
                   onBack={goBack}
                 />
@@ -723,8 +745,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Floating Live Comanda Button (< XL: mobile bottom pill above BottomNav + tablet collapsible drawer trigger) */}
-        {showRightCartPanel && (
+        {/* Floating Live Comanda Button (< XL: hidden on Welcome and only shown when there are active items/order) */}
+        {showRightCartPanel && liveComandaSummary.hasActive && (
           <button
             type="button"
             onClick={() => setShowCartDrawer(true)}
@@ -826,6 +848,8 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
     </div>
   );
 }

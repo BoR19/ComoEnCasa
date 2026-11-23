@@ -26,9 +26,12 @@ import {
   buildOrderCode,
   collectOrderPaymentInFirestore,
   createOrderInFirestore,
+  createTableInFirestore,
   customerPayOrderInFirestore,
   deleteOrderInFirestore,
+  deleteTableInFirestore,
   freeTableInFirestore,
+  moveTableOrderInFirestore,
   rateOrderInFirestore,
   removeAuthorizedStaffInFirestore,
   resolveUserRoles,
@@ -196,6 +199,17 @@ interface RestaurantContextValue {
     payNowMethod?: PaymentMethod;
   }) => KitchenOrder;
   handleFreeTable: (tableNumber: number) => void;
+  handleCreateTable: (payload: {
+    number: number;
+    name: string;
+    zone: string;
+    capacity: number;
+  }) => boolean;
+  handleDeleteTable: (tableNumber: number) => boolean;
+  handleMoveTableOrder: (
+    fromTableNumber: number,
+    toTableNumber: number
+  ) => boolean;
   handleSelectTakeawayOrder: (orderId: string | null) => void;
   handleSelectDeliveryOrder: (orderId: string | null) => void;
   loadOrderIntoLivePanel: (
@@ -222,12 +236,32 @@ interface RestaurantContextValue {
   handleRemoveAuthorizedStaff: (email: string) => void;
 }
 
+function parseTableParamFromUrl(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('mesa') || params.get('tableId') || '';
+    if (!raw) return null;
+    const cleaned = raw.replace(/^mesa-/i, '').trim();
+    const num = Number.parseInt(cleaned, 10);
+    if (Number.isInteger(num) && num >= 1 && num <= 99) {
+      return num;
+    }
+  } catch {
+    // Ignore malformed query string
+  }
+  return null;
+}
+
 const RestaurantContext = createContext<RestaurantContextValue | null>(null);
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [history, setHistory] = useState<ScreenId[]>(['welcome']);
+  const initialQrTableRef = useRef<number | null>(parseTableParamFromUrl());
+  const [history, setHistory] = useState<ScreenId[]>(() =>
+    initialQrTableRef.current ? ['welcome', 'menu'] : ['welcome']
+  );
   const [navDirection, setNavDirection] = useState<number>(1);
   const currentScreen = history[history.length - 1];
 
@@ -259,7 +293,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   const [selectedDishId, setSelectedDishId] = useState<string>('pollo-al-horno');
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [orderMode, setOrderMode] = useState<OrderMode>('dine-in');
-  const [selectedTable, setSelectedTable] = useState<number>(1);
+  const [selectedTable, setSelectedTable] = useState<number>(
+    () => initialQrTableRef.current ?? 1
+  );
   const [cart, setCart] = useState<CartItem[]>([]);
   const [takeawayInfo, setTakeawayInfo] = useState<TakeawayInfo>({
     customerName: '',
@@ -315,6 +351,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       setToastMsg((curr) => (curr === msg ? '' : curr));
     }, 2600);
   }, []);
+
+  useEffect(() => {
+    if (initialQrTableRef.current) {
+      showToast(`Vinculado a Mesa ${initialQrTableRef.current} · Escaneaste el QR`);
+      initialQrTableRef.current = null;
+    }
+  }, [showToast]);
 
   const closeActiveOverlays = useCallback(() => {
     setShowCartDrawer(false);
@@ -1536,6 +1579,165 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     ]
   );
 
+  const handleCreateTable = useCallback(
+    (payload: {
+      number: number;
+      name: string;
+      zone: string;
+      capacity: number;
+    }): boolean => {
+      if (!isStaffSession) return false;
+      const num = Math.round(payload.number);
+      if (!Number.isInteger(num) || num < 1 || num > 99) {
+        showToast('El número de mesa debe estar entre 1 y 99');
+        return false;
+      }
+      if (tables.some((t) => t.number === num)) {
+        showToast(`Ya existe la Mesa ${num}`);
+        return false;
+      }
+
+      const cleanZone = payload.zone.trim().slice(0, 40) || 'Salón';
+      const cleanName =
+        payload.name.trim().slice(0, 80) || `Mesa ${num} - ${cleanZone}`;
+      const cleanCapacity = Math.max(
+        1,
+        Math.min(30, Math.round(payload.capacity) || 4)
+      );
+
+      const newTable: TableItem = {
+        id: `mesa-${num}`,
+        number: num,
+        name: cleanName,
+        zone: cleanZone,
+        status: 'libre',
+        capacity: cleanCapacity,
+      };
+
+      setTables((prev) =>
+        [...prev, newTable].sort((a, b) => a.number - b.number)
+      );
+
+      if (firebaseUser && isStaff) {
+        void createTableInFirestore(newTable);
+      }
+
+      showToast(`${cleanName} agregada (${cleanZone})`);
+      return true;
+    },
+    [firebaseUser, isStaff, isStaffSession, showToast, tables]
+  );
+
+  const handleDeleteTable = useCallback(
+    (tableNumber: number): boolean => {
+      if (!isStaffSession) return false;
+      const target = tables.find((t) => t.number === tableNumber);
+      if (!target) return false;
+
+      const hasActiveOrder = orders.some(
+        (o) =>
+          o.mode === 'dine-in' &&
+          o.tableNumber === tableNumber &&
+          o.status !== 'Cobrado' &&
+          !o.paid
+      );
+
+      if (target.status === 'ocupada' || hasActiveOrder) {
+        showToast('No puedes eliminar una mesa con consumo activo');
+        return false;
+      }
+
+      const remaining = tables.filter((t) => t.number !== tableNumber);
+      setTables(remaining);
+      if (selectedTable === tableNumber && remaining.length > 0) {
+        setSelectedTable(remaining[0].number);
+      }
+
+      if (firebaseUser && isStaff) {
+        void deleteTableInFirestore(tableNumber);
+      }
+
+      showToast(`${target.name || `Mesa ${tableNumber}`} eliminada`);
+      return true;
+    },
+    [firebaseUser, isStaff, isStaffSession, orders, selectedTable, showToast, tables]
+  );
+
+  const handleMoveTableOrder = useCallback(
+    (fromTableNumber: number, toTableNumber: number): boolean => {
+      if (!isStaffSession) return false;
+      if (fromTableNumber === toTableNumber) return false;
+
+      const sourceTable = tables.find((t) => t.number === fromTableNumber);
+      const targetTable = tables.find((t) => t.number === toTableNumber);
+      if (!sourceTable || !targetTable) return false;
+
+      const targetHasActive = orders.some(
+        (o) =>
+          o.mode === 'dine-in' &&
+          o.tableNumber === toTableNumber &&
+          o.status !== 'Cobrado' &&
+          !o.paid
+      );
+      if (targetTable.status === 'ocupada' || targetHasActive) {
+        showToast(`La Mesa ${toTableNumber} ya está ocupada`);
+        return false;
+      }
+
+      const activeOrdersToMove = orders.filter(
+        (o) =>
+          o.mode === 'dine-in' &&
+          o.tableNumber === fromTableNumber &&
+          o.status !== 'Cobrado'
+      );
+      if (activeOrdersToMove.length === 0) {
+        showToast(`No hay pedido activo en Mesa ${fromTableNumber}`);
+        return false;
+      }
+
+      const movingIds = new Set(activeOrdersToMove.map((o) => o.id));
+      const newLabel = `Mesa ${toTableNumber}`;
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          movingIds.has(o.id)
+            ? { ...o, tableNumber: toTableNumber, customerLabel: newLabel }
+            : o
+        )
+      );
+
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.number === fromTableNumber) return { ...t, status: 'libre' };
+          if (t.number === toTableNumber) return { ...t, status: 'ocupada' };
+          return t;
+        })
+      );
+
+      if (selectedTable === fromTableNumber) {
+        setSelectedTable(toTableNumber);
+      }
+
+      if (firebaseUser && isStaff) {
+        const cloudOrderIds = activeOrdersToMove
+          .filter((o) => o.customerUid !== 'local-staff')
+          .map((o) => o.id);
+        void moveTableOrderInFirestore({
+          orderIds: cloudOrderIds,
+          fromTableNumber,
+          toTableNumber,
+          toCustomerLabel: newLabel,
+        });
+      }
+
+      showToast(
+        `Pedido trasladado de Mesa ${fromTableNumber} a Mesa ${toTableNumber}`
+      );
+      return true;
+    },
+    [firebaseUser, isStaff, isStaffSession, orders, selectedTable, showToast, tables]
+  );
+
   const loadOrderIntoLivePanel = useCallback(
     (
       order: KitchenOrder,
@@ -1938,6 +2140,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     handleCollectOrderPayment,
     handleCreatePosOrder,
     handleFreeTable,
+    handleCreateTable,
+    handleDeleteTable,
+    handleMoveTableOrder,
     handleSelectTakeawayOrder,
     handleSelectDeliveryOrder,
     loadOrderIntoLivePanel,

@@ -86,8 +86,10 @@ service cloud.firestore {
     // Validation Blueprint: TableDoc
     function isValidTable(data) {
       return data.keys().hasAll(['number', 'status', 'capacity', 'updatedAt']) &&
-        data.keys().hasOnly(['number', 'status', 'capacity', 'updatedAt']) &&
-        data.number is number && data.number >= 1 && data.number <= 50 &&
+        data.keys().hasOnly(['number', 'name', 'zone', 'status', 'capacity', 'updatedAt']) &&
+        data.number is number && data.number >= 1 && data.number <= 99 &&
+        (!('name' in data) || (data.name is string && data.name.size() >= 1 && data.name.size() <= 80)) &&
+        (!('zone' in data) || (data.zone is string && data.zone.size() >= 1 && data.zone.size() <= 40)) &&
         data.status in ['libre', 'ocupada'] &&
         data.capacity is number && data.capacity >= 1 && data.capacity <= 30 &&
         data.updatedAt is timestamp && data.updatedAt == request.time;
@@ -110,7 +112,7 @@ service cloud.firestore {
         data.code is string && data.code.size() >= 2 && data.code.size() <= 20 &&
         data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128 &&
         data.mode in ['dine-in', 'takeaway', 'delivery'] &&
-        (!('tableNumber' in data) || (data.tableNumber is number && data.tableNumber >= 1 && data.tableNumber <= 50)) &&
+        (!('tableNumber' in data) || (data.tableNumber is number && data.tableNumber >= 1 && data.tableNumber <= 99)) &&
         data.customerLabel is string && data.customerLabel.size() >= 1 && data.customerLabel.size() <= 80 &&
         (!('pickupNote' in data) || (data.pickupNote is string && data.pickupNote.size() <= 120)) &&
         (!('confirmationCode' in data) || (data.confirmationCode is string && data.confirmationCode.size() == 4 && data.confirmationCode.matches('^[0-9]{4}$'))) &&
@@ -180,11 +182,11 @@ service cloud.firestore {
       allow delete: if isValidId(dishId) && isAdmin();
     }
 
-    // 2. Tables (non-PII, public readable, staff full write + verified customer occupy-on-order)
+    // 2. Tables (non-PII, public readable, staff create/update/delete-when-libre + verified customer occupy-on-order)
     match /tables/{tableId} {
       allow get: if isValidId(tableId);
       allow list: if true;
-      allow create: if isValidId(tableId) && isAdmin() && isValidTable(incoming());
+      allow create: if isValidId(tableId) && isStaff() && isValidTable(incoming());
       allow update: if isValidId(tableId) && isValidTable(incoming()) && (
         isStaff() ||
         (
@@ -196,7 +198,7 @@ service cloud.firestore {
           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
         )
       );
-      allow delete: if isValidId(tableId) && isAdmin();
+      allow delete: if isValidId(tableId) && isStaff() && existing().status == 'libre';
     }
 
     // 3. Orders (customer sees own orders; staff sees all orders)
@@ -240,8 +242,12 @@ service cloud.firestore {
             existing().status != 'Cobrado' &&
             incoming().diff(existing()).affectedKeys().hasOnly([
               'items', 'total', 'notes', 'pickupNote', 'status', 'deliveredAtLabel',
-              'paid', 'paymentMethod', 'waiterRequested', 'updatedAt'
-            ])
+              'paid', 'paymentMethod', 'waiterRequested', 'tableNumber', 'customerLabel', 'updatedAt'
+            ]) &&
+            (
+              !incoming().diff(existing()).affectedKeys().hasAny(['tableNumber', 'customerLabel']) ||
+              (existing().mode == 'dine-in' && ('tableNumber' in incoming()) && incoming().tableNumber is number)
+            )
           ) ||
           (
             existing().customerUid == request.auth.uid &&

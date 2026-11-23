@@ -96,7 +96,7 @@
 @keyframes modalEnter {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
@@ -107,6 +107,43 @@
 .modal-surface {
   transform-origin: center;
   animation: modalEnter 200ms var(--ease-out) both;
+}
+
+@keyframes splashBackdropLife {
+  0% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes splashLogoLife {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  64% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+.splash-backdrop {
+  animation: splashBackdropLife 700ms var(--ease-out) forwards;
+}
+
+.splash-logo {
+  transform-origin: center;
+  will-change: transform, opacity;
+  animation: splashLogoLife 700ms var(--ease-out) forwards;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -123,6 +160,12 @@
 @media (prefers-reduced-motion: reduce) {
   .modal-surface {
     animation-duration: 1ms;
+    transform: none;
+  }
+
+  .splash-backdrop,
+  .splash-logo {
+    animation: none;
     transform: none;
   }
 
@@ -223,5 +266,14 @@
     width: 100% !important;
     max-width: 170mm !important;
     padding: 8mm !important;
+  }
+
+  .ticket-paper.qr-printable-card {
+    width: 100% !important;
+    max-width: 110mm !important;
+    border: 1.5px solid #e2d3ba !important;
+    border-radius: 16px !important;
+    padding: 10mm !important;
+    margin: 12mm auto !important;
   }
 }

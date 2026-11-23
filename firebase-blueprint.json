@@ -27,6 +27,8 @@
       "type": "object",
       "properties": {
         "number": { "type": "number" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "zone": { "type": "string", "minLength": 1, "maxLength": 40 },
         "status": { "type": "string", "enum": ["libre", "ocupada"] },
         "capacity": { "type": "number" },
         "updatedAt": { "type": "string", "format": "date-time" }

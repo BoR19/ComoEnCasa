@@ -234,6 +234,7 @@ interface AdminPanelScreenProps {
   onAddAuthorizedStaff: (email: string, name: string) => void;
   onToggleAuthorizedStaff: (email: string, active: boolean) => void;
   onRemoveAuthorizedStaff: (email: string) => void;
+  onGoTables?: () => void;
   onLogout: () => void;
   onBack: () => void;
 }
@@ -267,6 +268,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onAddAuthorizedStaff,
   onToggleAuthorizedStaff,
   onRemoveAuthorizedStaff,
+  onGoTables,
   onLogout,
   onBack,
 }) => {
@@ -755,7 +757,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <h3 className="hidden lg:block text-sm font-bold text-[var(--ink-primary)]">
                     Acciones rápidas
                   </h3>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className={`grid gap-2.5 ${onGoTables ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
                     <button
                       type="button"
                       onClick={() => switchTab('menu')}
@@ -770,6 +772,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     >
                       Cocina y Caja
                     </button>
+                    {onGoTables && (
+                      <button
+                        type="button"
+                        onClick={onGoTables}
+                        className="min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                      >
+                        Mesas y QR
+                      </button>
+                    )}
                   </div>
 
                   <button

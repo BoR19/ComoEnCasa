@@ -317,11 +317,18 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
 ];
 
 // Todas las mesas inician libres para pruebas reales sin datos falsos
-export const INITIAL_TABLES: TableItem[] = Array.from({ length: 8 }, (_, idx) => ({
-  number: idx + 1,
-  status: 'libre',
-  capacity: idx % 2 === 0 ? 4 : 6,
-}));
+export const INITIAL_TABLES: TableItem[] = Array.from({ length: 8 }, (_, idx) => {
+  const num = idx + 1;
+  const zone = num <= 4 ? 'Salón' : num <= 6 ? 'Patio' : 'Terraza';
+  return {
+    id: `mesa-${num}`,
+    number: num,
+    name: `Mesa ${num} - ${zone}`,
+    zone,
+    status: 'libre',
+    capacity: idx % 2 === 0 ? 4 : 6,
+  };
+});
 
 export const INITIAL_DELIVERY_INFO: DeliveryInfo = {
   address: '',

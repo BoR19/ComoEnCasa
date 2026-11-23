@@ -1017,6 +1017,7 @@ export async function freeTableInFirestore(tableNumber: number): Promise<void> {
     if (tableSnap.exists()) {
       batch.update(tableRef, {
         status: 'libre',
+        customerPhone: '',
         updatedAt: serverTimestamp(),
       });
     }
@@ -1077,6 +1078,7 @@ export async function moveTableOrderInFirestore(params: {
     const batch = writeBatch(db);
     batch.update(doc(db, 'tables', `mesa-${params.fromTableNumber}`), {
       status: 'libre',
+      customerPhone: '',
       updatedAt: serverTimestamp(),
     });
     batch.update(doc(db, 'tables', `mesa-${params.toTableNumber}`), {

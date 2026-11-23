@@ -1151,6 +1151,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, [firebaseUser, reportCloudError, selectedTable, tablePhonesByNumber]);
 
+
+
   const loginWithPin = useCallback(
     async (
       rawPin: string
@@ -1333,6 +1335,30 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     return getActiveOrderForTable(orders, tables, selectedTable);
   }, [orders, tables, activeTableOrderId, selectedTable]);
+
+  // Customer automatic tracking when staff moves active table order
+  useEffect(() => {
+    if (isStaffSession) return;
+    if (activeTableOrder && typeof activeTableOrder.tableNumber === 'number') {
+      if (
+        activeTableOrder.tableNumber !== selectedTable &&
+        !activeTableOrder.paid &&
+        activeTableOrder.status !== 'Cobrado'
+      ) {
+        const newTableNum = activeTableOrder.tableNumber;
+        setSelectedTable(newTableNum);
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('mesa', String(newTableNum));
+          url.searchParams.delete('tableId');
+          window.history.replaceState(window.history.state, '', url.toString());
+        } catch {
+          // ignore
+        }
+        showToast(`Tu pedido fue trasladado a Mesa ${newTableNum}`);
+      }
+    }
+  }, [activeTableOrder, isStaffSession, selectedTable, showToast]);
 
   const activeDeliveryOrder = useMemo(() => {
     if (activeDeliveryOrderId) {
@@ -2514,7 +2540,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       if (orderMode === 'dine-in' && selectedTable === tableNumber) {
         setCart([]);
       }
-      if (firebaseUser && isStaffSession) {
+      if (firebaseUser) {
         void freeTableInFirestore(tableNumber).catch((err) => {
           reportCloudError(err, 'Liberación de mesa en la nube');
         });

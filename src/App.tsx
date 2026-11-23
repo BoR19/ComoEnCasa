@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { LogIn, ShoppingBag, X } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { LiveCartPanel } from './components/LiveCartPanel';
 import { BottomNav } from './components/ShellComponents';
 import { hasSplashPlayedInSession, SplashScreen } from './components/SplashScreen';
-import { AdminLoginScreen, AdminPanelScreen } from './components/screens/AdminScreens';
+import { AdminPanelScreen } from './components/screens/AdminScreens';
+import { StaffPinLoginScreen } from './components/screens/StaffPinLoginScreen';
 import { CartScreen } from './components/screens/CartScreen';
 import { CustomizeDishScreen } from './components/screens/CustomizeDishScreen';
 import {
@@ -64,37 +65,30 @@ export default function App() {
     navDirection,
     navigate,
     goBack,
-    showGooglePrompt,
-    setShowGooglePrompt,
     showCartDrawer,
     setShowCartDrawer,
-    clearPendingAuthAction,
     toastMsg,
     showToast,
     firebaseUser,
-    authLoading,
-    authError,
-    setAuthError,
-    isAdminUser,
-    isStaff,
-    isAdminAuthenticated,
-    isMozoAuthenticated,
-    userRole,
+    isAdmin,
     isStaffSession,
-    setActiveRole,
-    enterAdminPanel,
-    handleGoogleSignIn,
-    handleGoogleSignOut,
-    handleAdminLogout,
-    handleMozoLoginSuccess,
-    handleMozoLogout,
+    userRole,
+    activeStaffSession,
+    permissions,
+    canTakeOrdersAndTables,
+    canViewKitchenBoard,
+    canCollectPayments,
+    canEditMenu,
+    canViewReports,
+    staffMembers,
+    adminPin,
+    loginWithPin,
+    logoutStaffSession,
     menuItems,
     tables,
     orders: kitchenOrders,
     inventory,
-    authorizedStaff,
     customerContacts,
-    mozoPin,
     setSelectedDishId,
     selectedDish,
     favoriteIds,
@@ -153,10 +147,10 @@ export default function App() {
     handleSaveDishEdit,
     handleAddNewDish,
     handleUpdateInventory,
-    handleUpdateMozoPin,
-    handleAddAuthorizedStaff,
-    handleToggleAuthorizedStaff,
-    handleRemoveAuthorizedStaff,
+    handleUpdateAdminPin,
+    handleSaveStaffMember,
+    handleToggleStaffActive,
+    handleDeleteStaffMember,
     handleConfirmQrTableWelcome,
     exitQrTableMode,
   } = useRestaurant();
@@ -260,14 +254,48 @@ export default function App() {
     currentScreen === 'delivery-info' ||
     currentScreen === 'delivery-tracking';
 
-  const goMozoComandas = () => {
-    setActiveRole('mozo');
-    navigate('cart');
-  };
+  const canOpenAdminWorkspace =
+    isAdmin ||
+    canEditMenu ||
+    canViewReports ||
+    canCollectPayments ||
+    canViewKitchenBoard;
+
+  const enterStaffWorkspace = useCallback(() => {
+    if (!activeStaffSession) {
+      navigate('admin-login');
+      return;
+    }
+    if (isAdmin || canEditMenu || canViewReports) {
+      navigate('admin-panel');
+      return;
+    }
+    if (canViewKitchenBoard || canCollectPayments) {
+      navigate('cart');
+      return;
+    }
+    if (canTakeOrdersAndTables) {
+      navigate('tables-select');
+      return;
+    }
+    navigate('admin-panel');
+  }, [
+    activeStaffSession,
+    canCollectPayments,
+    canEditMenu,
+    canTakeOrdersAndTables,
+    canViewKitchenBoard,
+    canViewReports,
+    isAdmin,
+    navigate,
+  ]);
 
   const renderLiveCartPanel = (onCloseDrawer?: () => void) => (
     <LiveCartPanel
       userRole={userRole}
+      isAdmin={isAdmin}
+      activeStaffSession={activeStaffSession}
+      permissions={permissions}
       cart={cart}
       menuItems={menuItems}
       kitchenOrders={kitchenOrders}
@@ -327,11 +355,11 @@ export default function App() {
         cartCount={cartCount}
         activeOrdersCount={activeOrdersCount}
         favoritesCount={favoriteIds.length}
-        firebaseUser={firebaseUser}
-        userRole={userRole}
-        isAdminAuthenticated={isAdminAuthenticated}
-        isMozoAuthenticated={isMozoAuthenticated}
-        onGoMozoComandas={goMozoComandas}
+        isAdmin={isAdmin}
+        activeStaffSession={activeStaffSession}
+        permissions={permissions}
+        onOpenStaffWorkspace={enterStaffWorkspace}
+        onLogoutStaffSession={logoutStaffSession}
       />
 
       {/* Main Responsive App Frame */}
@@ -382,15 +410,11 @@ export default function App() {
             >
               {currentScreen === 'welcome' && (
                 <WelcomeScreen
-                  mozoPin={mozoPin}
-                  isMozoLoggedIn={isMozoAuthenticated}
-                  firebaseUser={firebaseUser}
-                  isStaff={isStaff}
+                  activeStaffSession={activeStaffSession}
                   takeawayInfo={takeawayInfo}
-                  onGoogleSignIn={() => void handleGoogleSignIn()}
-                  onMozoLoginSuccess={handleMozoLoginSuccess}
-                  onMozoLogout={handleMozoLogout}
-                  onGoMozoComandas={goMozoComandas}
+                  onOpenStaffPinLogin={() => navigate('admin-login')}
+                  onEnterStaffWorkspace={enterStaffWorkspace}
+                  onLogoutStaffSession={logoutStaffSession}
                   onSelectDineIn={() => {
                     setOrderMode('dine-in');
                     navigate('tables-select');
@@ -410,9 +434,6 @@ export default function App() {
                     setOrderMode('delivery');
                     navigate('menu');
                   }}
-                  onGoAdminLogin={() =>
-                    navigate(isAdminAuthenticated ? 'admin-panel' : 'admin-login')
-                  }
                 />
               )}
 
@@ -483,8 +504,9 @@ export default function App() {
               {currentScreen === 'cart' && (
                 <CartScreen
                   userRole={userRole}
-                  firebaseUser={firebaseUser}
-                  isStaff={isStaff}
+                  isAdmin={isAdmin}
+                  activeStaffSession={activeStaffSession}
+                  permissions={permissions}
                   cart={cart}
                   cartCount={cartCount}
                   menuItems={menuItems}
@@ -515,8 +537,7 @@ export default function App() {
                   onCreatePosOrder={handleCreatePosOrder}
                   onCallWaiter={handleCallWaiter}
                   onPayTableOrder={handlePayTableOrder}
-                  onGoogleSignIn={() => void handleGoogleSignIn()}
-                  onMozoLogout={handleMozoLogout}
+                  onLogoutStaffSession={logoutStaffSession}
                 />
               )}
 
@@ -526,7 +547,8 @@ export default function App() {
                   orders={kitchenOrders}
                   selectedTable={selectedTable}
                   userRole={userRole}
-                  allowOccupiedSelection={isStaffSession}
+                  canManageTables={isAdmin || canTakeOrdersAndTables}
+                  allowOccupiedSelection={isAdmin || canTakeOrdersAndTables}
                   onSelectTable={handleSelectTable}
                   onConfirmTable={(tableNum) => {
                     if (typeof tableNum === 'number') {
@@ -658,43 +680,40 @@ export default function App() {
                   selectedTable={selectedTable}
                   activeTableOrder={activeTableOrder}
                   activeDeliveryOrder={activeDeliveryOrder}
-                  firebaseUser={firebaseUser}
-                  authLoading={authLoading}
-                  onGoogleSignIn={() => void handleGoogleSignIn()}
-                  onGoogleSignOut={() => void handleGoogleSignOut()}
+                  activeStaffSession={activeStaffSession}
                   onBack={goBack}
                   onGoTables={() => navigate('tables-select')}
                   onGoTableOrder={() => navigate('tables-order')}
                   onGoDeliveryTracking={() => navigate('delivery-tracking')}
-                  onGoAdminLogin={() =>
-                    navigate(isAdminAuthenticated ? 'admin-panel' : 'admin-login')
-                  }
+                  onOpenStaffPinLogin={() => navigate('admin-login')}
+                  onEnterStaffWorkspace={enterStaffWorkspace}
+                  onLogoutStaffSession={logoutStaffSession}
                 />
               )}
 
               {currentScreen === 'admin-login' && (
-                <AdminLoginScreen
-                  firebaseUser={firebaseUser}
-                  isAdmin={isAdminUser}
-                  authLoading={authLoading}
-                  authError={authError}
-                  onGoogleSignIn={handleGoogleSignIn}
-                  onGoogleSignOut={handleGoogleSignOut}
-                  onEnterAdminPanel={enterAdminPanel}
+                <StaffPinLoginScreen
+                  activeStaffSession={activeStaffSession}
+                  hasDefaultPins={adminPin === '0000'}
+                  onSubmitPin={loginWithPin}
+                  onEnterWorkspace={enterStaffWorkspace}
+                  onLogoutShift={logoutStaffSession}
                   onBack={goBack}
                 />
               )}
 
-              {currentScreen === 'admin-panel' && isAdminAuthenticated && (
+              {currentScreen === 'admin-panel' && canOpenAdminWorkspace && (
                 <AdminPanelScreen
-                  isAdmin={isAdminAuthenticated && isAdminUser}
+                  isAdmin={isAdmin}
+                  activeStaffSession={activeStaffSession}
+                  permissions={permissions}
                   menuItems={menuItems}
                   kitchenOrders={kitchenOrders}
                   tables={tables}
                   inventory={inventory}
-                  authorizedStaff={authorizedStaff}
                   customerContacts={customerContacts}
-                  adminEmail={firebaseUser?.email}
+                  staffMembers={staffMembers}
+                  adminPin={adminPin}
                   cartCount={cartCount}
                   orderMode={orderMode}
                   selectedTable={selectedTable}
@@ -711,65 +730,18 @@ export default function App() {
                   onDismissWaiterCall={handleDismissWaiterCall}
                   onFreeTable={handleFreeTable}
                   onUpdateInventory={handleUpdateInventory}
-                  mozoPin={mozoPin}
-                  onUpdateMozoPin={handleUpdateMozoPin}
-                  onAddAuthorizedStaff={handleAddAuthorizedStaff}
-                  onToggleAuthorizedStaff={handleToggleAuthorizedStaff}
-                  onRemoveAuthorizedStaff={handleRemoveAuthorizedStaff}
+                  onUpdateAdminPin={handleUpdateAdminPin}
+                  onSaveStaffMember={handleSaveStaffMember}
+                  onToggleStaffActive={handleToggleStaffActive}
+                  onDeleteStaffMember={handleDeleteStaffMember}
                   onGoTables={() => navigate('tables-select')}
-                  onLogout={() => void handleAdminLogout()}
+                  onLogout={logoutStaffSession}
                   onBack={goBack}
                 />
               )}
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Customer Google Sign-In Modal for live order sync */}
-        {showGooglePrompt && (
-          <div className="fixed inset-0 z-50 bg-black/65 overflow-y-auto flex p-4">
-            <div className="modal-surface my-auto mx-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-5 shadow-2xl space-y-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
-                    Conecta tu cuenta Google
-                  </h2>
-                  <p className="text-xs text-[var(--ink-muted)] mt-1 leading-relaxed">
-                    Para enviar tu pedido a Cocina y sincronizarlo en tiempo real con tu mesa o delivery, inicia sesión con Google en un toque.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearPendingAuthAction();
-                    setAuthError('');
-                    setShowGooglePrompt(false);
-                  }}
-                  aria-label="Cerrar"
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {authError && (
-                <p className="text-xs font-bold text-[var(--accent-primary)] bg-[var(--bg-inset)] border border-[var(--border-subtle)] rounded-xl px-3 py-2">
-                  {authError}
-                </p>
-              )}
-
-              <button
-                type="button"
-                disabled={authLoading}
-                onClick={() => void handleGoogleSignIn()}
-                className="w-full min-h-[48px] rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-50 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-              >
-                <LogIn className="w-4 h-4 text-[var(--accent-gold)]" />
-                <span>{authLoading ? 'Conectando...' : 'Continuar con Google'}</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Floating Live Comanda Button (< XL: hidden on Welcome and only shown when there are active items/order) */}
         {showRightCartPanel && liveComandaSummary.hasActive && (
@@ -811,10 +783,11 @@ export default function App() {
           <BottomNav
             currentScreen={currentScreen}
             onNavigate={navigate}
-            userRole={userRole}
+            isAdmin={isAdmin}
+            activeStaffSession={activeStaffSession}
+            permissions={permissions}
             orderMode={orderMode}
             selectedTable={selectedTable}
-            isAdminAuthenticated={isAdminAuthenticated}
             activeOrdersCount={activeOrdersCount}
             cartCount={cartCount}
           />

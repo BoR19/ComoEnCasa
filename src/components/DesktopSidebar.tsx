@@ -1,19 +1,22 @@
 import React from 'react';
-import { User as FirebaseUser } from 'firebase/auth';
 import {
   Bike,
-  ChefHat,
   Heart,
   Home,
+  LogOut,
   QrCode,
   ShieldCheck,
   ShoppingBag,
   User,
   UtensilsCrossed,
 } from 'lucide-react';
-import { OrderMode, ScreenId } from '../types/app';
+import {
+  ActiveStaffSession,
+  OrderMode,
+  ScreenId,
+  StaffPermissions,
+} from '../types/app';
 import { AppIcon } from './BrandAssets';
-import { AppUserRole } from './LiveCartPanel';
 
 interface DesktopSidebarProps {
   currentScreen: ScreenId;
@@ -23,11 +26,11 @@ interface DesktopSidebarProps {
   cartCount: number;
   activeOrdersCount: number;
   favoritesCount: number;
-  firebaseUser: FirebaseUser | null;
-  userRole: AppUserRole;
-  isAdminAuthenticated: boolean;
-  isMozoAuthenticated: boolean;
-  onGoMozoComandas: () => void;
+  isAdmin: boolean;
+  activeStaffSession: ActiveStaffSession | null;
+  permissions: StaffPermissions;
+  onOpenStaffWorkspace: () => void;
+  onLogoutStaffSession: () => void;
 }
 
 interface SidebarNavItem {
@@ -38,7 +41,6 @@ interface SidebarNavItem {
   match: ScreenId[];
   badge?: string | number;
   accentBadge?: boolean;
-  showVerifiedDot?: boolean;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
@@ -49,29 +51,38 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   cartCount,
   activeOrdersCount,
   favoritesCount,
-  firebaseUser,
-  userRole,
-  isAdminAuthenticated,
-  isMozoAuthenticated,
-  onGoMozoComandas,
+  isAdmin,
+  activeStaffSession,
+  permissions,
+  onOpenStaffWorkspace,
+  onLogoutStaffSession,
 }) => {
-  const isVerifiedUser = Boolean(firebaseUser?.emailVerified);
-  const comandaBadge =
-    userRole === 'mozo'
-      ? cartCount > 0
-        ? cartCount
-        : activeOrdersCount > 0
-        ? activeOrdersCount
-        : undefined
-      : cartCount > 0
-      ? cartCount
-      : undefined;
+  const isStaffSession = Boolean(activeStaffSession);
+  const canTakeOrders = isAdmin || permissions.orders_tables;
+  const canComandas =
+    !isAdmin && (permissions.kitchen_board || permissions.cashier_billing);
+  const canOpenAdminPanel =
+    isAdmin ||
+    permissions.menu_pricing ||
+    permissions.reports_history ||
+    permissions.kitchen_board ||
+    permissions.cashier_billing;
 
-  const navItems: SidebarNavItem[] = [
+  const comandaBadge = isStaffSession
+    ? cartCount > 0
+      ? cartCount
+      : activeOrdersCount > 0
+      ? activeOrdersCount
+      : undefined
+    : cartCount > 0
+    ? cartCount
+    : undefined;
+
+  const customerNavItems: SidebarNavItem[] = [
     {
       id: 'welcome',
       label: 'Inicio',
-      title: 'Inicio · Modo de pedido',
+      title: 'Inicio',
       icon: Home,
       match: ['welcome'],
     },
@@ -116,34 +127,85 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     },
     {
       id: 'cart',
-      label: userRole === 'mozo' ? 'Comandas' : 'Comanda',
-      title:
-        userRole === 'mozo'
-          ? 'Tablero de Comandas y Cocina'
-          : 'Tu Comanda y Carrito',
+      label: 'Comanda',
+      title: 'Tu Comanda y Carrito',
       icon: ShoppingBag,
       match: ['cart', 'payment-methods', 'payment-qr', 'payment-confirm'],
       badge: comandaBadge,
-      accentBadge: cartCount > 0 || (userRole === 'mozo' && activeOrdersCount > 0),
+      accentBadge: cartCount > 0,
     },
     {
       id: 'profile',
       label: 'Perfil',
-      title: isVerifiedUser
-        ? `Perfil conectado (${firebaseUser?.email || 'Google'})`
-        : 'Perfil y Cuenta',
+      title: 'Perfil y Cuenta',
       icon: User,
       match: ['profile'],
-      showVerifiedDot: isVerifiedUser,
     },
   ];
 
-  // Admin manages orders inside Cocina/Caja (admin-panel), so hide duplicate Comanda link
-  const visibleNavItems =
-    userRole === 'admin'
-      ? navItems.filter((item) => item.id !== 'cart')
-      : navItems;
+  const staffNavItems: SidebarNavItem[] = [
+    {
+      id: 'welcome',
+      label: 'Inicio',
+      title: 'Inicio',
+      icon: Home,
+      match: ['welcome'],
+    },
+    ...(canTakeOrders
+      ? [
+          {
+            id: 'menu' as ScreenId,
+            label: 'Carta',
+            title: 'Carta Digital',
+            icon: UtensilsCrossed,
+            match: ['menu', 'search', 'dish-detail', 'customize'] as ScreenId[],
+          },
+          {
+            id: 'tables-select' as ScreenId,
+            label: 'Mesas',
+            title:
+              orderMode === 'dine-in'
+                ? `Mapa de Mesas (Mesa ${selectedTable} activa)`
+                : 'Mapa de Mesas y QR',
+            icon: QrCode,
+            match: [
+              'tables-select',
+              'tables-qr',
+              'tables-order',
+              'table-qr-welcome',
+            ] as ScreenId[],
+            badge: orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
+          },
+        ]
+      : []),
+    ...(canComandas
+      ? [
+          {
+            id: 'cart' as ScreenId,
+            label: 'Comandas',
+            title: 'Tablero de Comandas y Cocina',
+            icon: ShoppingBag,
+            match: [
+              'cart',
+              'payment-methods',
+              'payment-qr',
+              'payment-confirm',
+            ] as ScreenId[],
+            badge: comandaBadge,
+            accentBadge: cartCount > 0 || activeOrdersCount > 0,
+          },
+        ]
+      : []),
+    {
+      id: 'profile',
+      label: 'Turno',
+      title: 'Estado del turno',
+      icon: User,
+      match: ['profile'],
+    },
+  ];
 
+  const visibleNavItems = isStaffSession ? staffNavItems : customerNavItems;
   const isAdminRoute =
     currentScreen === 'admin-panel' || currentScreen === 'admin-login';
 
@@ -156,7 +218,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       <button
         type="button"
         onClick={() => onNavigate('welcome')}
-        title="Inicio · Como en Casa"
+        title="Inicio — Como en Casa"
         className="w-full flex flex-col items-center gap-1.5 group cursor-pointer rounded-xl py-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
       >
         <div className="rounded-2xl ring-2 ring-[var(--accent-gold)]/45 group-hover:ring-[var(--accent-gold)] transition-shadow duration-150 ease-[var(--ease-out)]">
@@ -218,21 +280,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                   </span>
                 )}
 
-                {item.badge === undefined && item.showVerifiedDot && (
+                {item.badge === undefined && item.accentBadge && (
                   <span
                     aria-hidden="true"
-                    className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[var(--status-ok-bright)] ring-2 ring-[var(--ink-primary)]"
+                    className="absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full bg-[var(--accent-gold)] ring-2 ring-[var(--ink-primary)]"
                   />
                 )}
-
-                {item.badge === undefined &&
-                  !item.showVerifiedDot &&
-                  item.accentBadge && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full bg-[var(--accent-gold)] ring-2 ring-[var(--ink-primary)]"
-                    />
-                  )}
               </span>
 
               <span className="text-[10px] font-semibold leading-none whitespace-nowrap">
@@ -243,70 +296,78 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         })}
       </nav>
 
-      {/* Bottom Role Switcher (Separated from Primary Nav) */}
+      {/* Bottom Staff / PIN Entry Switcher */}
       <div className="w-full pt-2.5 border-t border-[var(--accent-gold)]/20 flex flex-col items-center gap-1.5 shrink-0">
-        {isMozoAuthenticated && (
+        {activeStaffSession ? (
+          <>
+            {canOpenAdminPanel && (
+              <button
+                type="button"
+                onClick={onOpenStaffWorkspace}
+                title={`Panel de trabajo — ${activeStaffSession.name}`}
+                aria-current={currentScreen === 'admin-panel' ? 'page' : undefined}
+                className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
+                  currentScreen === 'admin-panel'
+                    ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-[var(--ink-primary)]'
+                    : 'bg-white/10 border-[var(--accent-gold)]/30 text-[var(--bg-canvas)] hover:border-[var(--accent-gold)]/70'
+                }`}
+              >
+                <span className="relative inline-flex items-center justify-center">
+                  <ShieldCheck
+                    className={`w-4 h-4 shrink-0 ${
+                      currentScreen === 'admin-panel'
+                        ? 'text-[var(--ink-primary)]'
+                        : 'text-[var(--accent-gold)]'
+                    }`}
+                  />
+                  {activeOrdersCount > 0 && (
+                    <span className="absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--ops-accent)] text-[var(--bg-surface)] text-[9px] font-bold flex items-center justify-center tabular-nums leading-none border border-[var(--ink-primary)]">
+                      {activeOrdersCount}
+                    </span>
+                  )}
+                </span>
+                <span className="text-[10px] font-bold leading-none whitespace-nowrap">
+                  {isAdmin ? 'Admin' : activeStaffSession.role}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onLogoutStaffSession}
+              title={`Cerrar turno (${activeStaffSession.name})`}
+              className="w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 bg-white/5 border border-white/15 text-[var(--bg-canvas)]/85 hover:border-[var(--ops-accent)]/60 hover:text-[var(--bg-surface)] active:scale-[0.97] transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
+            >
+              <LogOut className="w-4 h-4 text-[var(--ops-accent)] shrink-0" />
+              <span className="text-[10px] font-semibold leading-none whitespace-nowrap">
+                Salir
+              </span>
+            </button>
+          </>
+        ) : (
           <button
             type="button"
-            onClick={onGoMozoComandas}
-            title={
-              userRole === 'mozo'
-                ? 'Modo Mozo activo · Ir a Comandas'
-                : 'Cambiar a modo Mozo'
-            }
+            onClick={() => onNavigate('admin-login')}
+            title="Acceso administrador o personal"
+            aria-current={isAdminRoute ? 'page' : undefined}
             className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
-              userRole === 'mozo'
-                ? 'bg-[var(--status-ok)] border-[var(--status-ok-bright)]/55 text-[var(--bg-surface)] shadow-xs'
-                : 'bg-white/10 border-[var(--accent-gold)]/25 text-[var(--bg-canvas)]/90 hover:border-[var(--status-ok-bright)]/60 hover:text-[var(--bg-surface)]'
+              isAdminRoute
+                ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-[var(--ink-primary)]'
+                : 'bg-white/10 border-[var(--accent-gold)]/30 text-[var(--bg-canvas)] hover:border-[var(--accent-gold)]/70'
             }`}
           >
-            <ChefHat
-              className={`w-4 h-4 shrink-0 ${
-                userRole === 'mozo'
-                  ? 'text-[var(--bg-surface)]'
-                  : 'text-[var(--status-ok-bright)]'
-              }`}
-            />
-            <span className="text-[10px] font-bold leading-none whitespace-nowrap">
-              Mozo
-            </span>
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() =>
-            onNavigate(isAdminAuthenticated ? 'admin-panel' : 'admin-login')
-          }
-          title={
-            isAdminAuthenticated
-              ? 'Panel Administrador · Cocina y Caja'
-              : 'Acceso Administrador'
-          }
-          aria-current={isAdminRoute ? 'page' : undefined}
-          className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
-            isAdminRoute || userRole === 'admin'
-              ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-[var(--ink-primary)]'
-              : 'bg-white/10 border-[var(--accent-gold)]/30 text-[var(--bg-canvas)] hover:border-[var(--accent-gold)]/70'
-          }`}
-        >
-          <span className="relative inline-flex items-center justify-center">
             <ShieldCheck
               className={`w-4 h-4 shrink-0 ${
-                isAdminRoute || userRole === 'admin'
+                isAdminRoute
                   ? 'text-[var(--ink-primary)]'
                   : 'text-[var(--accent-gold)]'
               }`}
             />
-            {isAdminAuthenticated && activeOrdersCount > 0 && (
-              <span className="absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--ops-accent)] text-[var(--bg-surface)] text-[9px] font-bold flex items-center justify-center tabular-nums leading-none border border-[var(--ink-primary)]">
-                {activeOrdersCount}
-              </span>
-            )}
-          </span>
-          <span className="text-[10px] font-bold leading-none">Admin</span>
-        </button>
+            <span className="text-[10px] font-bold leading-none">Acceso</span>
+          </button>
+        )}
       </div>
     </aside>
   );
 };
+

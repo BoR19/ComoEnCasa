@@ -43,6 +43,10 @@ import { VerifyDeliveryCodeModal } from './VerifyDeliveryCodeModal';
 
 interface OrdersBoardProps {
   userRole: AppUserRole;
+  canTakeOrders?: boolean;
+  canUpdateKitchen?: boolean;
+  canCollectBilling?: boolean;
+  canViewHistory?: boolean;
   orders: KitchenOrder[];
   tables: TableItem[];
   menuItems: MenuItem[];
@@ -82,6 +86,10 @@ interface OrdersBoardProps {
 
 export const OrdersBoard: React.FC<OrdersBoardProps> = ({
   userRole,
+  canTakeOrders = true,
+  canUpdateKitchen = true,
+  canCollectBilling = true,
+  canViewHistory = true,
   orders,
   tables,
   menuItems,
@@ -105,6 +113,8 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
   onEditTable,
 }) => {
   const isStaff = userRole === 'admin' || userRole === 'mozo';
+  const allowCreatePosOrder = Boolean(isStaff && canTakeOrders && onCreatePosOrder);
+  const allowCollectedTab = !isStaff || canViewHistory || canCollectBilling;
 
   const [orderFilter, setOrderFilter] = useState<OrderFilterType>('active');
   const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(
@@ -124,10 +134,24 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
   }, [userRole]);
 
   useEffect(() => {
-    if (openNewOrderSignal > 0 && isStaff && onCreatePosOrder) {
+    if (!allowCollectedTab && orderFilter === 'collected') {
+      setOrderFilter('active');
+    }
+  }, [allowCollectedTab, orderFilter]);
+
+  useEffect(() => {
+    if (openNewOrderSignal > 0 && allowCreatePosOrder) {
       setShowPosModal(true);
     }
-  }, [openNewOrderSignal, isStaff, onCreatePosOrder]);
+  }, [openNewOrderSignal, allowCreatePosOrder]);
+
+  const visibleFilterTabs = useMemo(
+    () =>
+      allowCollectedTab
+        ? ORDER_FILTER_TABS
+        : ORDER_FILTER_TABS.filter((f) => f.id !== 'collected'),
+    [allowCollectedTab]
+  );
 
   const filteredOrders = useMemo(
     () => filterOrdersByType(orders, orderFilter),
@@ -172,7 +196,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
       {/* Unified Filter Tabs & Quick Actions Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="w-full lg:w-auto max-w-full min-w-0 flex items-center gap-1 p-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] overflow-x-auto no-scrollbar">
-          {ORDER_FILTER_TABS.map((f) => (
+          {visibleFilterTabs.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -206,7 +230,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
               </button>
             )}
 
-            {isStaff && onCreatePosOrder && (
+            {allowCreatePosOrder && (
               <button
                 type="button"
                 onClick={() => setShowPosModal(true)}
@@ -252,7 +276,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                 Ir a Carta Digital
               </button>
             )}
-            {isStaff && onCreatePosOrder ? (
+            {allowCreatePosOrder ? (
               <button
                 type="button"
                 onClick={() => setShowPosModal(true)}
@@ -471,7 +495,8 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                       </span>
 
                       <div className="flex flex-wrap items-center gap-2">
-                        {order.mode === 'dine-in' &&
+                        {canCollectBilling &&
+                          order.mode === 'dine-in' &&
                           order.tableNumber &&
                           isTableOccupied && (
                             <button
@@ -509,70 +534,84 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-2 pt-0.5">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onUpdateOrderStatus(order.id, 'Preparando')
-                          }
-                          className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
-                            order.status === 'Preparando'
-                              ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
-                              : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
-                          }`}
-                        >
-                          Preparando
-                        </button>
+                      {(canUpdateKitchen || canCollectBilling) && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {canUpdateKitchen && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onUpdateOrderStatus(order.id, 'Preparando')
+                                }
+                                className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
+                                  order.status === 'Preparando'
+                                    ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                                    : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
+                                }`}
+                              >
+                                Preparando
+                              </button>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onUpdateOrderStatus(order.id, middleStatus)
-                          }
-                          className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
-                            order.status === middleStatus
-                              ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
-                              : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
-                          }`}
-                        >
-                          {middleLabel}
-                        </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onUpdateOrderStatus(order.id, middleStatus)
+                                }
+                                className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
+                                  order.status === middleStatus
+                                    ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                                    : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
+                                }`}
+                              >
+                                {middleLabel}
+                              </button>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (requiresDeliveryPin(order)) {
-                              setVerifyingOrder(order);
-                            } else {
-                              onUpdateOrderStatus(order.id, 'Entregado');
-                            }
-                          }}
-                          className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
-                            order.status === 'Entregado'
-                              ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
-                              : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
-                          }`}
-                        >
-                          {requiresDeliveryPin(order) && (
-                            <KeyRound className="w-3.5 h-3.5 text-[var(--ops-accent)] shrink-0" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (requiresDeliveryPin(order)) {
+                                    setVerifyingOrder(order);
+                                  } else {
+                                    onUpdateOrderStatus(order.id, 'Entregado');
+                                  }
+                                }}
+                                className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
+                                  !canCollectBilling ? 'col-span-2' : ''
+                                } ${
+                                  order.status === 'Entregado'
+                                    ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                                    : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
+                                }`}
+                              >
+                                {requiresDeliveryPin(order) && (
+                                  <KeyRound className="w-3.5 h-3.5 text-[var(--ops-accent)] shrink-0" />
+                                )}
+                                <span>
+                                  {order.mode === 'dine-in'
+                                    ? 'Servido'
+                                    : 'Entregado'}
+                                </span>
+                              </button>
+                            </>
                           )}
-                          <span>
-                            {order.mode === 'dine-in' ? 'Servido' : 'Entregado'}
-                          </span>
-                        </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setCollectingOrder(order)}
-                          className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                        >
-                          <Banknote className="w-3.5 h-3.5 shrink-0" />
-                          <span>Pagado / Cobrar</span>
-                        </button>
-                      </div>
+                          {canCollectBilling && (
+                            <button
+                              type="button"
+                              onClick={() => setCollectingOrder(order)}
+                              className={`min-h-[44px] px-3 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                                !canUpdateKitchen ? 'col-span-2' : ''
+                              }`}
+                            >
+                              <Banknote className="w-3.5 h-3.5 shrink-0" />
+                              <span>Pagado / Cobrar</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-2">
-                        {onAddDishesToOrder && (
+                        {canTakeOrders && onAddDishesToOrder && (
                           <button
                             type="button"
                             onClick={() => onAddDishesToOrder(order)}
@@ -587,7 +626,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                           type="button"
                           onClick={() => setTicketOrder(order)}
                           className={`min-h-[44px] px-3 py-2 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/55 text-[var(--accent-gold)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-[var(--accent-gold)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
-                            !onAddDishesToOrder ? 'col-span-2' : ''
+                            !canTakeOrders || !onAddDishesToOrder ? 'col-span-2' : ''
                           }`}
                         >
                           <Printer className="w-3.5 h-3.5 shrink-0" />
@@ -672,13 +711,14 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
       />
 
       {/* New POS Order Modal */}
-      {isStaff && onCreatePosOrder && (
+      {allowCreatePosOrder && onCreatePosOrder && (
         <PosOrderModal
           isOpen={showPosModal}
           title={newOrderLabel}
           tables={tables}
           menuItems={menuItems}
           initialTable={selectedTable}
+          canCollectBilling={canCollectBilling}
           onClose={() => setShowPosModal(false)}
           onCreatePosOrder={onCreatePosOrder}
           onOpenTicket={setTicketOrder}

@@ -48,6 +48,7 @@ interface TableSelectScreenProps {
   orders: KitchenOrder[];
   selectedTable: number;
   userRole: AppUserRole;
+  canManageTables?: boolean;
   allowOccupiedSelection?: boolean;
   onSelectTable: (tableNumber: number) => void;
   onConfirmTable: (tableNumber?: number) => void;
@@ -67,6 +68,7 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
   orders,
   selectedTable,
   userRole,
+  canManageTables,
   allowOccupiedSelection = false,
   onSelectTable,
   onConfirmTable,
@@ -75,7 +77,10 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
   onMoveTableOrder,
   onBack,
 }) => {
-  const isStaff = userRole === 'admin' || userRole === 'mozo';
+  const isStaff =
+    canManageTables !== undefined
+      ? canManageTables
+      : userRole === 'admin' || userRole === 'mozo';
   const [zoneFilter, setZoneFilter] = useState<string>('Todas');
 
   // Modals (centered with .modal-surface scale(0.95)->1 & opacity 0->1)

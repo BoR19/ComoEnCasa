@@ -137,25 +137,45 @@
     },
     "StaffConfigDoc": {
       "title": "StaffConfigDoc",
-      "description": "Configuración privada operativa (PIN de Mozo).",
+      "description": "Configuración de PIN maestro de Administrador y respaldo operativo.",
       "type": "object",
       "properties": {
+        "adminPin": { "type": "string", "minLength": 4, "maxLength": 4, "pattern": "^[0-9]{4}$" },
         "mozoPin": { "type": "string", "minLength": 4, "maxLength": 4, "pattern": "^[0-9]{4}$" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["mozoPin", "updatedAt"]
+      "required": ["adminPin", "mozoPin", "updatedAt"]
     },
-    "AuthorizedStaffDoc": {
-      "title": "AuthorizedStaffDoc",
-      "description": "Cuenta de personal (Mozo/Caja) autorizada por el administrador.",
+    "StaffMemberDoc": {
+      "title": "StaffMemberDoc",
+      "description": "Miembro del equipo (Mozo, Cajero, Cocina) con PIN de 4 dígitos y permisos granulares.",
       "type": "object",
       "properties": {
-        "email": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "id": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[a-zA-Z0-9_\\-]+$" },
         "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "role": { "type": "string", "enum": ["Mozo", "Cajero", "Cocina"] },
+        "pin": { "type": "string", "minLength": 4, "maxLength": 4, "pattern": "^[0-9]{4}$" },
         "active": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "permissions": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["email", "name", "active", "createdAt"]
+      "required": ["id", "name", "role", "pin", "active", "permissions", "createdAt", "updatedAt"]
+    },
+    "StaffSessionDoc": {
+      "title": "StaffSessionDoc",
+      "description": "Sesión de turno verificada por PIN para el usuario anónimo del dispositivo.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "staffId": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "role": { "type": "string", "enum": ["Admin", "Mozo", "Cajero", "Cocina"] },
+        "pin": { "type": "string", "minLength": 4, "maxLength": 4, "pattern": "^[0-9]{4}$" },
+        "isAdmin": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "staffId", "name", "role", "pin", "isAdmin", "updatedAt"]
     }
   },
   "firestore": {
@@ -193,11 +213,15 @@
     },
     "/config/staff": {
       "schema": { "$ref": "#/entities/StaffConfigDoc" },
-      "description": "Configuración operativa de PIN de Mozo."
+      "description": "Configuración operativa de PIN maestro de Administrador."
     },
-    "/authorized_staff/{staffEmail}": {
-      "schema": { "$ref": "#/entities/AuthorizedStaffDoc" },
-      "description": "Lista de correos de mozos autorizados."
+    "/staff/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffMemberDoc" },
+      "description": "Equipo de trabajo (Mozo, Cajero, Cocina), PIN de 4 dígitos y permisos."
+    },
+    "/staff_sessions/{sessionUid}": {
+      "schema": { "$ref": "#/entities/StaffSessionDoc" },
+      "description": "Turnos activos validados por PIN para terminales con Auth anónimo."
     }
   }
 }

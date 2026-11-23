@@ -1,54 +1,40 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { User } from 'firebase/auth';
 import {
   ArrowRight,
   Bike,
-  CheckCircle2,
   Clock,
-  Delete,
-  KeyRound,
-  LogIn,
   LogOut,
   MapPin,
+  ShieldCheck,
   ShoppingBag,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
-import { TakeawayInfo } from '../../types/app';
+import { ActiveStaffSession, TakeawayInfo } from '../../types/app';
 import { OfficialLogo } from '../BrandAssets';
 
 interface WelcomeScreenProps {
-  mozoPin: string;
-  isMozoLoggedIn: boolean;
-  firebaseUser: User | null;
-  isStaff: boolean;
+  activeStaffSession: ActiveStaffSession | null;
   takeawayInfo: TakeawayInfo;
-  onGoogleSignIn: () => void;
-  onMozoLoginSuccess: () => void;
-  onMozoLogout: () => void;
-  onGoMozoComandas: () => void;
+  onOpenStaffPinLogin: () => void;
+  onEnterStaffWorkspace: () => void;
+  onLogoutStaffSession: () => void;
   onSelectDineIn: () => void;
   onSelectTakeaway: (info: TakeawayInfo) => void;
   onSelectDelivery: () => void;
-  onGoAdminLogin: () => void;
 }
 
 const PICKUP_TIME_CHIPS = ['15 min', '30 min', '45 min'];
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
-  mozoPin,
-  isMozoLoggedIn,
-  firebaseUser,
-  isStaff,
+  activeStaffSession,
   takeawayInfo,
-  onGoogleSignIn,
-  onMozoLoginSuccess,
-  onMozoLogout,
-  onGoMozoComandas,
+  onOpenStaffPinLogin,
+  onEnterStaffWorkspace,
+  onLogoutStaffSession,
   onSelectDineIn,
   onSelectTakeaway,
   onSelectDelivery,
-  onGoAdminLogin,
 }) => {
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [showTakeawayModal, setShowTakeawayModal] = useState(false);
@@ -56,12 +42,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   const [takeawayPickupDraft, setTakeawayPickupDraft] = useState('');
   const [takeawayError, setTakeawayError] = useState('');
 
-  // 5-tap secret trigger on OfficialLogo for Mozo PIN popup
+  // 5-tap secret trigger on OfficialLogo for Staff/Admin PIN screen
   const [logoTapCount, setLogoTapCount] = useState(0);
   const tapTimerRef = useRef<number | null>(null);
-  const [showMozoModal, setShowMozoModal] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     return () => {
@@ -77,9 +60,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     const nextCount = logoTapCount + 1;
     if (nextCount >= 5) {
       setLogoTapCount(0);
-      setPinInput('');
-      setPinError('');
-      setShowMozoModal(true);
+      onOpenStaffPinLogin();
       return;
     }
 
@@ -89,69 +70,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     }, 2200);
   };
 
-  const validateAndSubmitPin = (candidate: string) => {
-    if (candidate.length < 4) return;
-    if (candidate !== mozoPin) {
-      setPinError('PIN incorrecto. Verifica los 4 números de Mozo.');
-      setPinInput('');
-      return;
-    }
-
-    setPinError('');
-    setPinInput('');
-    setShowMozoModal(false);
-
-    if (isMozoLoggedIn) {
-      onMozoLogout();
-    } else {
-      onMozoLoginSuccess();
-    }
-  };
-
-  const handleDigitPress = (digit: string) => {
-    if (pinInput.length >= 4) return;
-    setPinError('');
-    const next = pinInput + digit;
-    setPinInput(next);
-    if (next.length === 4) {
-      validateAndSubmitPin(next);
-    }
-  };
-
-  const handleBackspace = () => {
-    setPinError('');
-    setPinInput((prev) => prev.slice(0, -1));
-  };
-
-  useEffect(() => {
-    if (!showMozoModal) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (/^[0-9]$/.test(e.key)) {
-        e.preventDefault();
-        handleDigitPress(e.key);
-      } else if (e.key === 'Backspace') {
-        e.preventDefault();
-        handleBackspace();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowMozoModal(false);
-      } else if (e.key === 'Enter' && pinInput.length === 4) {
-        e.preventDefault();
-        validateAndSubmitPin(pinInput);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  });
-
   const openTakeawayModal = () => {
-    const defaultName =
-      takeawayInfo.customerName.trim() ||
-      firebaseUser?.displayName?.split(' ')[0] ||
-      '';
-    setTakeawayNameDraft(defaultName);
+    setTakeawayNameDraft(takeawayInfo.customerName.trim());
     setTakeawayPickupDraft(takeawayInfo.pickupNote);
     setTakeawayError('');
     setShowTakeawayModal(true);
@@ -217,14 +137,27 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 </span>
               )}
 
-              {isMozoLoggedIn && (
-                <button
-                  type="button"
-                  onClick={onGoMozoComandas}
-                  className="min-h-[36px] px-3 py-1 rounded-xl bg-[var(--status-ok)]/12 border border-[var(--status-ok)]/30 text-[var(--status-ok)] text-xs font-bold hover:bg-[var(--status-ok)]/20 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                >
-                  Sesión Mozo activa — Ir a Comandas
-                </button>
+              {activeStaffSession && (
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onEnterStaffWorkspace}
+                    className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[var(--ops-surface)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
+                    <span>
+                      Turno: {activeStaffSession.name} — {activeStaffSession.role}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onLogoutStaffSession}
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                    <span>Cerrar turno</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -346,10 +279,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
           <button
             type="button"
-            onClick={onGoAdminLogin}
+            onClick={onOpenStaffPinLogin}
             className="underline decoration-[var(--border-subtle)] underline-offset-4 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-sm py-1"
           >
-            Acceso administrador
+            Acceso administrador / personal
           </button>
         </footer>
       </div>
@@ -520,163 +453,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         </div>
       )}
 
-      {/* Modal: Acceso Mozo (4-digit PIN Login / Logout) */}
-      {showMozoModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Acceso Mozo"
-        >
-          <div className="modal-surface my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[var(--bg-surface)] text-[var(--ink-primary)] rounded-3xl border border-[var(--border-subtle)] p-4 sm:p-5 shadow-2xl space-y-3.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-[var(--ink-primary)] text-[var(--accent-gold)] flex items-center justify-center">
-                  <KeyRound className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)] leading-tight">
-                    {isMozoLoggedIn ? 'Sesión Mozo activa' : 'Acceso Mozo'}
-                  </h2>
-                  <p className="text-xs font-medium text-[var(--ink-muted)]">
-                    {isMozoLoggedIn
-                      ? 'Ingresa 4 números para cerrar sesión'
-                      : 'Introduce tu PIN de 4 números'}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowMozoModal(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {isMozoLoggedIn && (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMozoModal(false);
-                  onGoMozoComandas();
-                }}
-                className="w-full min-h-[42px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-              >
-                <UtensilsCrossed className="w-4 h-4" />
-                <span>Entrar a Comandas</span>
-              </button>
-            )}
-
-            {/* Google Staff Sync Status inside PIN Modal */}
-            {firebaseUser && isStaff ? (
-              <div className="rounded-xl bg-[var(--status-ok)]/10 border border-[var(--status-ok)]/30 px-3 py-2 flex items-center gap-2 text-xs font-semibold text-[var(--status-ok)]">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span className="truncate">
-                  Sincronizado en vivo: {firebaseUser.email}
-                </span>
-              </div>
-            ) : (
-              <div className="rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] px-3 py-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-[var(--ink-muted)] leading-tight">
-                  {firebaseUser
-                    ? `Cuenta (${firebaseUser.email}) sin rol de personal`
-                    : 'Conecta Google autorizado para sincronizar en vivo'}
-                </span>
-                <button
-                  type="button"
-                  onClick={onGoogleSignIn}
-                  className="px-2.5 py-1.5 rounded-lg bg-[var(--ink-primary)] text-[var(--bg-surface)] text-xs font-semibold inline-flex items-center gap-1 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                >
-                  <LogIn className="w-3 h-3 text-[var(--accent-gold)]" />
-                  <span>{firebaseUser ? 'Cambiar' : 'Conectar'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* 4-digit visual slots */}
-            <div className="grid grid-cols-4 gap-2.5 py-1">
-              {[0, 1, 2, 3].map((idx) => {
-                const filled = idx < pinInput.length;
-                return (
-                  <div
-                    key={idx}
-                    className={`h-13 rounded-2xl border-2 flex items-center justify-center text-xl font-bold tabular-nums transition-colors duration-150 ease-[var(--ease-out)] ${
-                      filled
-                        ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--accent-gold)]'
-                        : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-muted)]'
-                    }`}
-                  >
-                    {filled ? '●' : ''}
-                  </div>
-                );
-              })}
-            </div>
-
-            {pinError && (
-              <p className="text-xs font-semibold text-[var(--status-danger)] bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/35 rounded-xl px-3 py-2 text-center">
-                {pinError}
-              </p>
-            )}
-
-            {/* Numeric Keypad */}
-            <div className="grid grid-cols-3 gap-2">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-                <button
-                  key={digit}
-                  type="button"
-                  onClick={() => handleDigitPress(digit)}
-                  className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-base font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                >
-                  {digit}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPinInput('');
-                  setPinError('');
-                }}
-                className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-              >
-                Limpiar
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDigitPress('0')}
-                className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-base font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-              >
-                0
-              </button>
-
-              <button
-                type="button"
-                onClick={handleBackspace}
-                aria-label="Borrar último dígito"
-                className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] flex items-center justify-center hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-              >
-                <Delete className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between text-xs font-medium text-[var(--ink-muted)] pt-1">
-              <span>
-                PIN por defecto: {mozoPin === '1234' ? '1234' : '4 dígitos'}
-              </span>
-              {isMozoLoggedIn && (
-                <span className="inline-flex items-center gap-1 text-[var(--accent-primary)] font-bold">
-                  <LogOut className="w-3 h-3" />
-                  Modo logout
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

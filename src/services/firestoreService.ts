@@ -1,4 +1,3 @@
-import { User } from 'firebase/auth';
 import {
   collection,
   deleteDoc,
@@ -22,8 +21,8 @@ import {
 } from '../data/mockData';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import {
-  AuthorizedStaffItem,
   CustomerContactItem,
+  EmployeeRoleTitle,
   InventoryItem,
   KitchenOrder,
   MenuItem,
@@ -31,52 +30,78 @@ import {
   OrderMode,
   OrderStatus,
   PaymentMethod,
+  StaffMember,
+  StaffPermissions,
+  StaffRoleTitle,
   TableItem,
 } from '../types/app';
 import { normalizeWhatsAppPhone } from '../utils/ticketHelpers';
 
-export const BOOTSTRAP_ADMIN_EMAIL = 'borbjo637@gmail.com';
+export const DEFAULT_ADMIN_PIN = '0000';
+export const DEFAULT_MOZO_PIN = '1234';
 
-export interface UserRoleStatus {
-  isAdmin: boolean;
-  isMozo: boolean;
-}
+export const ALL_STAFF_PERMISSIONS: StaffPermissions = {
+  orders_tables: true,
+  kitchen_board: true,
+  cashier_billing: true,
+  menu_pricing: true,
+  reports_history: true,
+};
 
-export async function resolveUserRoles(user: User | null): Promise<UserRoleStatus> {
-  if (!user || !user.emailVerified) {
-    return { isAdmin: false, isMozo: false };
-  }
+export const DEFAULT_PERMISSIONS_BY_ROLE: Record<
+  EmployeeRoleTitle,
+  StaffPermissions
+> = {
+  Mozo: {
+    orders_tables: true,
+    kitchen_board: true,
+    cashier_billing: false,
+    menu_pricing: false,
+    reports_history: false,
+  },
+  Cajero: {
+    orders_tables: true,
+    kitchen_board: true,
+    cashier_billing: true,
+    menu_pricing: false,
+    reports_history: true,
+  },
+  Cocina: {
+    orders_tables: false,
+    kitchen_board: true,
+    cashier_billing: false,
+    menu_pricing: false,
+    reports_history: false,
+  },
+};
 
-  const email = (user.email || '').toLowerCase();
-  if (email === BOOTSTRAP_ADMIN_EMAIL) {
-    return { isAdmin: true, isMozo: true };
-  }
-
-  let isAdmin = false;
-  let isMozo = false;
-
-  try {
-    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
-    if (adminSnap.exists()) {
-      isAdmin = true;
-      isMozo = true;
-    }
-  } catch {
-    // Non-admin read is allowed only for own uid; fallback safely
-  }
-
-  if (!isAdmin && email) {
-    try {
-      const staffSnap = await getDoc(doc(db, 'authorized_staff', email));
-      if (staffSnap.exists() && staffSnap.data()?.active === true) {
-        isMozo = true;
-      }
-    } catch {
-      // Not an authorized mozo
-    }
-  }
-
-  return { isAdmin, isMozo };
+export function normalizeStaffPermissions(
+  raw?: Partial<StaffPermissions> | null,
+  fallbackRole: EmployeeRoleTitle = 'Mozo'
+): StaffPermissions {
+  const defaults = DEFAULT_PERMISSIONS_BY_ROLE[fallbackRole];
+  return {
+    orders_tables:
+      typeof raw?.orders_tables === 'boolean'
+        ? raw.orders_tables
+        : defaults.orders_tables,
+    kitchen_board:
+      typeof raw?.kitchen_board === 'boolean'
+        ? raw.kitchen_board
+        : defaults.kitchen_board,
+    cashier_billing:
+      typeof raw?.cashier_billing === 'boolean'
+        ? raw.cashier_billing
+        : defaults.cashier_billing,
+    menu_pricing:
+      typeof raw?.menu_pricing === 'boolean'
+        ? raw.menu_pricing
+        : defaults.menu_pricing,
+    reports_history:
+      typeof raw?.reports_history === 'boolean'
+        ? raw.reports_history
+        : defaults.reports_history,
+  };
 }
 
 function sanitizeOrderLines(items: OrderLineItem[]): OrderLineItem[] {
@@ -120,12 +145,14 @@ function buildMenuDocPayload(item: MenuItem, sortOrder: number) {
 
 export async function seedInitialCatalogIfEmpty(): Promise<void> {
   try {
-    const [menuSnap, tableSnap, invSnap, staffCfgSnap] = await Promise.all([
-      getDocs(collection(db, 'menuItems')),
-      getDocs(collection(db, 'tables')),
-      getDocs(collection(db, 'inventory')),
-      getDoc(doc(db, 'config', 'staff')),
-    ]);
+    const [menuSnap, tableSnap, invSnap, staffCfgSnap, staffSnap] =
+      await Promise.all([
+        getDocs(collection(db, 'menuItems')),
+        getDocs(collection(db, 'tables')),
+        getDocs(collection(db, 'inventory')),
+        getDoc(doc(db, 'config', 'staff')),
+        getDocs(collection(db, 'staff')),
+      ]);
 
     const batch = writeBatch(db);
     let hasWrites = false;
@@ -168,7 +195,22 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
 
     if (!staffCfgSnap.exists()) {
       batch.set(doc(db, 'config', 'staff'), {
-        mozoPin: '1234',
+        adminPin: DEFAULT_ADMIN_PIN,
+        mozoPin: DEFAULT_MOZO_PIN,
+        updatedAt: serverTimestamp(),
+      });
+      hasWrites = true;
+    }
+
+    if (staffSnap.empty) {
+      batch.set(doc(db, 'staff', 'staff-carlos'), {
+        id: 'staff-carlos',
+        name: 'Carlos (Mozo)',
+        role: 'Mozo',
+        pin: DEFAULT_MOZO_PIN,
+        active: true,
+        permissions: DEFAULT_PERMISSIONS_BY_ROLE.Mozo,
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
       hasWrites = true;
@@ -178,7 +220,11 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
       await batch.commit();
     }
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'menuItems|tables|inventory|config/staff');
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      'menuItems|tables|inventory|config/staff|staff'
+    );
   }
 }
 
@@ -442,16 +488,22 @@ export function subscribeInventory(
 }
 
 export function subscribeStaffConfig(
-  onPin: (mozoPin: string) => void
+  onPins: (pins: { adminPin: string; mozoPin: string }) => void
 ): () => void {
   return onSnapshot(
     doc(db, 'config', 'staff'),
     (snapshot) => {
       if (snapshot.exists()) {
-        const pin = snapshot.data()?.mozoPin;
-        if (typeof pin === 'string' && /^[0-9]{4}$/.test(pin)) {
-          onPin(pin);
-        }
+        const data = snapshot.data();
+        const adminPin =
+          typeof data?.adminPin === 'string' && /^[0-9]{4}$/.test(data.adminPin)
+            ? data.adminPin
+            : DEFAULT_ADMIN_PIN;
+        const mozoPin =
+          typeof data?.mozoPin === 'string' && /^[0-9]{4}$/.test(data.mozoPin)
+            ? data.mozoPin
+            : DEFAULT_MOZO_PIN;
+        onPins({ adminPin, mozoPin });
       }
     },
     (error) => {
@@ -460,24 +512,41 @@ export function subscribeStaffConfig(
   );
 }
 
-export function subscribeAuthorizedStaff(
-  onData: (list: AuthorizedStaffItem[]) => void
+export function subscribeStaffMembers(
+  isAdmin: boolean,
+  onData: (list: StaffMember[]) => void
 ): () => void {
+  const q = isAdmin
+    ? collection(db, 'staff')
+    : query(collection(db, 'staff'), where('active', '==', true));
+
   return onSnapshot(
-    collection(db, 'authorized_staff'),
+    q,
     (snapshot) => {
-      const list: AuthorizedStaffItem[] = snapshot.docs.map((d) => {
-        const data = d.data();
-        return {
-          email: data.email || d.id,
-          name: data.name || data.email || d.id,
-          active: Boolean(data.active),
-        };
-      });
+      const list: StaffMember[] = snapshot.docs
+        .map((d) => {
+          const data = d.data();
+          const role: EmployeeRoleTitle =
+            data.role === 'Cajero' || data.role === 'Cocina'
+              ? data.role
+              : 'Mozo';
+          return {
+            id: String(data.id || d.id),
+            name: String(data.name || d.id),
+            role,
+            pin:
+              typeof data.pin === 'string' && /^[0-9]{4}$/.test(data.pin)
+                ? data.pin
+                : DEFAULT_MOZO_PIN,
+            active: Boolean(data.active),
+            permissions: normalizeStaffPermissions(data.permissions, role),
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'));
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'authorized_staff');
+      handleFirestoreError(error, OperationType.LIST, 'staff');
     }
   );
 }
@@ -997,10 +1066,14 @@ export async function saveInventoryInFirestore(
   }
 }
 
-export async function saveMozoPinInFirestore(mozoPin: string): Promise<void> {
+export async function saveStaffConfigPinsInFirestore(params: {
+  adminPin: string;
+  mozoPin: string;
+}): Promise<void> {
   try {
     await setDoc(doc(db, 'config', 'staff'), {
-      mozoPin,
+      adminPin: params.adminPin,
+      mozoPin: params.mozoPin,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -1008,45 +1081,101 @@ export async function saveMozoPinInFirestore(mozoPin: string): Promise<void> {
   }
 }
 
-export async function addAuthorizedStaffInFirestore(
-  email: string,
-  name: string
+export async function upsertStaffMemberInFirestore(
+  member: StaffMember
 ): Promise<void> {
-  const cleanEmail = email.trim().toLowerCase();
+  const path = `staff/${member.id}`;
   try {
-    await setDoc(doc(db, 'authorized_staff', cleanEmail), {
-      email: cleanEmail,
-      name: name.trim().slice(0, 80) || cleanEmail,
-      active: true,
-      createdAt: serverTimestamp(),
-    });
+    const ref = doc(db, 'staff', member.id);
+    const snap = await getDoc(ref);
+    const cleanPermissions = normalizeStaffPermissions(
+      member.permissions,
+      member.role
+    );
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        id: member.id,
+        name: member.name.trim().slice(0, 80),
+        role: member.role,
+        pin: member.pin,
+        active: Boolean(member.active),
+        permissions: cleanPermissions,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await updateDoc(ref, {
+        name: member.name.trim().slice(0, 80),
+        role: member.role,
+        pin: member.pin,
+        active: Boolean(member.active),
+        permissions: cleanPermissions,
+        updatedAt: serverTimestamp(),
+      });
+    }
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, `authorized_staff/${cleanEmail}`);
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
-export async function toggleAuthorizedStaffInFirestore(
-  email: string,
+export async function toggleStaffActiveInFirestore(
+  staffId: string,
   active: boolean
 ): Promise<void> {
-  const cleanEmail = email.trim().toLowerCase();
   try {
-    await updateDoc(doc(db, 'authorized_staff', cleanEmail), {
+    await updateDoc(doc(db, 'staff', staffId), {
       active,
+      updatedAt: serverTimestamp(),
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `authorized_staff/${cleanEmail}`);
+    handleFirestoreError(error, OperationType.UPDATE, `staff/${staffId}`);
   }
 }
 
-export async function removeAuthorizedStaffInFirestore(
-  email: string
+export async function deleteStaffMemberInFirestore(
+  staffId: string
 ): Promise<void> {
-  const cleanEmail = email.trim().toLowerCase();
   try {
-    await deleteDoc(doc(db, 'authorized_staff', cleanEmail));
+    await deleteDoc(doc(db, 'staff', staffId));
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `authorized_staff/${cleanEmail}`);
+    handleFirestoreError(error, OperationType.DELETE, `staff/${staffId}`);
+  }
+}
+
+export async function activateStaffSessionInFirestore(params: {
+  uid: string;
+  staffId: string;
+  name: string;
+  role: StaffRoleTitle;
+  pin: string;
+  isAdmin: boolean;
+}): Promise<void> {
+  try {
+    await setDoc(doc(db, 'staff_sessions', params.uid), {
+      uid: params.uid,
+      staffId: params.staffId,
+      name: params.name.trim().slice(0, 80),
+      role: params.role,
+      pin: params.pin,
+      isAdmin: params.isAdmin,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      `staff_sessions/${params.uid}`
+    );
+  }
+}
+
+export async function clearStaffSessionInFirestore(
+  uid: string
+): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'staff_sessions', uid));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `staff_sessions/${uid}`);
   }
 }
 

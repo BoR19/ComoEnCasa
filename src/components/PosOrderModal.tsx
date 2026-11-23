@@ -23,6 +23,7 @@ interface PosOrderModalProps {
   tables: TableItem[];
   menuItems: MenuItem[];
   initialTable?: number;
+  canCollectBilling?: boolean;
   onClose: () => void;
   onCreatePosOrder: (payload: {
     mode: OrderMode;
@@ -44,6 +45,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
   tables,
   menuItems,
   initialTable = 1,
+  canCollectBilling = true,
   onClose,
   onCreatePosOrder,
   onOpenTicket,
@@ -131,7 +133,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
       deliveryPhone: mode === 'delivery' ? phone : undefined,
       notes,
       items,
-      payNowMethod: payNow ? payMethod : undefined,
+      payNowMethod: canCollectBilling && payNow ? payMethod : undefined,
     });
     onClose();
     if (openTicketOnSave && onOpenTicket) {
@@ -330,43 +332,45 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
             className="w-full px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           />
 
-          <div className="space-y-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setPayNow((p) => !p)}
-              className="flex items-center gap-2 text-xs font-bold text-[var(--ink-primary)] cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-            >
-              <span
-                className={`w-4 h-4 rounded border flex items-center justify-center ${
-                  payNow
-                    ? 'bg-[var(--status-ok)] border-[var(--status-ok)] text-white'
-                    : 'border-[var(--ink-muted)]'
-                }`}
+          {canCollectBilling && (
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setPayNow((p) => !p)}
+                className="flex items-center gap-2 text-xs font-bold text-[var(--ink-primary)] cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
-                {payNow && <Check className="w-3 h-3" strokeWidth={3} />}
-              </span>
-              <span>Cobrar inmediatamente en caja</span>
-            </button>
+                <span
+                  className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    payNow
+                      ? 'bg-[var(--status-ok)] border-[var(--status-ok)] text-white'
+                      : 'border-[var(--ink-muted)]'
+                  }`}
+                >
+                  {payNow && <Check className="w-3 h-3" strokeWidth={3} />}
+                </span>
+                <span>Cobrar inmediatamente en caja</span>
+              </button>
 
-            {payNow && (
-              <div className="grid grid-cols-2 gap-1.5">
-                {PAYMENT_METHODS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setPayMethod(m)}
-                    className={`py-1.5 px-2 rounded-lg border text-xs font-bold active:scale-[0.97] transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
-                      payMethod === m
-                        ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
-                        : 'bg-[var(--bg-inset)] border-[var(--border-subtle)]'
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              {payNow && (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {PAYMENT_METHODS.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setPayMethod(m)}
+                      className={`py-1.5 px-2 rounded-lg border text-xs font-bold active:scale-[0.97] transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
+                        payMethod === m
+                          ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
+                          : 'bg-[var(--bg-inset)] border-[var(--border-subtle)]'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             type="button"

@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { User } from 'firebase/auth';
 import {
   BarChart3,
   BellRing,
   ChefHat,
-  ChevronLeft,
   Clock,
   Download,
-  KeyRound,
-  LogIn,
   LogOut,
   MessageCircle,
   Pencil,
@@ -18,16 +14,16 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
-  Trash2,
   Users,
   Utensils,
   X,
 } from 'lucide-react';
 import {
+  ActiveStaffSession,
   AdminTab,
-  AuthorizedStaffItem,
   CustomerContactItem,
   DishSizeOption,
+  EmployeeRoleTitle,
   InventoryItem,
   KitchenOrder,
   MenuCategory,
@@ -36,6 +32,8 @@ import {
   OrderMode,
   OrderStatus,
   PaymentMethod,
+  StaffMember,
+  StaffPermissions,
   TableItem,
 } from '../../types/app';
 import {
@@ -55,155 +53,23 @@ import {
   downloadMenuFullBackupZip,
 } from '../../utils/menuImageBackup';
 import { formatBoliviaDisplayPhone } from '../../utils/ticketHelpers';
-import { OfficialLogo } from '../BrandAssets';
 import { CollectPaymentModal } from '../CollectPaymentModal';
 import { OrdersBoard } from '../OrdersBoard';
 import { CategoryTabs, MobileHeader } from '../ShellComponents';
 import { TicketModal } from '../TicketModal';
-
-interface AdminLoginScreenProps {
-  firebaseUser: User | null;
-  isAdmin: boolean;
-  authLoading: boolean;
-  authError?: string;
-  onGoogleSignIn: () => Promise<void>;
-  onGoogleSignOut: () => Promise<void>;
-  onEnterAdminPanel: () => void;
-  onBack: () => void;
-}
-
-export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
-  firebaseUser,
-  isAdmin,
-  authLoading,
-  authError,
-  onGoogleSignIn,
-  onGoogleSignOut,
-  onEnterAdminPanel,
-  onBack,
-}) => {
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const handleGoogleAccess = async () => {
-    setErrorMsg('');
-    try {
-      await onGoogleSignIn();
-    } catch {
-      setErrorMsg('No se pudo completar el inicio de sesión con Google.');
-    }
-  };
-
-  const displayedError = errorMsg || authError;
-
-  return (
-    <div className="flex-1 flex flex-col bg-[var(--ops-canvas)] text-[var(--bg-canvas)] min-h-0">
-      <div className="px-3 pt-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-xs font-bold text-[var(--accent-gold)] hover:underline px-2 py-1.5 inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Volver a la app</span>
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto phone-scroll px-5 sm:px-6 py-4 flex flex-col">
-        <div className="my-auto max-w-md w-full mx-auto lg:rounded-3xl lg:border lg:border-[var(--ops-border)] lg:bg-[var(--ops-surface)] lg:p-8">
-          <div className="flex flex-col items-center">
-            <OfficialLogo size="sm" />
-            <h1 className="font-serif-display text-2xl font-bold text-[var(--bg-canvas)] mt-3 text-center">
-              Acceso Administrador
-            </h1>
-            <p className="text-xs text-[var(--bg-canvas)]/75 text-center mt-1">
-              Inicia sesión con tu cuenta Google de administración para sincronizar pedidos, menú y mesas en tiempo real.
-            </p>
-          </div>
-
-          <div className="space-y-3.5 my-6">
-            {firebaseUser && (
-              <div className="rounded-2xl bg-[var(--ops-elevated)] border border-[var(--ops-border)] p-3.5 text-center space-y-1">
-                <p className="text-[11px] font-bold text-[var(--accent-gold)]">
-                  Cuenta actual conectada
-                </p>
-                <p className="text-sm font-bold text-[var(--bg-canvas)] truncate">
-                  {firebaseUser.email}
-                </p>
-                {!isAdmin && !authLoading && (
-                  <p className="text-xs font-bold text-[var(--ops-accent)] pt-1">
-                    Esta cuenta no tiene permisos de Administrador.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {displayedError && (
-              <p className="text-xs font-bold text-[var(--accent-gold)] bg-[var(--ops-elevated)] px-3 py-2 rounded-xl border border-[var(--ops-border)]">
-                {displayedError}
-              </p>
-            )}
-
-            {isAdmin ? (
-              <button
-                type="button"
-                onClick={onEnterAdminPanel}
-                className="w-full min-h-[50px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ShieldCheck className="w-5 h-5" />
-                <span>Entrar al Panel Administrador</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={authLoading}
-                onClick={handleGoogleAccess}
-                className="w-full min-h-[50px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>
-                  {authLoading
-                    ? 'Verificando cuenta...'
-                    : firebaseUser
-                    ? 'Cambiar a cuenta Administrador'
-                    : 'Ingresar con Google'}
-                </span>
-              </button>
-            )}
-
-            {firebaseUser && (
-              <button
-                type="button"
-                onClick={() => void onGoogleSignOut()}
-                className="w-full min-h-[42px] rounded-2xl border border-[var(--ops-border)] text-[var(--bg-canvas)] font-bold text-xs hover:bg-[var(--ops-elevated)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-              >
-                Cerrar cuenta Google actual
-              </button>
-            )}
-          </div>
-
-          <footer className="text-center space-y-1 pt-2">
-            <p className="text-xs font-bold text-[var(--accent-gold)]">
-              Solo personal autorizado
-            </p>
-            <p className="text-[11px] text-[var(--bg-canvas)]/70">
-              Sincronización en vivo · Firebase Firestore
-            </p>
-          </footer>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { TeamPermissionsTab } from './TeamPermissionsTab';
 
 interface AdminPanelScreenProps {
   isAdmin: boolean;
+  activeStaffSession: ActiveStaffSession | null;
+  permissions: StaffPermissions;
   menuItems: MenuItem[];
   kitchenOrders: KitchenOrder[];
   tables: TableItem[];
   inventory: InventoryItem[];
-  authorizedStaff: AuthorizedStaffItem[];
   customerContacts?: CustomerContactItem[];
-  adminEmail?: string | null;
+  staffMembers: StaffMember[];
+  adminPin: string;
   cartCount: number;
   orderMode: OrderMode;
   selectedTable: number;
@@ -237,11 +103,17 @@ interface AdminPanelScreenProps {
   onDismissWaiterCall: (orderId: string) => void;
   onFreeTable: (tableNumber: number) => void;
   onUpdateInventory: (updated: InventoryItem[]) => void;
-  mozoPin: string;
-  onUpdateMozoPin: (newPin: string) => void;
-  onAddAuthorizedStaff: (email: string, name: string) => void;
-  onToggleAuthorizedStaff: (email: string, active: boolean) => void;
-  onRemoveAuthorizedStaff: (email: string) => void;
+  onUpdateAdminPin: (newPin: string) => Promise<boolean>;
+  onSaveStaffMember: (payload: {
+    id?: string;
+    name: string;
+    role: EmployeeRoleTitle;
+    pin: string;
+    active: boolean;
+    permissions: StaffPermissions;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  onToggleStaffActive: (staffId: string, active: boolean) => void;
+  onDeleteStaffMember: (staffId: string) => void;
   onGoTables?: () => void;
   onLogout: () => void;
   onBack: () => void;
@@ -249,13 +121,15 @@ interface AdminPanelScreenProps {
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   isAdmin,
+  activeStaffSession,
+  permissions,
   menuItems,
   kitchenOrders,
   tables,
   inventory,
-  authorizedStaff,
   customerContacts = [],
-  adminEmail,
+  staffMembers,
+  adminPin,
   cartCount,
   orderMode,
   selectedTable,
@@ -272,23 +146,60 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onDismissWaiterCall,
   onFreeTable,
   onUpdateInventory,
-  mozoPin,
-  onUpdateMozoPin,
-  onAddAuthorizedStaff,
-  onToggleAuthorizedStaff,
-  onRemoveAuthorizedStaff,
+  onUpdateAdminPin,
+  onSaveStaffMember,
+  onToggleStaffActive,
+  onDeleteStaffMember,
   onGoTables,
   onLogout,
   onBack,
 }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const [pinDraft, setPinDraft] = useState(mozoPin);
-  const [newStaffEmail, setNewStaffEmail] = useState('');
-  const [newStaffName, setNewStaffName] = useState('');
+  const canViewDashboard =
+    isAdmin || permissions.cashier_billing || permissions.reports_history;
+  const canEditMenu = isAdmin || permissions.menu_pricing;
+  const canViewKitchen =
+    isAdmin || permissions.kitchen_board || permissions.cashier_billing;
+  const canViewReports = isAdmin || permissions.reports_history;
+  const canCollectBilling = isAdmin || permissions.cashier_billing;
+  const canCreateOrders =
+    isAdmin || permissions.orders_tables || permissions.cashier_billing;
+
+  const availableTabs = useMemo(() => {
+    const list: {
+      id: AdminTab;
+      label: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }[] = [];
+    if (canViewDashboard) {
+      list.push({ id: 'dashboard', label: 'Panel', icon: BarChart3 });
+    }
+    if (canEditMenu) {
+      list.push({ id: 'menu', label: 'Menú', icon: Utensils });
+    }
+    if (canViewKitchen) {
+      list.push({ id: 'kitchen', label: 'Cocina/Caja', icon: ChefHat });
+    }
+    if (canViewReports) {
+      list.push({ id: 'reports', label: 'Reportes', icon: BarChart3 });
+    }
+    if (isAdmin) {
+      list.push({ id: 'staff', label: 'Equipo', icon: Users });
+    }
+    return list;
+  }, [canEditMenu, canViewDashboard, canViewKitchen, canViewReports, isAdmin]);
+
+  const [activeTab, setActiveTab] = useState<AdminTab>(
+    () => availableTabs[0]?.id ?? 'dashboard'
+  );
 
   useEffect(() => {
-    setPinDraft(mozoPin);
-  }, [mozoPin]);
+    if (
+      availableTabs.length > 0 &&
+      !availableTabs.some((t) => t.id === activeTab)
+    ) {
+      setActiveTab(availableTabs[0].id);
+    }
+  }, [activeTab, availableTabs]);
 
   const [menuCategory, setMenuCategory] =
     useState<MenuCategory>('Platos Fuertes');
@@ -560,7 +471,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       ? 'Cocina y Caja'
       : activeTab === 'reports'
       ? 'Reportes'
-      : 'Panel Administrador';
+      : activeTab === 'staff'
+      ? 'Equipo y Permisos'
+      : isAdmin
+      ? 'Panel Administrador'
+      : `Panel — ${activeStaffSession?.role || 'Personal'}`;
 
   return (
     <div className="relative flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
@@ -586,8 +501,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <button
               type="button"
               onClick={onLogout}
-              aria-label="Cerrar sesión de administrador"
-              title="Cerrar sesión"
+              aria-label="Cerrar turno"
+              title="Cerrar turno"
               className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               <LogOut className="w-5 h-5" />
@@ -598,19 +513,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
       {/* Admin Sub-Navigation Bar */}
       <div className="bg-[var(--ops-surface)] border-b border-[var(--ops-border)] px-3 py-2 shrink-0">
-        <div className="max-w-6xl mx-auto w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 sm:gap-2">
-          {(
-            [
-              { id: 'dashboard', label: 'Panel', icon: BarChart3 },
-              { id: 'menu', label: 'Menú', icon: Utensils },
-              { id: 'kitchen', label: 'Cocina/Caja', icon: ChefHat },
-              { id: 'reports', label: 'Reportes', icon: BarChart3 },
-            ] as {
-              id: AdminTab;
-              label: string;
-              icon: React.ComponentType<{ className?: string }>;
-            }[]
-          ).map((tab) => {
+        <div className="max-w-6xl mx-auto w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:grid sm:grid-flow-col sm:auto-cols-fr sm:gap-2">
+          {availableTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
@@ -638,14 +542,38 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           {activeTab === 'dashboard' && (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[var(--ink-primary)] text-center lg:text-left">
-                  Hola Administrador
-                </h2>
-                {adminEmail && (
-                  <span className="text-xs font-bold text-[var(--status-ok)]">
-                    En vivo · {adminEmail}
-                  </span>
-                )}
+                <div>
+                  <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[var(--ink-primary)] text-left">
+                    {activeStaffSession
+                      ? `Hola, ${activeStaffSession.name}`
+                      : 'Hola Administrador'}
+                  </h2>
+                  {activeStaffSession && (
+                    <p className="text-xs font-semibold text-[var(--ink-muted)] mt-0.5">
+                      Turno: {activeStaffSession.name} — {activeStaffSession.role}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => switchTab('staff')}
+                      className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--ops-surface)] text-[var(--accent-gold)] text-xs font-bold inline-flex items-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 shrink-0" />
+                      <span>Equipo y Permisos</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                    <span>Cerrar turno</span>
+                  </button>
+                </div>
               </div>
 
               {waiterRequests.map((req) => (
@@ -761,13 +689,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                             </button>
 
                             {!ord.paid ? (
-                              <button
-                                type="button"
-                                onClick={() => setCollectingOrder(ord)}
-                                className="px-2.5 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-[11px] font-bold shrink-0 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                              >
-                                Cobrar
-                              </button>
+                              canCollectBilling ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setCollectingOrder(ord)}
+                                  className="px-2.5 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-[11px] font-bold shrink-0 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                                >
+                                  Cobrar
+                                </button>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--bg-inset)] text-[var(--ink-muted)] shrink-0">
+                                  Pendiente
+                                </span>
+                              )
                             ) : (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--status-ok)]/12 text-[var(--status-ok)] shrink-0">
                                 {ord.status}
@@ -785,45 +719,51 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <h3 className="hidden lg:block text-sm font-bold text-[var(--ink-primary)]">
                     Acciones rápidas
                   </h3>
-                  <div className={`grid gap-2.5 ${onGoTables ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
-                    <button
-                      type="button"
-                      onClick={() => switchTab('menu')}
-                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                    >
-                      Gestión de Menú
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => switchTab('kitchen')}
-                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                    >
-                      Cocina y Caja
-                    </button>
-                    {onGoTables && (
+                  <div className="flex flex-wrap gap-2.5">
+                    {canEditMenu && (
+                      <button
+                        type="button"
+                        onClick={() => switchTab('menu')}
+                        className="flex-1 min-w-[110px] min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                      >
+                        Gestión de Menú
+                      </button>
+                    )}
+                    {canViewKitchen && (
+                      <button
+                        type="button"
+                        onClick={() => switchTab('kitchen')}
+                        className="flex-1 min-w-[110px] min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                      >
+                        Cocina y Caja
+                      </button>
+                    )}
+                    {onGoTables && (isAdmin || permissions.orders_tables) && (
                       <button
                         type="button"
                         onClick={onGoTables}
-                        className="min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                        className="flex-1 min-w-[110px] min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                       >
                         Mesas y QR
                       </button>
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      switchTab('kitchen');
-                      setOpenKitchenPosSignal((n) => n + 1);
-                    }}
-                    className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" strokeWidth={2.5} />
-                    <span>Nuevo Pedido / Cobro en Caja</span>
-                  </button>
+                  {canCreateOrders && canViewKitchen && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        switchTab('kitchen');
+                        setOpenKitchenPosSignal((n) => n + 1);
+                      }}
+                      className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" strokeWidth={2.5} />
+                      <span>Nuevo Pedido / Cobro en Caja</span>
+                    </button>
+                  )}
 
-                  {/* Ajustes / Configuración (Admin-Only Discrete Backup Tool) */}
+                  {/* Ajustes / Configuración (Admin-Only Discrete Backup Tool & Staff Link) */}
                   {isAdmin && (
                     <div className="rounded-2xl bg-[var(--ops-surface)] border border-[var(--ops-border)] p-3.5 space-y-2.5 text-[var(--bg-canvas)]">
                       <div className="flex items-center justify-between gap-2">
@@ -892,136 +832,24 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           {backupSummary}
                         </p>
                       )}
+
+                      <div className="pt-2 border-t border-[var(--ops-border)] flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-white/80 inline-flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                          <span>
+                            {staffMembers.filter((m) => m.active).length} colaboradores activos
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => switchTab('staff')}
+                          className="min-h-[34px] px-3 py-1 rounded-xl bg-[var(--ops-accent)] text-white text-xs font-bold hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                        >
+                          Gestionar equipo y PINs
+                        </button>
+                      </div>
                     </div>
                   )}
-
-                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-[var(--ink-primary)] inline-flex items-center gap-1.5">
-                        <KeyRound className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-                        <span>PIN de Mozo (4 dígitos)</span>
-                      </span>
-                      <span className="text-[10px] font-semibold text-[var(--ink-muted)]">
-                        5 toques al logo
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={pinDraft}
-                        onChange={(e) =>
-                          setPinDraft(
-                            e.target.value.replace(/\D/g, '').slice(0, 4)
-                          )
-                        }
-                        placeholder="1234"
-                        className="flex-1 h-9 px-3 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold tracking-widest text-center text-[var(--ink-primary)] tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                      />
-                      <button
-                        type="button"
-                        disabled={pinDraft.length !== 4 || pinDraft === mozoPin}
-                        onClick={() => onUpdateMozoPin(pinDraft)}
-                        className="h-9 px-3 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] text-xs font-bold disabled:opacity-45 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                      >
-                        Guardar PIN
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Authorized Mozos (Google Accounts) */}
-                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-[var(--ink-primary)] inline-flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-                        <span>Mozos autorizados (Google)</span>
-                      </span>
-                      <span className="text-[10px] font-semibold text-[var(--ink-muted)] tabular-nums">
-                        {authorizedStaff.length} registrados
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      <input
-                        type="text"
-                        value={newStaffName}
-                        onChange={(e) => setNewStaffName(e.target.value)}
-                        placeholder="Nombre (Ej. Carlos)"
-                        className="h-9 px-2.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                      />
-                      <input
-                        type="email"
-                        value={newStaffEmail}
-                        onChange={(e) => setNewStaffEmail(e.target.value)}
-                        placeholder="correo.mozo@gmail.com"
-                        className="h-9 px-2.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      disabled={!newStaffEmail.trim().includes('@')}
-                      onClick={() => {
-                        onAddAuthorizedStaff(
-                          newStaffEmail.trim(),
-                          newStaffName.trim() || newStaffEmail.trim()
-                        );
-                        setNewStaffEmail('');
-                        setNewStaffName('');
-                      }}
-                      className="w-full h-9 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] text-xs font-bold disabled:opacity-45 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                    >
-                      Autorizar Mozo
-                    </button>
-
-                    {authorizedStaff.length > 0 && (
-                      <div className="space-y-1.5 pt-1 max-h-36 overflow-y-auto phone-scroll">
-                        {authorizedStaff.map((staff) => (
-                          <div
-                            key={staff.email}
-                            className="flex items-center justify-between gap-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] px-2.5 py-1.5 text-[11px]"
-                          >
-                            <div className="min-w-0">
-                              <p className="font-bold text-[var(--ink-primary)] truncate">
-                                {staff.name}
-                              </p>
-                              <p className="text-[10px] text-[var(--ink-muted)] truncate">
-                                {staff.email}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onToggleAuthorizedStaff(
-                                    staff.email,
-                                    !staff.active
-                                  )
-                                }
-                                className={`px-2 py-1 rounded-lg text-[10px] font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer ${
-                                  staff.active
-                                    ? 'bg-[var(--status-ok)]/12 text-[var(--status-ok)]'
-                                    : 'bg-[var(--ink-muted)]/12 text-[var(--ink-muted)]'
-                                }`}
-                              >
-                                {staff.active ? 'Activo' : 'Pausado'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onRemoveAuthorizedStaff(staff.email)
-                                }
-                                aria-label={`Eliminar ${staff.email}`}
-                                className="w-6 h-6 rounded-lg text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 active:scale-[0.95] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] flex items-center justify-center cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </>
@@ -1111,9 +939,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </>
           )}
 
-          {activeTab === 'kitchen' && (
+          {activeTab === 'kitchen' && canViewKitchen && (
             <OrdersBoard
-              userRole="admin"
+              userRole={isAdmin ? 'admin' : 'mozo'}
+              canTakeOrders={canCreateOrders}
+              canUpdateKitchen={isAdmin || permissions.kitchen_board}
+              canCollectBilling={canCollectBilling}
+              canViewHistory={canViewReports || canCollectBilling}
               orders={kitchenOrders}
               tables={tables}
               menuItems={menuItems}
@@ -1133,7 +965,18 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               onCollectOrderPayment={onCollectOrderPayment}
               onDismissWaiterCall={onDismissWaiterCall}
               onFreeTable={onFreeTable}
-              onCreatePosOrder={onCreatePosOrder}
+              onCreatePosOrder={canCreateOrders ? onCreatePosOrder : undefined}
+            />
+          )}
+
+          {activeTab === 'staff' && isAdmin && (
+            <TeamPermissionsTab
+              adminPin={adminPin}
+              staffMembers={staffMembers}
+              onUpdateAdminPin={onUpdateAdminPin}
+              onSaveStaffMember={onSaveStaffMember}
+              onToggleStaffActive={onToggleStaffActive}
+              onDeleteStaffMember={onDeleteStaffMember}
             />
           )}
 
@@ -1298,17 +1141,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <span>Exportar Clientes (.csv)</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInvDraft(inventory);
-                    setShowInvModal(true);
-                  }}
-                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                  <span>Actualizar Inventario</span>
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvDraft(inventory);
+                      setShowInvModal(true);
+                    }}
+                    className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                    <span>Actualizar Inventario</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

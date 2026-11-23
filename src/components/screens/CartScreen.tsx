@@ -1,18 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { User } from 'firebase/auth';
 import {
   Bike,
   CheckCircle2,
-  LogIn,
   LogOut,
   Minus,
   Pencil,
   Plus,
+  ShieldCheck,
   ShoppingBag,
   Trash2,
   UtensilsCrossed,
 } from 'lucide-react';
 import {
+  ActiveStaffSession,
   CartItem,
   KitchenOrder,
   MenuItem,
@@ -20,6 +20,7 @@ import {
   OrderMode,
   OrderStatus,
   PaymentMethod,
+  StaffPermissions,
   TableItem,
   TakeawayInfo,
 } from '../../types/app';
@@ -35,8 +36,9 @@ import { MobileHeader } from '../ShellComponents';
 
 interface CartScreenProps {
   userRole: AppUserRole;
-  firebaseUser: User | null;
-  isStaff: boolean;
+  isAdmin: boolean;
+  activeStaffSession: ActiveStaffSession | null;
+  permissions: StaffPermissions;
   cart: CartItem[];
   cartCount: number;
   menuItems: MenuItem[];
@@ -84,14 +86,14 @@ interface CartScreenProps {
   }) => KitchenOrder;
   onCallWaiter: (orderId: string) => void;
   onPayTableOrder: (order: KitchenOrder) => void;
-  onGoogleSignIn: () => void;
-  onMozoLogout: () => void;
+  onLogoutStaffSession: () => void;
 }
 
 export const CartScreen: React.FC<CartScreenProps> = ({
   userRole,
-  firebaseUser,
-  isStaff,
+  isAdmin,
+  activeStaffSession,
+  permissions,
   cart,
   cartCount,
   menuItems,
@@ -122,10 +124,16 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   onCreatePosOrder,
   onCallWaiter,
   onPayTableOrder,
-  onGoogleSignIn,
-  onMozoLogout,
+  onLogoutStaffSession,
 }) => {
-  const isStaffSession = userRole === 'admin' || userRole === 'mozo';
+  const isStaffSession = Boolean(activeStaffSession);
+  const canCreateOrders =
+    isAdmin || permissions.orders_tables || permissions.cashier_billing;
+  const canUpdateKitchen = isAdmin || permissions.kitchen_board;
+  const canCollectBilling = isAdmin || permissions.cashier_billing;
+  const canViewHistory =
+    isAdmin || permissions.reports_history || permissions.cashier_billing;
+
   const [openNewOrderSignal, setOpenNewOrderSignal] = useState(0);
   const [takeawayNameError, setTakeawayNameError] = useState(false);
 
@@ -145,11 +153,15 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader
-        title={userRole === 'mozo' ? 'Comandas — Mozo' : 'Comandas'}
+        title={
+          activeStaffSession
+            ? `Comandas — ${activeStaffSession.role}`
+            : 'Comandas'
+        }
         onBack={onBack}
         rightSlot={
           <div className="flex items-center gap-1">
-            {isStaffSession && (
+            {isStaffSession && canCreateOrders && (
               <button
                 type="button"
                 onClick={() => setOpenNewOrderSignal((n) => n + 1)}
@@ -175,12 +187,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 </span>
               )}
             </button>
-            {userRole === 'mozo' && (
+            {activeStaffSession && (
               <button
                 type="button"
-                onClick={onMozoLogout}
-                aria-label="Cerrar sesión de mozo"
-                title="Cerrar sesión Mozo"
+                onClick={onLogoutStaffSession}
+                aria-label="Cerrar turno"
+                title="Cerrar turno"
                 className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-[var(--accent-gold)] hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
               >
                 <LogOut className="w-4 h-4" />
@@ -192,28 +204,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-24 xl:pb-8 space-y-5">
-          {/* Mozo Google Sync Status */}
-          {userRole === 'mozo' && (!firebaseUser || !isStaff) && (
-            <div className="rounded-2xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--accent-gold)]/50 p-3.5 flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[var(--accent-gold)]">
-                  {firebaseUser
-                    ? `Cuenta (${firebaseUser.email}) sin permiso de personal`
-                    : 'Conecta una cuenta Google autorizada para sincronizar en vivo'}
-                </p>
-                <p className="text-xs text-white/75 truncate">
-                  {firebaseUser
-                    ? 'Pide al Administrador autorizar este correo en Panel Admin.'
-                    : 'Sincroniza mesas y pedidos con Cocina en tiempo real.'}
+          {/* Active Staff Shift Banner */}
+          {activeStaffSession && (
+            <div className="rounded-2xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--ops-border)] p-3.5 flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
+              <div className="min-w-0 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+                <p className="text-xs font-bold text-[var(--bg-surface)] truncate">
+                  Turno: {activeStaffSession.name} — {activeStaffSession.role}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={onGoogleSignIn}
-                className="px-3 py-1.5 rounded-xl bg-[var(--accent-gold)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                onClick={onLogoutStaffSession}
+                className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--ops-elevated)] border border-[var(--ops-border)] text-[var(--bg-canvas)] text-xs font-bold inline-flex items-center gap-1.5 hover:border-[var(--ops-accent)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)]"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>{firebaseUser ? 'Cambiar cuenta' : 'Conectar Google'}</span>
+                <LogOut className="w-3.5 h-3.5 text-[var(--ops-accent)]" />
+                <span>Cerrar turno</span>
               </button>
             </div>
           )}
@@ -460,6 +466,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           {/* Unified Orders Board */}
           <OrdersBoard
             userRole={userRole}
+            canTakeOrders={canCreateOrders}
+            canUpdateKitchen={canUpdateKitchen}
+            canCollectBilling={canCollectBilling}
+            canViewHistory={canViewHistory}
             orders={kitchenOrders}
             tables={tables}
             menuItems={menuItems}
@@ -479,7 +489,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             onCollectOrderPayment={onCollectOrderPayment}
             onDismissWaiterCall={onDismissWaiterCall}
             onFreeTable={onFreeTable}
-            onCreatePosOrder={onCreatePosOrder}
+            onCreatePosOrder={canCreateOrders ? onCreatePosOrder : undefined}
             onCallWaiter={onCallWaiter}
             onPayTableOrder={onPayTableOrder}
             onGoMenu={onGoMenu}

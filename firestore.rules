@@ -20,6 +20,10 @@ service cloud.firestore {
       return phone is string && phone.size() >= 8 && phone.size() <= 20 && phone.matches('^[0-9]{8,15}$');
     }
 
+    function isValidPin(pin) {
+      return pin is string && pin.size() == 4 && pin.matches('^[0-9]{4}$');
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -32,30 +36,46 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isVerifiedUser() {
-      return isSignedIn() && request.auth.token.email_verified == true;
+    // PIN-verified Staff & Admin Sessions (supports silent signInAnonymously without Google popups)
+    function hasStaffSession() {
+      return isSignedIn() && exists(/databases/$(database)/documents/staff_sessions/$(request.auth.uid));
     }
 
-    function isBootstrapAdmin() {
-      return isVerifiedUser() && request.auth.token.email == 'borbjo637@gmail.com';
+    function staffSessionData() {
+      return get(/databases/$(database)/documents/staff_sessions/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
-      return isBootstrapAdmin() || (
-        isVerifiedUser() &&
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+    function isValidAdminPin(pin) {
+      return isValidPin(pin) && (
+        (!exists(/databases/$(database)/documents/config/staff) && pin == '0000') ||
+        (exists(/databases/$(database)/documents/config/staff) &&
+          get(/databases/$(database)/documents/config/staff).data.adminPin == pin)
       );
     }
 
-    function isAuthorizedMozo() {
-      return isVerifiedUser() &&
-        request.auth.token.email is string &&
-        exists(/databases/$(database)/documents/authorized_staff/$(request.auth.token.email)) &&
-        get(/databases/$(database)/documents/authorized_staff/$(request.auth.token.email)).data.active == true;
+    function isAdmin() {
+      return hasStaffSession() &&
+        staffSessionData().isAdmin == true &&
+        isValidAdminPin(staffSessionData().pin);
+    }
+
+    function isActiveEmployeeSession() {
+      return hasStaffSession() &&
+        staffSessionData().isAdmin == false &&
+        exists(/databases/$(database)/documents/staff/$(staffSessionData().staffId)) &&
+        get(/databases/$(database)/documents/staff/$(staffSessionData().staffId)).data.active == true &&
+        get(/databases/$(database)/documents/staff/$(staffSessionData().staffId)).data.pin == staffSessionData().pin;
     }
 
     function isStaff() {
-      return isAdmin() || isAuthorizedMozo();
+      return isAdmin() || isActiveEmployeeSession();
+    }
+
+    function hasPerm(permKey) {
+      return isAdmin() || (
+        isActiveEmployeeSession() &&
+        get(/databases/$(database)/documents/staff/$(staffSessionData().staffId)).data.permissions[permKey] == true
+      );
     }
 
     // Validation Blueprint: MenuItemDoc
@@ -205,13 +225,52 @@ service cloud.firestore {
 
     // Validation Blueprint: StaffConfigDoc
     function isValidStaffConfig(data) {
-      return data.keys().hasAll(['mozoPin', 'updatedAt']) &&
-        data.keys().hasOnly(['mozoPin', 'updatedAt']) &&
-        data.mozoPin is string && data.mozoPin.size() == 4 && data.mozoPin.matches('^[0-9]{4}$') &&
+      return data.keys().hasAll(['adminPin', 'mozoPin', 'updatedAt']) &&
+        data.keys().hasOnly(['adminPin', 'mozoPin', 'updatedAt']) &&
+        isValidPin(data.adminPin) &&
+        isValidPin(data.mozoPin) &&
         data.updatedAt is timestamp && data.updatedAt == request.time;
     }
 
-    // Validation Blueprint: AuthorizedStaffDoc
+    // Validation Blueprint: StaffMemberDoc
+    function isValidStaffPermissions(perms) {
+      return perms is map &&
+        perms.keys().hasAll(['orders_tables', 'kitchen_board', 'cashier_billing', 'menu_pricing', 'reports_history']) &&
+        perms.keys().hasOnly(['orders_tables', 'kitchen_board', 'cashier_billing', 'menu_pricing', 'reports_history']) &&
+        perms.orders_tables is bool &&
+        perms.kitchen_board is bool &&
+        perms.cashier_billing is bool &&
+        perms.menu_pricing is bool &&
+        perms.reports_history is bool;
+    }
+
+    function isValidStaffMember(data) {
+      return data.keys().hasAll(['id', 'name', 'role', 'pin', 'active', 'permissions', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'role', 'pin', 'active', 'permissions', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.role in ['Mozo', 'Cajero', 'Cocina'] &&
+        isValidPin(data.pin) &&
+        data.active is bool &&
+        isValidStaffPermissions(data.permissions) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: StaffSessionDoc
+    function isValidStaffSession(data) {
+      return data.keys().hasAll(['uid', 'staffId', 'name', 'role', 'pin', 'isAdmin', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'staffId', 'name', 'role', 'pin', 'isAdmin', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        isValidId(data.staffId) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+        data.role in ['Admin', 'Mozo', 'Cajero', 'Cocina'] &&
+        isValidPin(data.pin) &&
+        data.isAdmin is bool &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: Legacy AuthorizedStaffDoc
     function isValidAuthorizedStaff(data) {
       return data.keys().hasAll(['email', 'name', 'active', 'createdAt']) &&
         data.keys().hasOnly(['email', 'name', 'active', 'createdAt']) &&
@@ -221,24 +280,25 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
-    // 1. Menu Catalog (non-PII, public readable, admin-only writable)
+    // 1. Menu Catalog (non-PII, public readable, admin or menu_pricing staff writable)
     match /menuItems/{dishId} {
       allow get: if isValidId(dishId);
       allow list: if true;
-      allow create: if isValidId(dishId) && isAdmin() && isValidMenuItem(incoming()) && incoming().id == dishId;
-      allow update: if isValidId(dishId) && isAdmin() && isValidMenuItem(incoming()) && incoming().id == existing().id;
+      allow create: if isValidId(dishId) && hasPerm('menu_pricing') && isValidMenuItem(incoming()) && incoming().id == dishId;
+      allow update: if isValidId(dishId) && hasPerm('menu_pricing') && isValidMenuItem(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(dishId) && isAdmin();
     }
 
-    // 2. Tables (non-PII, public readable, staff create/update/delete-when-libre + verified customer occupy-on-order)
+    // 2. Tables (non-PII, public readable, staff create/update/delete-when-libre + signed-in customer occupy-on-order)
     match /tables/{tableId} {
       allow get: if isValidId(tableId);
       allow list: if true;
-      allow create: if isValidId(tableId) && isStaff() && isValidTable(incoming());
+      allow create: if isValidId(tableId) && (hasPerm('orders_tables') || hasPerm('cashier_billing')) && isValidTable(incoming());
       allow update: if isValidId(tableId) && isValidTable(incoming()) && (
-        isStaff() ||
+        hasPerm('orders_tables') ||
+        hasPerm('cashier_billing') ||
         (
-          isVerifiedUser() &&
+          isSignedIn() &&
           existing().status == 'libre' &&
           incoming().status == 'ocupada' &&
           incoming().number == existing().number &&
@@ -246,26 +306,27 @@ service cloud.firestore {
           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
         )
       );
-      allow delete: if isValidId(tableId) && isStaff() && existing().status == 'libre';
+      allow delete: if isValidId(tableId) && (hasPerm('orders_tables') || hasPerm('cashier_billing')) && existing().status == 'libre';
     }
 
-    // 3. Orders (customer sees own orders; staff sees all orders)
+    // 3. Orders (customer sees own orders; active staff sees all orders)
     match /orders/{orderId} {
       allow get: if isValidId(orderId) && (
         isStaff() ||
-        (isVerifiedUser() && existing().customerUid == request.auth.uid)
+        (isSignedIn() && existing().customerUid == request.auth.uid)
       );
       allow list: if isStaff() || (
-        isVerifiedUser() && existing().customerUid == request.auth.uid
+        isSignedIn() && existing().customerUid == request.auth.uid
       );
       allow create: if isValidId(orderId) &&
-        isVerifiedUser() &&
+        isSignedIn() &&
         isValidOrder(incoming()) &&
         incoming().id == orderId &&
         incoming().createdAt == request.time &&
         (!(incoming().mode in ['takeaway', 'delivery']) || ('confirmationCode' in incoming())) &&
         (
-          isStaff() ||
+          hasPerm('orders_tables') ||
+          hasPerm('cashier_billing') ||
           (
             incoming().customerUid == request.auth.uid &&
             incoming().status == 'Preparando' &&
@@ -276,7 +337,7 @@ service cloud.firestore {
           )
         );
       allow update: if isValidId(orderId) &&
-        isVerifiedUser() &&
+        isSignedIn() &&
         isValidOrder(incoming()) &&
         incoming().id == existing().id &&
         incoming().customerUid == existing().customerUid &&
@@ -293,6 +354,10 @@ service cloud.firestore {
               'paid', 'paymentMethod', 'waiterRequested', 'billRequested', 'tableNumber', 'customerLabel', 'updatedAt'
             ]) &&
             (
+              !incoming().diff(existing()).affectedKeys().hasAny(['paid', 'paymentMethod']) ||
+              hasPerm('cashier_billing')
+            ) &&
+            (
               !incoming().diff(existing()).affectedKeys().hasAny(['tableNumber', 'customerLabel']) ||
               (existing().mode == 'dine-in' && ('tableNumber' in incoming()) && incoming().tableNumber is number)
             )
@@ -303,23 +368,19 @@ service cloud.firestore {
               (
                 !(existing().status == 'Entregado' && existing().paid == true) &&
                 (
-                  // Customer action: append items to own unpaid dine-in table order
                   (
                     existing().paid == false &&
                     incoming().paid == false &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['items', 'total', 'status', 'updatedAt'])
                   ) ||
-                  // Customer action: call waiter or request bill at table
                   (
                     incoming().waiterRequested == true &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['waiterRequested', 'billRequested', 'updatedAt'])
                   ) ||
-                  // Customer action: mark own delivery order delivered / rate order
                   (
                     existing().mode == 'delivery' &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['status', 'deliveredAtLabel', 'ratingStars', 'updatedAt'])
                   ) ||
-                  // Customer action: pay via QR / payment screen on own order
                   (
                     existing().paid == false &&
                     incoming().paid == true &&
@@ -327,7 +388,6 @@ service cloud.firestore {
                   )
                 )
               ) ||
-              // Allow rating a delivered+paid delivery order once if not yet rated
               (
                 existing().mode == 'delivery' &&
                 !('ratingStars' in existing()) &&
@@ -343,17 +403,17 @@ service cloud.firestore {
         allow get: if isValidId(orderId) && (
           isStaff() ||
           (
-            isVerifiedUser() &&
+            isSignedIn() &&
             get(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == request.auth.uid
           )
         );
         allow create: if isValidId(orderId) &&
-          isVerifiedUser() &&
+          isSignedIn() &&
           isValidPrivateDelivery(incoming()) &&
           (isStaff() || incoming().customerUid == request.auth.uid) &&
           getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == incoming().customerUid;
         allow update: if isValidId(orderId) &&
-          isVerifiedUser() &&
+          isSignedIn() &&
           isValidPrivateDelivery(incoming()) &&
           incoming().customerUid == existing().customerUid &&
           isStaff();
@@ -365,17 +425,17 @@ service cloud.firestore {
         allow get: if isValidId(orderId) && (
           isStaff() ||
           (
-            isVerifiedUser() &&
+            isSignedIn() &&
             get(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == request.auth.uid
           )
         );
         allow create: if isValidId(orderId) &&
-          isVerifiedUser() &&
+          isSignedIn() &&
           isValidPrivateContact(incoming()) &&
           (isStaff() || incoming().customerUid == request.auth.uid) &&
           getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == incoming().customerUid;
         allow update: if isValidId(orderId) &&
-          isVerifiedUser() &&
+          isSignedIn() &&
           isValidPrivateContact(incoming()) &&
           incoming().customerUid == existing().customerUid &&
           (isStaff() || incoming().customerUid == request.auth.uid);
@@ -387,35 +447,35 @@ service cloud.firestore {
     match /table_sessions/{tableId} {
       allow get: if isValidId(tableId) && (
         isStaff() ||
-        (isVerifiedUser() && existing().customerUid == request.auth.uid)
+        (isSignedIn() && existing().customerUid == request.auth.uid)
       );
       allow list: if isStaff();
       allow create: if isValidId(tableId) &&
-        isVerifiedUser() &&
+        isSignedIn() &&
         isValidTableSession(incoming()) &&
         (isStaff() || incoming().customerUid == request.auth.uid);
       allow update: if isValidId(tableId) &&
-        isVerifiedUser() &&
+        isSignedIn() &&
         isValidTableSession(incoming()) &&
         (isStaff() || (existing().customerUid == request.auth.uid && incoming().customerUid == request.auth.uid));
       allow delete: if isValidId(tableId) && isStaff();
     }
 
-    // 3E. Customer Contacts Directory (Staff read/write, Verified customer upsert own contact)
+    // 3E. Customer Contacts Directory (Staff read/write, Signed-in customer upsert own contact)
     match /customer_contacts/{phoneKey} {
       allow get: if isValidPhoneKey(phoneKey) && (
         isStaff() ||
-        (isVerifiedUser() && existing().customerUid == request.auth.uid)
+        (isSignedIn() && existing().customerUid == request.auth.uid)
       );
       allow list: if isStaff();
       allow create: if isValidPhoneKey(phoneKey) &&
-        isVerifiedUser() &&
+        isSignedIn() &&
         isValidCustomerContact(incoming()) &&
         incoming().phone == phoneKey &&
         incoming().createdAt == request.time &&
         (isStaff() || incoming().customerUid == request.auth.uid);
       allow update: if isValidPhoneKey(phoneKey) &&
-        isVerifiedUser() &&
+        isSignedIn() &&
         isValidCustomerContact(incoming()) &&
         incoming().phone == existing().phone &&
         incoming().createdAt == existing().createdAt &&
@@ -423,37 +483,68 @@ service cloud.firestore {
       allow delete: if isValidPhoneKey(phoneKey) && isAdmin();
     }
 
-    // 4. Inventory (Admin only)
+    // 4. Inventory (Admin write, Staff with reports_history or Admin read)
     match /inventory/{itemId} {
-      allow get: if isValidId(itemId) && isAdmin();
-      allow list: if isAdmin();
+      allow get: if isValidId(itemId) && (isAdmin() || hasPerm('reports_history'));
+      allow list: if isAdmin() || hasPerm('reports_history');
       allow create: if isValidId(itemId) && isAdmin() && isValidInventoryItem(incoming()) && incoming().id == itemId;
       allow update: if isValidId(itemId) && isAdmin() && isValidInventoryItem(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(itemId) && isAdmin();
     }
 
-    // 5. Staff Config (Mozo PIN - Staff read, Admin write)
+    // 5. Staff Config (PIN verification read for signed-in app terminal, Admin write)
     match /config/staff {
-      allow get: if isStaff();
+      allow get: if isSignedIn();
       allow create, update: if isAdmin() && isValidStaffConfig(incoming());
     }
 
-    // 6. Admins registry (Bootstrapped admin manages)
-    match /admins/{uid} {
-      allow get: if isVerifiedUser() && (request.auth.uid == uid || isBootstrapAdmin());
-      allow list, create, update, delete: if isBootstrapAdmin();
+    // 6. Staff Directory & Permissions (Admin full access, signed-in terminal reads active staff for PIN login)
+    match /staff/{staffId} {
+      allow get: if isValidId(staffId) && (isAdmin() || (isSignedIn() && existing().active == true));
+      allow list: if isAdmin() || (isSignedIn() && existing().active == true);
+      allow create: if isValidId(staffId) &&
+        isAdmin() &&
+        isValidStaffMember(incoming()) &&
+        incoming().id == staffId &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(staffId) &&
+        isAdmin() &&
+        isValidStaffMember(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(staffId) && isAdmin();
     }
 
-    // 7. Authorized Staff / Mozos (Admin manages; user can verify own email entry)
+    // 7. PIN-verified Staff Sessions (bound strictly to request.auth.uid and verified against config/staff or active staff doc)
+    match /staff_sessions/{sessionUid} {
+      allow get: if isValidId(sessionUid) && isSignedIn() && request.auth.uid == sessionUid;
+      allow create, update: if isValidId(sessionUid) &&
+        isSignedIn() &&
+        request.auth.uid == sessionUid &&
+        isValidStaffSession(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        (
+          (incoming().isAdmin == true && isValidAdminPin(incoming().pin)) ||
+          (
+            incoming().isAdmin == false &&
+            exists(/databases/$(database)/documents/staff/$(incoming().staffId)) &&
+            get(/databases/$(database)/documents/staff/$(incoming().staffId)).data.active == true &&
+            get(/databases/$(database)/documents/staff/$(incoming().staffId)).data.pin == incoming().pin
+          )
+        );
+      allow delete: if isValidId(sessionUid) && isSignedIn() && request.auth.uid == sessionUid;
+    }
+
+    // 8. Legacy collections retained closed to client writes
+    match /admins/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
     match /authorized_staff/{staffEmail} {
-      allow get: if isValidEmailKey(staffEmail) && (
-        isAdmin() ||
-        (isVerifiedUser() && request.auth.token.email == staffEmail)
-      );
+      allow get: if isValidEmailKey(staffEmail) && isAdmin();
       allow list: if isAdmin();
-      allow create: if isValidEmailKey(staffEmail) && isAdmin() && isValidAuthorizedStaff(incoming()) && incoming().email == staffEmail && incoming().createdAt == request.time;
-      allow update: if isValidEmailKey(staffEmail) && isAdmin() && isValidAuthorizedStaff(incoming()) && incoming().email == existing().email && incoming().createdAt == existing().createdAt;
-      allow delete: if isValidEmailKey(staffEmail) && isAdmin();
+      allow create, update, delete: if isAdmin() && isValidAuthorizedStaff(incoming());
     }
   }
 }

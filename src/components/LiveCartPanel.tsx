@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  ActiveStaffSession,
   CartItem,
   DeliveryInfo,
   KitchenOrder,
@@ -31,6 +32,7 @@ import {
   OrderMode,
   OrderStatus,
   PaymentMethod,
+  StaffPermissions,
   TableItem,
   TakeawayInfo,
 } from '../types/app';
@@ -58,6 +60,9 @@ export type AppUserRole = 'admin' | 'mozo' | 'customer';
 
 interface LiveCartPanelProps {
   userRole: AppUserRole;
+  isAdmin?: boolean;
+  activeStaffSession?: ActiveStaffSession | null;
+  permissions?: StaffPermissions;
   cart: CartItem[];
   menuItems: MenuItem[];
   kitchenOrders: KitchenOrder[];
@@ -103,6 +108,9 @@ interface LiveCartPanelProps {
 
 export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
   userRole,
+  isAdmin = false,
+  activeStaffSession = null,
+  permissions,
   cart,
   menuItems,
   kitchenOrders,
@@ -152,6 +160,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
   const [takeawayNameAttempted, setTakeawayNameAttempted] = useState(false);
 
   const isStaffRole = userRole === 'admin' || userRole === 'mozo';
+  const isAdminRole = Boolean(isAdmin) || userRole === 'admin';
+  const canUpdateKitchen =
+    isAdminRole || (permissions ? permissions.kitchen_board : isStaffRole);
+  const canCollectBilling =
+    isAdminRole || (permissions ? permissions.cashier_billing : isStaffRole);
+  const canTakeOrders =
+    isAdminRole ||
+    (permissions ? permissions.orders_tables || permissions.cashier_billing : true);
   const inspectedOrder =
     orderMode === 'dine-in'
       ? activeTableOrder
@@ -209,8 +225,15 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
       ? ['Preparando', 'En camino', 'Entregado']
       : ['Preparando', 'Listo', 'Entregado'];
 
-  const roleBadgeLabel =
-    userRole === 'admin' ? 'Admin' : userRole === 'mozo' ? 'Mozo' : null;
+  const roleBadgeLabel = activeStaffSession
+    ? activeStaffSession.isAdmin
+      ? 'Admin'
+      : activeStaffSession.role
+    : userRole === 'admin'
+    ? 'Admin'
+    : userRole === 'mozo'
+    ? 'Mozo'
+    : null;
 
   const headerContextBadge =
     orderMode === 'dine-in'
@@ -722,7 +745,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {isStaffRole && !inspectedOrder.paid && (
+                        {isStaffRole &&
+                          (canTakeOrders || canUpdateKitchen) &&
+                          !inspectedOrder.paid && (
                           <div className="inline-flex items-center gap-0.5 rounded-lg bg-[var(--bg-inset)] border border-[var(--border-subtle)] p-0.5">
                             <button
                               type="button"
@@ -810,47 +835,49 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     )}
 
                     {/* Status Switcher */}
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {activeOrderStatuses.map((st) => {
-                        const active = inspectedOrder.status === st;
-                        const needsPin =
-                          st === 'Entregado' &&
-                          requiresDeliveryPin(inspectedOrder);
-                        const label =
-                          st === 'Entregado'
-                            ? inspectedOrder.mode === 'dine-in'
-                              ? 'Servido'
-                              : 'Entregado'
-                            : st;
-                        return (
-                          <button
-                            key={st}
-                            type="button"
-                            onClick={() => {
-                              if (needsPin) {
-                                setVerifyingOrder(inspectedOrder);
-                              } else {
-                                onUpdateOrderStatus(inspectedOrder.id, st);
-                              }
-                            }}
-                            className={`min-h-[40px] px-1.5 py-1.5 rounded-xl text-[11px] font-bold border transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer inline-flex items-center justify-center gap-1 ${
-                              active
-                                ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
-                                : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
-                            }`}
-                          >
-                            {needsPin && (
-                              <KeyRound className="w-3 h-3 text-[var(--ops-accent)] shrink-0" />
-                            )}
-                            <span>{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {canUpdateKitchen && (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {activeOrderStatuses.map((st) => {
+                          const active = inspectedOrder.status === st;
+                          const needsPin =
+                            st === 'Entregado' &&
+                            requiresDeliveryPin(inspectedOrder);
+                          const label =
+                            st === 'Entregado'
+                              ? inspectedOrder.mode === 'dine-in'
+                                ? 'Servido'
+                                : 'Entregado'
+                              : st;
+                          return (
+                            <button
+                              key={st}
+                              type="button"
+                              onClick={() => {
+                                if (needsPin) {
+                                  setVerifyingOrder(inspectedOrder);
+                                } else {
+                                  onUpdateOrderStatus(inspectedOrder.id, st);
+                                }
+                              }}
+                              className={`min-h-[40px] px-1.5 py-1.5 rounded-xl text-[11px] font-bold border transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer inline-flex items-center justify-center gap-1 ${
+                                active
+                                  ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
+                                  : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
+                              }`}
+                            >
+                              {needsPin && (
+                                <KeyRound className="w-3 h-3 text-[var(--ops-accent)] shrink-0" />
+                              )}
+                              <span>{label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Staff Action Grid */}
                     <div className="grid grid-cols-2 gap-1.5">
-                      {!inspectedOrder.paid && (
+                      {canCollectBilling && !inspectedOrder.paid && (
                         <button
                           type="button"
                           onClick={() => setCollectingOrder(inspectedOrder)}
@@ -892,20 +919,22 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <span>Carta</span>
                       </button>
 
-                      {orderMode === 'dine-in' && isSelectedTableOccupied && (
-                        <button
-                          type="button"
-                          onClick={() => onFreeTable(selectedTable)}
-                          className="col-span-2 min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1 hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
-                        >
-                          <Unlock className="w-3.5 h-3.5" />
-                          <span>Liberar Mesa {selectedTable}</span>
-                        </button>
-                      )}
+                      {canCollectBilling &&
+                        orderMode === 'dine-in' &&
+                        isSelectedTableOccupied && (
+                          <button
+                            type="button"
+                            onClick={() => onFreeTable(selectedTable)}
+                            className="col-span-2 min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1 hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
+                          >
+                            <Unlock className="w-3.5 h-3.5" />
+                            <span>Liberar Mesa {selectedTable}</span>
+                          </button>
+                        )}
                     </div>
 
                     {/* Admin-Only Cancel / Delete Order */}
-                    {userRole === 'admin' && (
+                    {isAdminRole && (
                       <div className="pt-1">
                         {confirmDeleteId === inspectedOrder.id ? (
                           <div className="rounded-xl bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/40 p-2 flex items-center justify-between gap-2">
@@ -1044,16 +1073,18 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--ink-muted)]">
                   <span>Sin pedido activo en Mesa {selectedTable}.</span>
-                  {isStaffRole && isSelectedTableOccupied && (
-                    <button
-                      type="button"
-                      onClick={() => onFreeTable(selectedTable)}
-                      className="px-2 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-[10px] font-bold inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
-                    >
-                      <Unlock className="w-3 h-3" />
-                      <span>Liberar</span>
-                    </button>
-                  )}
+                  {isStaffRole &&
+                    canCollectBilling &&
+                    isSelectedTableOccupied && (
+                      <button
+                        type="button"
+                        onClick={() => onFreeTable(selectedTable)}
+                        className="px-2 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-[10px] font-bold inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
+                      >
+                        <Unlock className="w-3 h-3" />
+                        <span>Liberar</span>
+                      </button>
+                    )}
                 </div>
                 {effectivePhone && (
                   <p className="text-[10px] font-bold text-[var(--status-ok)] tabular-nums">

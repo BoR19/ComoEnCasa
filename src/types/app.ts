@@ -155,10 +155,34 @@ export interface InventoryItem {
   status: 'Stock OK' | 'Bajo stock';
 }
 
-export interface AuthorizedStaffItem {
-  email: string;
+export type EmployeeRoleTitle = 'Mozo' | 'Cajero' | 'Cocina';
+export type StaffRoleTitle = 'Admin' | EmployeeRoleTitle;
+
+export type StaffPermissionKey =
+  | 'orders_tables'
+  | 'kitchen_board'
+  | 'cashier_billing'
+  | 'menu_pricing'
+  | 'reports_history';
+
+export type StaffPermissions = Record<StaffPermissionKey, boolean>;
+
+export interface StaffMember {
+  id: string;
   name: string;
+  role: EmployeeRoleTitle;
+  pin: string;
   active: boolean;
+  permissions: StaffPermissions;
+}
+
+export interface ActiveStaffSession {
+  staffId: string;
+  name: string;
+  role: StaffRoleTitle;
+  pin: string;
+  isAdmin: boolean;
+  permissions: StaffPermissions;
 }
 
 export interface CustomerContactItem {
@@ -173,4 +197,4 @@ export interface CustomerContactItem {
   updatedAtLabel?: string;
 }
 
-export type AdminTab = 'dashboard' | 'menu' | 'kitchen' | 'reports';
+export type AdminTab = 'dashboard' | 'menu' | 'kitchen' | 'reports' | 'staff';

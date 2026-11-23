@@ -4,17 +4,23 @@ import {
   ChevronLeft,
   Home,
   QrCode,
+  ShieldCheck,
   ShoppingBag,
   User,
   UtensilsCrossed,
 } from 'lucide-react';
-import { MenuCategory, OrderMode, ScreenId } from '../types/app';
+import {
+  ActiveStaffSession,
+  MenuCategory,
+  OrderMode,
+  ScreenId,
+  StaffPermissions,
+} from '../types/app';
 import {
   MENU_CATEGORIES,
   MENU_FILTER_CATEGORIES,
   MenuFilterCategory,
 } from '../utils/appHelpers';
-import type { AppUserRole } from './LiveCartPanel';
 
 interface MobileHeaderProps {
   title: string;
@@ -117,13 +123,22 @@ export function CategoryTabs<T extends MenuFilterCategory = MenuCategory>({
   );
 }
 
+const GRID_COLS_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+};
+
 interface BottomNavProps {
   currentScreen: ScreenId;
   onNavigate: (screen: ScreenId) => void;
-  userRole?: AppUserRole;
+  isAdmin?: boolean;
+  activeStaffSession?: ActiveStaffSession | null;
+  permissions?: StaffPermissions;
   orderMode?: OrderMode;
   selectedTable?: number;
-  isAdminAuthenticated?: boolean;
   activeOrdersCount?: number;
   cartCount?: number;
 }
@@ -131,104 +146,199 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({
   currentScreen,
   onNavigate,
-  userRole = 'customer',
+  isAdmin = false,
+  activeStaffSession = null,
+  permissions,
   orderMode = 'dine-in',
   selectedTable = 1,
-  isAdminAuthenticated = false,
   activeOrdersCount = 0,
   cartCount = 0,
 }) => {
-  const ordersScreenId: ScreenId =
-    userRole === 'admin'
-      ? isAdminAuthenticated
-        ? 'admin-panel'
-        : 'admin-login'
-      : 'cart';
+  const isStaffSession = Boolean(activeStaffSession);
+  const canTakeOrders = isAdmin || Boolean(permissions?.orders_tables);
+  const canComandas =
+    !isAdmin &&
+    Boolean(permissions?.kitchen_board || permissions?.cashier_billing);
+  const canOpenPanel =
+    isAdmin ||
+    Boolean(
+      permissions?.menu_pricing ||
+        permissions?.reports_history ||
+        permissions?.kitchen_board ||
+        permissions?.cashier_billing
+    );
 
-  const ordersLabel =
-    userRole === 'admin'
-      ? 'Cocina'
-      : userRole === 'mozo'
-      ? 'Comandas'
-      : 'Comanda';
+  const comandaBadge = isStaffSession
+    ? cartCount > 0
+      ? cartCount
+      : activeOrdersCount
+    : cartCount;
 
-  const ordersBadge =
-    userRole === 'admin'
-      ? activeOrdersCount
-      : userRole === 'mozo'
-      ? cartCount > 0
-        ? cartCount
-        : activeOrdersCount
-      : cartCount;
-
-  const navItems: {
+  type BottomNavItem = {
     id: ScreenId;
     label: string;
     icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
     matchScreens: ScreenId[];
     badge?: number | string;
     highlightBadge?: boolean;
-  }[] = [
-    {
-      id: 'welcome',
-      label: 'Inicio',
-      icon: Home,
-      matchScreens: ['welcome'],
-    },
-    {
-      id: 'menu',
-      label: 'Carta',
-      icon: UtensilsCrossed,
-      matchScreens: ['menu', 'search', 'favorites', 'dish-detail', 'customize'],
-    },
-    {
-      id: 'tables-select',
-      label: 'Mesas',
-      icon: QrCode,
-      matchScreens: [
-        'tables-select',
-        'tables-qr',
-        'tables-order',
-        'table-qr-welcome',
-      ],
-      badge: orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
-    },
-    {
-      id: ordersScreenId,
-      label: ordersLabel,
-      icon: userRole === 'admin' ? ChefHat : ShoppingBag,
-      matchScreens:
-        userRole === 'admin'
-          ? ['admin-panel', 'admin-login']
-          : ['cart', 'payment-methods', 'payment-qr', 'payment-confirm'],
-      badge: ordersBadge > 0 ? ordersBadge : undefined,
-      highlightBadge: ordersBadge > 0,
-    },
-    {
-      id: 'profile',
-      label: 'Perfil',
-      icon: User,
-      matchScreens:
-        userRole === 'admin'
-          ? ['profile', 'delivery-info', 'delivery-tracking', 'delivery-confirm']
-          : [
-              'profile',
-              'admin-login',
-              'admin-panel',
-              'delivery-info',
-              'delivery-tracking',
-              'delivery-confirm',
-            ],
-    },
-  ];
+  };
+
+  const navItems: BottomNavItem[] = !isStaffSession
+    ? [
+        {
+          id: 'welcome',
+          label: 'Inicio',
+          icon: Home,
+          matchScreens: ['welcome'],
+        },
+        {
+          id: 'menu',
+          label: 'Carta',
+          icon: UtensilsCrossed,
+          matchScreens: [
+            'menu',
+            'search',
+            'favorites',
+            'dish-detail',
+            'customize',
+          ],
+        },
+        {
+          id: 'tables-select',
+          label: 'Mesas',
+          icon: QrCode,
+          matchScreens: [
+            'tables-select',
+            'tables-qr',
+            'tables-order',
+            'table-qr-welcome',
+          ],
+          badge: orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
+        },
+        {
+          id: 'cart',
+          label: 'Comanda',
+          icon: ShoppingBag,
+          matchScreens: [
+            'cart',
+            'payment-methods',
+            'payment-qr',
+            'payment-confirm',
+          ],
+          badge: cartCount > 0 ? cartCount : undefined,
+          highlightBadge: cartCount > 0,
+        },
+        {
+          id: 'profile',
+          label: 'Perfil',
+          icon: User,
+          matchScreens: [
+            'profile',
+            'admin-login',
+            'admin-panel',
+            'delivery-info',
+            'delivery-tracking',
+            'delivery-confirm',
+          ],
+        },
+      ]
+    : [
+        {
+          id: 'welcome',
+          label: 'Inicio',
+          icon: Home,
+          matchScreens: ['welcome'],
+        },
+        ...(canTakeOrders
+          ? [
+              {
+                id: 'menu' as ScreenId,
+                label: 'Carta',
+                icon: UtensilsCrossed,
+                matchScreens: [
+                  'menu',
+                  'search',
+                  'favorites',
+                  'dish-detail',
+                  'customize',
+                ] as ScreenId[],
+              },
+              {
+                id: 'tables-select' as ScreenId,
+                label: 'Mesas',
+                icon: QrCode,
+                matchScreens: [
+                  'tables-select',
+                  'tables-qr',
+                  'tables-order',
+                  'table-qr-welcome',
+                ] as ScreenId[],
+                badge:
+                  orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
+              },
+            ]
+          : []),
+        ...(canComandas
+          ? [
+              {
+                id: 'cart' as ScreenId,
+                label: 'Comandas',
+                icon: ChefHat,
+                matchScreens: [
+                  'cart',
+                  'payment-methods',
+                  'payment-qr',
+                  'payment-confirm',
+                ] as ScreenId[],
+                badge: comandaBadge > 0 ? comandaBadge : undefined,
+                highlightBadge: comandaBadge > 0,
+              },
+            ]
+          : []),
+        ...(canOpenPanel
+          ? [
+              {
+                id: 'admin-panel' as ScreenId,
+                label: isAdmin ? 'Panel' : 'Gestión',
+                icon: ShieldCheck,
+                matchScreens: ['admin-panel', 'admin-login'] as ScreenId[],
+                badge:
+                  isAdmin && activeOrdersCount > 0
+                    ? activeOrdersCount
+                    : undefined,
+                highlightBadge: isAdmin && activeOrdersCount > 0,
+              },
+            ]
+          : []),
+        ...((!canTakeOrders || !canComandas || !canOpenPanel) &&
+        !(canTakeOrders && canComandas && canOpenPanel)
+          ? [
+              {
+                id: 'profile' as ScreenId,
+                label: 'Turno',
+                icon: User,
+                matchScreens: [
+                  'profile',
+                  'delivery-info',
+                  'delivery-tracking',
+                  'delivery-confirm',
+                ] as ScreenId[],
+              },
+            ]
+          : []),
+      ];
+
+  const limitedNavItems = navItems.slice(0, 5);
+  const gridColsClass =
+    GRID_COLS_CLASS[limitedNavItems.length] || 'grid-cols-4';
 
   return (
     <nav
       aria-label="Navegación principal móvil"
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--ink-primary)] border-t border-[var(--accent-gold)]/25 px-2 pt-1.5 pb-[max(0.45rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.22)] select-none"
     >
-      <div className="max-w-lg mx-auto grid grid-cols-5 items-center gap-1">
-        {navItems.map((item) => {
+      <div className={`max-w-lg mx-auto grid ${gridColsClass} items-center gap-1`}>
+        {limitedNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.matchScreens.includes(currentScreen);
           return (
@@ -267,3 +377,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     </nav>
   );
 };
+

@@ -81,6 +81,48 @@ export function getTableStats(tables: TableItem[]): {
   return { freeCount, occupiedCount, totalCount, occupancyPct };
 }
 
+export function getTableItemsCount(
+  orders: KitchenOrder[],
+  tables: TableItem[],
+  tableNumber: number
+): number {
+  const activeOrder = getActiveOrderForTable(orders, tables, tableNumber);
+  return activeOrder ? getOrderLinesCount(activeOrder.items) : 0;
+}
+
+export function getTableConsumption(
+  orders: KitchenOrder[],
+  tables: TableItem[],
+  tableNumber: number
+): number {
+  const activeOrder = getActiveOrderForTable(orders, tables, tableNumber);
+  return activeOrder ? activeOrder.total : 0;
+}
+
+export function computeSalesTotals(orders: KitchenOrder[]): {
+  totalPaid: number;
+  totalPending: number;
+  paidCount: number;
+  pendingCount: number;
+} {
+  let totalPaid = 0;
+  let totalPending = 0;
+  let paidCount = 0;
+  let pendingCount = 0;
+
+  for (const order of orders) {
+    if (order.paid) {
+      totalPaid += order.total;
+      paidCount += 1;
+    } else if (!isOrderSettled(order)) {
+      totalPending += order.total;
+      pendingCount += 1;
+    }
+  }
+
+  return { totalPaid, totalPending, paidCount, pendingCount };
+}
+
 export function getCategoryCounts(
   items: MenuItem[]
 ): Record<MenuFilterCategory, number> {

@@ -309,14 +309,20 @@ service cloud.firestore {
       allow delete: if isValidId(tableId) && (hasPerm('orders_tables') || hasPerm('cashier_billing')) && existing().status == 'libre';
     }
 
-    // 3. Orders (customer sees own orders; active staff sees all orders)
+    // 3. Orders (customer sees own orders or active unpaid dine-in table orders; active staff sees all orders)
     match /orders/{orderId} {
       allow get: if isValidId(orderId) && (
         isStaff() ||
-        (isSignedIn() && existing().customerUid == request.auth.uid)
+        (isSignedIn() && (
+          existing().customerUid == request.auth.uid ||
+          (existing().mode == 'dine-in' && existing().paid == false)
+        ))
       );
       allow list: if isStaff() || (
-        isSignedIn() && existing().customerUid == request.auth.uid
+        isSignedIn() && (
+          existing().customerUid == request.auth.uid ||
+          (existing().mode == 'dine-in' && existing().paid == false)
+        )
       );
       allow create: if isValidId(orderId) &&
         isSignedIn() &&
@@ -425,20 +431,26 @@ service cloud.firestore {
         allow get: if isValidId(orderId) && (
           isStaff() ||
           (
-            isSignedIn() &&
-            get(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == request.auth.uid
+            isSignedIn() && (
+              get(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == request.auth.uid ||
+              (
+                get(/databases/$(database)/documents/orders/$(orderId)).data.mode == 'dine-in' &&
+                get(/databases/$(database)/documents/orders/$(orderId)).data.paid == false
+              )
+            )
           )
         );
-        allow create: if isValidId(orderId) &&
+        allow create, update: if isValidId(orderId) &&
           isSignedIn() &&
           isValidPrivateContact(incoming()) &&
-          (isStaff() || incoming().customerUid == request.auth.uid) &&
-          getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerUid == incoming().customerUid;
-        allow update: if isValidId(orderId) &&
-          isSignedIn() &&
-          isValidPrivateContact(incoming()) &&
-          incoming().customerUid == existing().customerUid &&
-          (isStaff() || incoming().customerUid == request.auth.uid);
+          (
+            isStaff() ||
+            incoming().customerUid == request.auth.uid ||
+            (
+              get(/databases/$(database)/documents/orders/$(orderId)).data.mode == 'dine-in' &&
+              get(/databases/$(database)/documents/orders/$(orderId)).data.paid == false
+            )
+          );
         allow delete: if isValidId(orderId) && isAdmin();
       }
     }
@@ -447,27 +459,19 @@ service cloud.firestore {
     match /table_sessions/{tableId} {
       allow get: if isValidId(tableId) && (
         isStaff() ||
-        (isSignedIn() && existing().customerUid == request.auth.uid)
+        (isSignedIn() && (
+          existing().customerUid == request.auth.uid ||
+          (
+            exists(/databases/$(database)/documents/tables/$(tableId)) &&
+            get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'ocupada'
+          )
+        ))
       );
       allow list: if isStaff();
-      allow create: if isValidId(tableId) &&
+      allow create, update: if isValidId(tableId) &&
         isSignedIn() &&
         isValidTableSession(incoming()) &&
         (isStaff() || incoming().customerUid == request.auth.uid);
-      allow update: if isValidId(tableId) &&
-        isSignedIn() &&
-        isValidTableSession(incoming()) &&
-        (
-          isStaff() ||
-          (existing().customerUid == request.auth.uid && incoming().customerUid == request.auth.uid) ||
-          (
-            incoming().customerUid == request.auth.uid &&
-            (
-              !exists(/databases/$(database)/documents/tables/$(tableId)) ||
-              get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'libre'
-            )
-          )
-        );
       allow delete: if isValidId(tableId) && isStaff();
     }
 

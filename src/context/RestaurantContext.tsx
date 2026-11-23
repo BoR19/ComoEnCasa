@@ -28,6 +28,7 @@ import {
   DEFAULT_PERMISSIONS_BY_ROLE,
   activateStaffSessionInFirestore,
   appendOrderItemsInFirestore,
+  attachPhoneToTableOrder,
   buildOrderCode,
   clearStaffSessionInFirestore,
   collectOrderPaymentInFirestore,
@@ -399,6 +400,7 @@ interface RestaurantContextValue {
   tableCustomerPhone: string;
   handleSelectTable: (tableNumber: number) => void;
   handleConfirmQrTableWelcome: (rawPhone?: string) => void;
+  handleAttachPhoneToTableOrder: (phone: string) => Promise<boolean>;
   exitQrTableMode: () => void;
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
@@ -1030,7 +1032,8 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       },
       (err) => {
         reportCloudError(err, 'Sincronización en vivo de Comandas');
-      }
+      },
+      !isStaffSession ? selectedTable : undefined
     );
     return () => unsubOrders();
   }, [
@@ -1039,6 +1042,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     isCloudStaffReady,
     isStaffSession,
     reportCloudError,
+    selectedTable,
     syncRetryNonce,
   ]);
 
@@ -1360,6 +1364,45 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [activeTableOrder, isStaffSession, selectedTable, showToast]);
 
+  // Automatic detection of open tab on QR scanned table (Caja/Mozo order sync)
+  useEffect(() => {
+    if (isStaffSession) return;
+    if (!selectedTable) return;
+
+    const existingOrder = orders.find(
+      (o) =>
+        o.mode === 'dine-in' &&
+        o.tableNumber === selectedTable &&
+        o.status !== 'Cobrado' &&
+        !o.paid
+    );
+
+    if (existingOrder) {
+      if (activeTableOrderId !== existingOrder.id) {
+        setActiveTableOrderId(existingOrder.id);
+      }
+      if (currentScreen === 'table-qr-welcome') {
+        setNavDirection(1);
+        setHistory((prev) => {
+          const withoutQrWelcome = prev.filter((s) => s !== 'table-qr-welcome');
+          return withoutQrWelcome.includes('menu')
+            ? withoutQrWelcome
+            : [...withoutQrWelcome, 'menu'];
+        });
+        showToast(
+          `Mesa ${selectedTable}: cuenta abierta vinculada (${existingOrder.code})`
+        );
+      }
+    }
+  }, [
+    activeTableOrderId,
+    currentScreen,
+    isStaffSession,
+    orders,
+    selectedTable,
+    showToast,
+  ]);
+
   const activeDeliveryOrder = useMemo(() => {
     if (activeDeliveryOrderId) {
       const byId = orders.find((o) => o.id === activeDeliveryOrderId);
@@ -1483,6 +1526,47 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       selectedTable,
       showToast,
     ]
+  );
+
+  const handleAttachPhoneToTableOrder = useCallback(
+    async (rawPhone: string): Promise<boolean> => {
+      const parsed = validateBoliviaPhone(rawPhone);
+      if (!parsed.valid) {
+        showToast(parsed.error || 'Número de celular inválido (8 dígitos)');
+        return false;
+      }
+      const order = activeTableOrder;
+      if (!order) {
+        showToast('No se encontró pedido activo en la mesa');
+        return false;
+      }
+
+      setTablePhonesByNumber((prev) => {
+        const next = { ...prev, [selectedTable]: parsed.whatsappDigits };
+        writeStoredTablePhones(next);
+        return next;
+      });
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === order.id ? { ...o, customerPhone: parsed.whatsappDigits } : o
+        )
+      );
+
+      try {
+        await attachPhoneToTableOrder({
+          orderId: order.id,
+          tableNumber: selectedTable,
+          phone: parsed.whatsappDigits,
+        });
+        showToast(`WhatsApp ${parsed.display} guardado para tu comanda`);
+        return true;
+      } catch (err) {
+        reportCloudError(err, 'Guardado de WhatsApp en comanda', false);
+        return false;
+      }
+    },
+    [activeTableOrder, reportCloudError, selectedTable, showToast]
   );
 
   const handleSelectTakeawayOrder = useCallback((orderId: string | null) => {
@@ -1641,8 +1725,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           o.mode === 'dine-in' &&
           o.tableNumber === selectedTable &&
           o.status !== 'Cobrado' &&
-          !o.paid &&
-          (isStaffSession || o.customerUid === ownerUid)
+          !o.paid
       );
 
       if (existingUnpaid) {
@@ -1669,7 +1752,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
             showToast('Guardado solo en este dispositivo (sin conexión a la nube)');
             return;
           }
-          if (isStaffSession || existingUnpaid.customerUid === activeUser.uid) {
+          if (
+            isStaffSession ||
+            existingUnpaid.customerUid === activeUser.uid ||
+            existingUnpaid.mode === 'dine-in'
+          ) {
             try {
               await appendOrderItemsInFirestore({
                 orderId: existingUnpaid.id,
@@ -3278,6 +3365,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     tableCustomerPhone,
     handleSelectTable,
     handleConfirmQrTableWelcome,
+    handleAttachPhoneToTableOrder,
     exitQrTableMode,
     cart,
     setCart,

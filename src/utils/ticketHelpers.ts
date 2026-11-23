@@ -73,6 +73,14 @@ export function formatBoliviaDisplayPhone(rawPhone?: string): string {
   return rawPhone;
 }
 
+export function maskPhoneNumberForPrivacy(rawPhone?: string): string {
+  if (!rawPhone) return '';
+  const digits = rawPhone.replace(/\D/g, '');
+  if (!digits) return '';
+  const last4 = digits.slice(-4);
+  return `••••${last4}`;
+}
+
 export function buildWhatsAppTicketText(
   order: KitchenOrder,
   options?: { restaurantPhone?: string; dateLabel?: string }

@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { KitchenOrder } from '../types/app';
-import { getTakeawayCustomerName } from '../utils/appHelpers';
+import { formatBsDecimal, getTakeawayCustomerName } from '../utils/appHelpers';
 
 interface VerifyDeliveryCodeModalProps {
   order: KitchenOrder | null;
@@ -149,7 +149,7 @@ export const VerifyDeliveryCodeModal: React.FC<VerifyDeliveryCodeModalProps> = (
             </div>
           </div>
           <span className="text-xs font-bold text-[var(--accent-gold)] tabular-nums shrink-0">
-            Bs. {order.total.toFixed(2)}
+            {formatBsDecimal(order.total)}
           </span>
         </div>
 

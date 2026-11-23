@@ -13,13 +13,14 @@ import {
   updateDoc,
   where,
   writeBatch,
+  DocumentData,
 } from 'firebase/firestore';
 import {
   INITIAL_INVENTORY,
   INITIAL_MENU_ITEMS,
   INITIAL_TABLES,
 } from '../data/mockData';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import {
   CustomerContactItem,
   EmployeeRoleTitle,
@@ -355,99 +356,201 @@ export function subscribeOrders(
   userUid: string,
   isStaff: boolean,
   onData: (orders: KitchenOrder[]) => void,
-  onError?: (error: unknown) => void
+  onError?: (error: unknown) => void,
+  activeTableNumber?: number
 ): () => void {
-  const q = isStaff
-    ? query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
-    : query(collection(db, 'orders'), where('customerUid', '==', userUid));
-
   let latestSeq = 0;
 
-  return onSnapshot(
-    q,
-    async (snapshot) => {
-      const seq = ++latestSeq;
-      const rawDocs = snapshot.docs.map((d) => {
-        const data = d.data();
-        const ts =
-          data.createdAt instanceof Timestamp
-            ? data.createdAt.toMillis()
-            : Date.now();
-        const order: KitchenOrder & { _createdAtMs: number } = {
-          id: data.id || d.id,
-          code: data.code,
-          customerUid: data.customerUid,
-          mode: data.mode,
-          tableNumber: typeof data.tableNumber === 'number' ? data.tableNumber : undefined,
-          customerLabel: data.customerLabel,
-          pickupNote: typeof data.pickupNote === 'string' ? data.pickupNote : undefined,
-          confirmationCode:
-            typeof data.confirmationCode === 'string'
-              ? data.confirmationCode
-              : undefined,
-          items: Array.isArray(data.items) ? data.items : [],
-          notes: typeof data.notes === 'string' ? data.notes : '',
-          status: data.status,
-          total: Number(data.total),
-          estimatedMinutes: Number(data.estimatedMinutes) || 15,
-          createdAt: data.createdAtLabel || '',
-          deliveredAt: typeof data.deliveredAtLabel === 'string' ? data.deliveredAtLabel : undefined,
-          paid: Boolean(data.paid),
-          paymentMethod: data.paymentMethod,
-          waiterRequested: Boolean(data.waiterRequested),
-          billRequested: Boolean(data.billRequested),
-          ratingStars: typeof data.ratingStars === 'number' ? data.ratingStars : undefined,
-          _createdAtMs: ts,
-        };
-        return order;
-      });
+  const processDocs = async (docs: Array<{ id: string; data: () => DocumentData }>) => {
+    const seq = ++latestSeq;
+    const rawDocs = docs.map((d) => {
+      const data = d.data();
+      const ts =
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toMillis()
+          : Date.now();
+      const order: KitchenOrder & { _createdAtMs: number } = {
+        id: data.id || d.id,
+        code: data.code,
+        customerUid: data.customerUid,
+        mode: data.mode,
+        tableNumber: typeof data.tableNumber === 'number' ? data.tableNumber : undefined,
+        customerLabel: data.customerLabel,
+        pickupNote: typeof data.pickupNote === 'string' ? data.pickupNote : undefined,
+        confirmationCode:
+          typeof data.confirmationCode === 'string'
+            ? data.confirmationCode
+            : undefined,
+        items: Array.isArray(data.items) ? data.items : [],
+        notes: typeof data.notes === 'string' ? data.notes : '',
+        status: data.status,
+        total: Number(data.total),
+        estimatedMinutes: Number(data.estimatedMinutes) || 15,
+        createdAt: data.createdAtLabel || '',
+        deliveredAt: typeof data.deliveredAtLabel === 'string' ? data.deliveredAtLabel : undefined,
+        paid: Boolean(data.paid),
+        paymentMethod: data.paymentMethod,
+        waiterRequested: Boolean(data.waiterRequested),
+        billRequested: Boolean(data.billRequested),
+        ratingStars: typeof data.ratingStars === 'number' ? data.ratingStars : undefined,
+        _createdAtMs: ts,
+      };
+      return order;
+    });
 
-      rawDocs.sort((a, b) => b._createdAtMs - a._createdAtMs);
+    rawDocs.sort((a, b) => b._createdAtMs - a._createdAtMs);
 
-      const enriched = await Promise.all(
-        rawDocs.map(async ({ _createdAtMs: _ts, ...ord }) => {
-          let nextOrder: KitchenOrder = ord;
-          if (ord.mode === 'delivery') {
-            try {
-              const piiSnap = await getDoc(doc(db, 'orders', ord.id, 'private', 'delivery'));
-              if (piiSnap.exists()) {
-                const pii = piiSnap.data();
-                nextOrder = {
-                  ...nextOrder,
-                  deliveryAddress: pii.address,
-                  deliveryPhone: pii.phone,
-                  customerPhone: normalizeWhatsAppPhone(String(pii.phone || '')) || undefined,
-                };
-              }
-            } catch {
-              // Ignore if private doc does not exist
-            }
-          }
+    const enriched = await Promise.all(
+      rawDocs.map(async ({ _createdAtMs: _ts, ...ord }) => {
+        let nextOrder: KitchenOrder = ord;
+        if (ord.mode === 'delivery') {
           try {
-            const contactSnap = await getDoc(doc(db, 'orders', ord.id, 'private', 'contact'));
-            if (contactSnap.exists()) {
-              const contactData = contactSnap.data();
-              if (typeof contactData.phone === 'string' && contactData.phone) {
-                nextOrder = {
-                  ...nextOrder,
-                  customerPhone: contactData.phone,
-                };
-              }
+            const piiSnap = await getDoc(doc(db, 'orders', ord.id, 'private', 'delivery'));
+            if (piiSnap.exists()) {
+              const pii = piiSnap.data();
+              nextOrder = {
+                ...nextOrder,
+                deliveryAddress: pii.address,
+                deliveryPhone: pii.phone,
+                customerPhone: normalizeWhatsAppPhone(String(pii.phone || '')) || undefined,
+              };
             }
           } catch {
-            // Ignore if private contact doc does not exist
+            // Ignore if private doc does not exist
           }
-          return nextOrder;
-        })
-      );
+        }
+        try {
+          const contactSnap = await getDoc(doc(db, 'orders', ord.id, 'private', 'contact'));
+          if (contactSnap.exists()) {
+            const contactData = contactSnap.data();
+            if (typeof contactData.phone === 'string' && contactData.phone) {
+              nextOrder = {
+                ...nextOrder,
+                customerPhone: contactData.phone,
+              };
+            }
+          }
+        } catch {
+          // Ignore if private contact doc does not exist
+        }
+        return nextOrder;
+      })
+    );
 
-      if (seq !== latestSeq) return;
-      onData(enriched);
+    if (seq !== latestSeq) return;
+    onData(enriched);
+  };
+
+  if (isStaff) {
+    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        void processDocs(snapshot.docs);
+      },
+      (error) => {
+        notifyListenerError(error, OperationType.LIST, 'orders', onError);
+      }
+    );
+  }
+
+  // Customer listener: subscribes to own orders + active unpaid dine-in order for table if present
+  let userDocsMap = new Map<string, { id: string; data: () => DocumentData }>();
+  let tableDocsMap = new Map<string, { id: string; data: () => DocumentData }>();
+
+  const emitMerged = () => {
+    const combined = new Map<string, { id: string; data: () => DocumentData }>();
+    userDocsMap.forEach((v, k) => combined.set(k, v));
+    tableDocsMap.forEach((v, k) => combined.set(k, v));
+    void processDocs(Array.from(combined.values()));
+  };
+
+  const qUser = query(collection(db, 'orders'), where('customerUid', '==', userUid));
+  const unsubUser = onSnapshot(
+    qUser,
+    (snapshot) => {
+      userDocsMap = new Map(snapshot.docs.map((d) => [d.id, { id: d.id, data: () => d.data() }]));
+      emitMerged();
     },
     (error) => {
       notifyListenerError(error, OperationType.LIST, 'orders', onError);
     }
   );
+
+  let unsubTable: (() => void) | null = null;
+  if (typeof activeTableNumber === 'number' && activeTableNumber >= 1 && activeTableNumber <= 99) {
+    const qTable = query(
+      collection(db, 'orders'),
+      where('mode', '==', 'dine-in'),
+      where('tableNumber', '==', activeTableNumber),
+      where('paid', '==', false)
+    );
+    unsubTable = onSnapshot(
+      qTable,
+      (snapshot) => {
+        tableDocsMap = new Map(snapshot.docs.map((d) => [d.id, { id: d.id, data: () => d.data() }]));
+        emitMerged();
+      },
+      (error) => {
+        console.warn('Table order real-time sync notification:', error);
+      }
+    );
+  }
+
+  return () => {
+    unsubUser();
+    if (unsubTable) unsubTable();
+  };
+}
+
+export async function attachPhoneToTableOrder(params: {
+  orderId: string;
+  tableNumber: number;
+  phone: string;
+}): Promise<string> {
+  const cleanPhone = normalizeWhatsAppPhone(params.phone);
+  if (!cleanPhone || !/^[0-9]{8,15}$/.test(cleanPhone)) {
+    throw new Error('Número de celular inválido');
+  }
+
+  const currentUid = auth.currentUser?.uid || 'guest-customer';
+  const batch = writeBatch(db);
+
+  batch.set(
+    doc(db, 'orders', params.orderId, 'private', 'contact'),
+    {
+      customerUid: currentUid,
+      phone: cleanPhone,
+      tableNumber: params.tableNumber,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  batch.set(
+    doc(db, 'table_sessions', `mesa-${params.tableNumber}`),
+    {
+      tableNumber: params.tableNumber,
+      customerUid: currentUid,
+      customerPhone: cleanPhone,
+      activeOrderId: params.orderId,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await batch.commit();
+
+  void upsertCustomerContactInFirestore({
+    phone: cleanPhone,
+    customerUid: currentUid,
+    lastTableNumber: params.tableNumber,
+    lastMode: 'dine-in',
+    lastOrderTotal: 0,
+    source: 'qr-table',
+  }).catch(() => {});
+
+  return cleanPhone;
 }
 
 export function subscribeTableSessions(

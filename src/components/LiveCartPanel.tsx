@@ -51,6 +51,7 @@ import {
 import {
   buildWhatsAppShareUrl,
   formatBoliviaDisplayPhone,
+  maskPhoneNumberForPrivacy,
 } from '../utils/ticketHelpers';
 import { CollectPaymentModal } from './CollectPaymentModal';
 import { TicketModal } from './TicketModal';
@@ -103,6 +104,7 @@ interface LiveCartPanelProps {
   onDismissWaiterCall: (orderId: string) => void;
   onFreeTable: (tableNumber: number) => void;
   onDeleteOrder: (order: KitchenOrder) => void;
+  onAttachPhone?: (phone: string) => Promise<boolean>;
   onClose?: () => void;
 }
 
@@ -147,6 +149,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
   onDismissWaiterCall,
   onFreeTable,
   onDeleteOrder,
+  onAttachPhone,
   onClose,
 }) => {
   const [collectingOrder, setCollectingOrder] = useState<KitchenOrder | null>(
@@ -158,6 +161,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
   );
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [takeawayNameAttempted, setTakeawayNameAttempted] = useState(false);
+  const [inlinePhone, setInlinePhone] = useState('');
+  const [showInlinePhoneForm, setShowInlinePhoneForm] = useState(false);
+  const [isSavingInlinePhone, setIsSavingInlinePhone] = useState(false);
 
   const isStaffRole = userRole === 'admin' || userRole === 'mozo';
   const isAdminRole = Boolean(isAdmin) || userRole === 'admin';
@@ -675,7 +681,10 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     </span>
                     {effectivePhone && (
                       <span className="block text-[10px] font-bold text-[var(--status-ok)] tabular-nums mt-0.5">
-                        WhatsApp: {formatBoliviaDisplayPhone(effectivePhone)}
+                        WhatsApp:{' '}
+                        {isStaffRole
+                          ? formatBoliviaDisplayPhone(effectivePhone)
+                          : maskPhoneNumberForPrivacy(effectivePhone)}
                       </span>
                     )}
                   </div>
@@ -695,6 +704,78 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       : 'Pendiente'}
                   </span>
                 </div>
+
+                {/* Optional discreet WhatsApp prompt for customer without blocking */}
+                {!effectivePhone &&
+                  !isStaffRole &&
+                  !inspectedOrder.paid &&
+                  orderMode === 'dine-in' &&
+                  onAttachPhone && (
+                    <div className="rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] p-2.5 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <MessageCircle className="w-3.5 h-3.5 text-[var(--status-ok)] shrink-0" />
+                          <span className="text-[11px] font-semibold text-[var(--ink-primary)] leading-tight truncate">
+                            Añade tu WhatsApp para enviarte el recibo digital
+                          </span>
+                        </div>
+                        {!showInlinePhoneForm && (
+                          <button
+                            type="button"
+                            onClick={() => setShowInlinePhoneForm(true)}
+                            className="px-2.5 py-1 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-[10px] font-bold active:scale-[0.97] transition-transform cursor-pointer shrink-0"
+                          >
+                            Añadir
+                          </button>
+                        )}
+                      </div>
+                      {showInlinePhoneForm && (
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!inlinePhone.trim() || isSavingInlinePhone) return;
+                            setIsSavingInlinePhone(true);
+                            const ok = await onAttachPhone(inlinePhone);
+                            setIsSavingInlinePhone(false);
+                            if (ok) {
+                              setShowInlinePhoneForm(false);
+                              setInlinePhone('');
+                            }
+                          }}
+                          className="flex items-center gap-1.5 pt-1"
+                        >
+                          <span className="h-8 px-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-bold text-[var(--ink-muted)] flex items-center tabular-nums shrink-0">
+                            +591
+                          </span>
+                          <input
+                            type="tel"
+                            maxLength={10}
+                            value={inlinePhone}
+                            onChange={(e) =>
+                              setInlinePhone(e.target.value.replace(/\D/g, ''))
+                            }
+                            placeholder="71234567"
+                            autoFocus
+                            className="flex-1 h-8 px-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus:border-[var(--accent-primary)] tabular-nums"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isSavingInlinePhone || inlinePhone.length < 8}
+                            className="h-8 px-2.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-[11px] font-bold disabled:opacity-40 cursor-pointer active:scale-95 transition-transform shrink-0"
+                          >
+                            {isSavingInlinePhone ? '...' : 'Guardar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowInlinePhoneForm(false)}
+                            className="h-8 px-2 text-xs text-[var(--ink-muted)] hover:text-[var(--ink-primary)] cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
 
                 {/* Waiter Call / Bill Request Alert */}
                 {inspectedOrder.waiterRequested && (

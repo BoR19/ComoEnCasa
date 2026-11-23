@@ -145,26 +145,39 @@ function buildMenuDocPayload(item: MenuItem, sortOrder: number) {
 
 export async function seedInitialCatalogIfEmpty(): Promise<void> {
   try {
-    const [menuSnap, tableSnap, invSnap, staffCfgSnap, staffSnap] =
-      await Promise.all([
-        getDocs(collection(db, 'menuItems')),
-        getDocs(collection(db, 'tables')),
-        getDocs(collection(db, 'inventory')),
-        getDoc(doc(db, 'config', 'staff')),
-        getDocs(collection(db, 'staff')),
-      ]);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return;
+    }
+
+    let menuSnap, tableSnap, invSnap, staffCfgSnap, staffSnap;
+    try {
+      [menuSnap, tableSnap, invSnap, staffCfgSnap, staffSnap] =
+        await Promise.all([
+          getDocs(collection(db, 'menuItems')),
+          getDocs(collection(db, 'tables')),
+          getDocs(collection(db, 'inventory')),
+          getDoc(doc(db, 'config', 'staff')),
+          getDocs(collection(db, 'staff')),
+        ]);
+    } catch (readErr) {
+      const msg = readErr instanceof Error ? readErr.message : String(readErr || '');
+      if (msg.toLowerCase().includes('offline') || msg.toLowerCase().includes('unavailable')) {
+        return;
+      }
+      throw readErr;
+    }
 
     const batch = writeBatch(db);
     let hasWrites = false;
 
-    if (menuSnap.empty) {
+    if (menuSnap && menuSnap.empty) {
       INITIAL_MENU_ITEMS.forEach((item, idx) => {
         batch.set(doc(db, 'menuItems', item.id), buildMenuDocPayload(item, idx));
       });
       hasWrites = true;
     }
 
-    if (tableSnap.empty) {
+    if (tableSnap && tableSnap.empty) {
       INITIAL_TABLES.forEach((tbl) => {
         const docPayload: Record<string, unknown> = {
           number: tbl.number,
@@ -179,7 +192,7 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
       hasWrites = true;
     }
 
-    if (invSnap.empty) {
+    if (invSnap && invSnap.empty) {
       INITIAL_INVENTORY.forEach((inv) => {
         batch.set(doc(db, 'inventory', inv.id), {
           id: inv.id,
@@ -193,7 +206,7 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
       hasWrites = true;
     }
 
-    if (!staffCfgSnap.exists()) {
+    if (staffCfgSnap && !staffCfgSnap.exists()) {
       batch.set(doc(db, 'config', 'staff'), {
         adminPin: DEFAULT_ADMIN_PIN,
         mozoPin: DEFAULT_MOZO_PIN,
@@ -202,7 +215,7 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
       hasWrites = true;
     }
 
-    if (staffSnap.empty) {
+    if (staffSnap && staffSnap.empty) {
       batch.set(doc(db, 'staff', 'staff-carlos'), {
         id: 'staff-carlos',
         name: 'Carlos (Mozo)',
@@ -220,6 +233,10 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
       await batch.commit();
     }
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error || '');
+    if (msg.toLowerCase().includes('offline') || msg.toLowerCase().includes('unavailable')) {
+      return;
+    }
     handleFirestoreError(
       error,
       OperationType.WRITE,

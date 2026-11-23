@@ -1219,6 +1219,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (activeUser) {
         try {
+          if (nextSession.isAdmin) {
+            await seedInitialCatalogIfEmpty();
+          }
           await activateStaffSessionInFirestore({
             uid: activeUser.uid,
             staffId: nextSession.staffId,
@@ -1230,17 +1233,6 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           setCloudStaffSessionKey(
             `${activeUser.uid}:${nextSession.staffId}:${nextSession.pin}`
           );
-          if (nextSession.isAdmin) {
-            try {
-              await seedInitialCatalogIfEmpty();
-            } catch (seedErr) {
-              reportCloudError(
-                seedErr,
-                'Inicialización del catálogo en Firestore',
-                false
-              );
-            }
-          }
         } catch (err) {
           const friendly = reportCloudError(
             err,

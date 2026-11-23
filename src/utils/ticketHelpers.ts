@@ -23,6 +23,56 @@ export function normalizeWhatsAppPhone(rawPhone: string): string {
   return digits;
 }
 
+export function validateBoliviaPhone(rawPhone: string): {
+  valid: boolean;
+  localDigits: string;
+  whatsappDigits: string;
+  display: string;
+  error?: string;
+} {
+  const rawDigits = rawPhone.replace(/\D/g, '');
+  let localDigits = rawDigits;
+  if (rawDigits.startsWith('591') && rawDigits.length === 11) {
+    localDigits = rawDigits.slice(3);
+  } else if (rawDigits.startsWith('0') && rawDigits.length === 9) {
+    localDigits = rawDigits.slice(1);
+  }
+
+  if (!localDigits) {
+    return {
+      valid: false,
+      localDigits: '',
+      whatsappDigits: '',
+      display: '',
+      error: 'Ingresa tu número celular de Bolivia (8 dígitos, empezando en 6 o 7).',
+    };
+  }
+
+  if (!/^[67]\d{7}$/.test(localDigits)) {
+    return {
+      valid: false,
+      localDigits,
+      whatsappDigits: '',
+      display: '',
+      error: 'Debe tener 8 dígitos y empezar con 6 o 7 (ej. 71234567).',
+    };
+  }
+
+  return {
+    valid: true,
+    localDigits,
+    whatsappDigits: `591${localDigits}`,
+    display: `+591 ${localDigits}`,
+  };
+}
+
+export function formatBoliviaDisplayPhone(rawPhone?: string): string {
+  if (!rawPhone) return '';
+  const parsed = validateBoliviaPhone(rawPhone);
+  if (parsed.valid) return parsed.display;
+  return rawPhone;
+}
+
 export function buildWhatsAppTicketText(
   order: KitchenOrder,
   options?: { restaurantPhone?: string; dateLabel?: string }
@@ -56,6 +106,8 @@ export function buildWhatsAppTicketText(
   }
   if (order.deliveryPhone) {
     lines.push(`*Teléfono:* ${order.deliveryPhone}`);
+  } else if (order.customerPhone) {
+    lines.push(`*WhatsApp:* ${formatBoliviaDisplayPhone(order.customerPhone)}`);
   }
   if (
     order.confirmationCode &&
@@ -127,6 +179,8 @@ export function buildPlainTextTicket(order: KitchenOrder): string {
   }
   if (order.deliveryPhone) {
     lines.push(`Tel.   : ${order.deliveryPhone}`);
+  } else if (order.customerPhone) {
+    lines.push(`WhatsAp: ${formatBoliviaDisplayPhone(order.customerPhone)}`);
   }
   if (
     order.confirmationCode &&

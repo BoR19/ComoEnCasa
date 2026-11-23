@@ -185,7 +185,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       id: 'tables-select',
       label: 'Mesas',
       icon: QrCode,
-      matchScreens: ['tables-select', 'tables-qr', 'tables-order'],
+      matchScreens: [
+        'tables-select',
+        'tables-qr',
+        'tables-order',
+        'table-qr-welcome',
+      ],
       badge: orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
     },
     {

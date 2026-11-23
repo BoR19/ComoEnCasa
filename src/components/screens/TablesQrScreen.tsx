@@ -6,9 +6,12 @@ import {
   CheckCircle2,
   Clock,
   Lock,
+  MessageCircle,
+  Phone,
   Plus,
   Printer,
   QrCode,
+  ReceiptText,
   ScanLine,
   Trash2,
   Users,
@@ -23,6 +26,10 @@ import {
   getOrderLinesCount,
   getTableStats,
 } from '../../utils/appHelpers';
+import {
+  buildWhatsAppShareUrl,
+  formatBoliviaDisplayPhone,
+} from '../../utils/ticketHelpers';
 import { OfficialLogo } from '../BrandAssets';
 import type { AppUserRole } from '../LiveCartPanel';
 import { MobileHeader } from '../ShellComponents';
@@ -254,8 +261,11 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
                 const isReadyToPay = Boolean(
                   activeOrder &&
                     !activeOrder.paid &&
-                    activeOrder.status === 'Entregado'
+                    (activeOrder.status === 'Entregado' ||
+                      activeOrder.billRequested)
                 );
+                const tablePhone =
+                  table.customerPhone || activeOrder?.customerPhone || '';
                 const isSelected = table.number === selectedTable;
                 const displayName =
                   table.name?.trim() || `Mesa ${table.number}`;
@@ -338,6 +348,15 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
                         {activeOrder && (
                           <span className="block text-[11px] font-semibold text-[var(--ink-muted)] mt-0.5">
                             Estado: {activeOrder.status}
+                            {activeOrder.billRequested && !activeOrder.paid
+                              ? ' · Cuenta solicitada'
+                              : ''}
+                          </span>
+                        )}
+                        {isStaff && tablePhone && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--status-ok)] mt-0.5 tabular-nums">
+                            <Phone className="w-3 h-3 shrink-0" />
+                            <span>{formatBoliviaDisplayPhone(tablePhone)}</span>
                           </span>
                         )}
                       </div>
@@ -371,41 +390,55 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
                       </button>
 
                       {isStaff ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectTable(table.number);
-                              onConfirmTable(table.number);
-                            }}
-                            className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
-                          >
-                            <UtensilsCrossed className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
-                            <span>
-                              {isOccupied ? 'Ver / Agregar' : 'Tomar pedido'}
-                            </span>
-                          </button>
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onSelectTable(table.number);
+                                onConfirmTable(table.number);
+                              }}
+                              className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                            >
+                              <UtensilsCrossed className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
+                              <span>
+                                {isOccupied ? 'Ver / Agregar' : 'Tomar pedido'}
+                              </span>
+                            </button>
 
-                          {isOccupied ? (
-                            <button
-                              type="button"
-                              onClick={() => setMovingFromTable(table)}
-                              className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                            {isOccupied ? (
+                              <button
+                                type="button"
+                                onClick={() => setMovingFromTable(table)}
+                                className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                              >
+                                <ArrowRightLeft className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                                <span>Mover a otra mesa</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setDeletingTable(table)}
+                                className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--status-danger)] text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:border-[var(--status-danger)] hover:bg-[var(--status-danger)]/5 active:scale-[0.97] transition-[transform,border-color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--status-danger)]"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                <span>Eliminar mesa</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {activeOrder && (
+                            <a
+                              href={buildWhatsAppShareUrl(activeOrder, tablePhone)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
                             >
-                              <ArrowRightLeft className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
-                              <span>Mover a otra mesa</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setDeletingTable(table)}
-                              className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--status-danger)] text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:border-[var(--status-danger)] hover:bg-[var(--status-danger)]/5 active:scale-[0.97] transition-[transform,border-color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--status-danger)]"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                              <span>Eliminar mesa</span>
-                            </button>
+                              <MessageCircle className="w-4 h-4 shrink-0" />
+                              <span>Enviar recibo por WhatsApp</span>
+                            </a>
                           )}
-                        </div>
+                        </>
                       ) : (
                         <button
                           type="button"
@@ -878,6 +911,7 @@ interface TableOrderScreenProps {
   onBack: () => void;
   onGoMenu: () => void;
   onCallWaiter: (orderId: string) => void;
+  onRequestBill?: (orderId: string) => void;
   onPayAtTable: () => void;
 }
 
@@ -887,6 +921,7 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
   onBack,
   onGoMenu,
   onCallWaiter,
+  onRequestBill,
   onPayAtTable,
 }) => {
   const [showTicket, setShowTicket] = useState(false);
@@ -923,10 +958,18 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
 
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-5xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-20 xl:pb-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="px-3.5 py-1 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs">
-              Mesa {selectedTable}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3.5 py-1 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs">
+                Mesa {selectedTable}
+              </span>
+              {order.customerPhone && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--status-ok)]/12 text-[var(--status-ok)] font-bold text-[11px] tabular-nums">
+                  <MessageCircle className="w-3 h-3 shrink-0" />
+                  <span>{formatBoliviaDisplayPhone(order.customerPhone)}</span>
+                </span>
+              )}
+            </div>
             <span className="text-xs font-bold text-[var(--ink-muted)] tabular-nums">
               {order.code} · {order.createdAt}
             </span>
@@ -979,11 +1022,15 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-bold ${
                     order.paid
                       ? 'bg-[var(--status-ok)]/12 text-[var(--status-ok)]'
+                      : order.billRequested || order.status === 'Entregado'
+                      ? 'bg-[var(--accent-gold)]/25 text-[var(--ink-primary)] border border-[var(--accent-gold)]/50'
                       : 'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]'
                   }`}
                 >
                   {order.paid
                     ? `Pagado (${order.paymentMethod})`
+                    : order.billRequested || order.status === 'Entregado'
+                    ? 'Por pagar'
                     : 'Pendiente de pago'}
                 </span>
               </div>
@@ -993,14 +1040,28 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
                   <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                     Resumen
                   </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowTicket(true)}
-                    className="px-3 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold inline-flex items-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-                    <span>Ticket / WhatsApp</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {!order.paid && (
+                      <button
+                        type="button"
+                        onClick={() => onCallWaiter(order.id)}
+                        className="px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold inline-flex items-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                      >
+                        <Bell className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                        <span>
+                          {order.waiterRequested ? 'En camino' : 'Llamar mesero'}
+                        </span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowTicket(true)}
+                      className="px-3 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold inline-flex items-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                      <span>Ticket / WA</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] px-4 py-3 flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--accent-gold)]">
@@ -1012,7 +1073,13 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
                 </div>
               </section>
 
-              {order.waiterRequested && (
+              {order.billRequested && !order.paid && (
+                <div className="rounded-2xl bg-[var(--accent-gold)]/15 border border-[var(--accent-gold)]/60 px-3.5 py-2.5 text-xs font-bold text-[var(--ink-primary)]">
+                  Cuenta solicitada. El mozo se acercará a la Mesa {selectedTable} o puedes pagar ahora mismo.
+                </div>
+              )}
+
+              {order.waiterRequested && !order.billRequested && (
                 <div className="rounded-2xl bg-[var(--status-ok)]/12 border border-[var(--status-ok)] px-3.5 py-2.5 text-xs font-bold text-[var(--status-ok)]">
                   Mesero notificado en Caja/Cocina. Enseguida se acercará a la
                   Mesa {selectedTable}.
@@ -1021,37 +1088,53 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
 
               {/* Desktop inline actions */}
               <div className="hidden lg:grid grid-cols-2 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => onCallWaiter(order.id)}
-                  className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                >
-                  <Bell className="w-4 h-4 text-[var(--accent-primary)]" />
-                  <span>
-                    {order.waiterRequested
-                      ? 'Mesero en camino'
-                      : 'Llamar al mesero'}
-                  </span>
-                </button>
-
                 {order.paid ? (
-                  <button
-                    type="button"
-                    onClick={onGoMenu}
-                    className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Pedir más</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowTicket(true)}
+                      className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4 text-[var(--accent-primary)]" />
+                      <span>Ver recibo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onGoMenu}
+                      className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Pedir más</span>
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={onPayAtTable}
-                    className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <span>Pagar en mesa</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onRequestBill
+                          ? onRequestBill(order.id)
+                          : onCallWaiter(order.id)
+                      }
+                      className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <ReceiptText className="w-4 h-4 text-[var(--accent-primary)]" />
+                      <span>
+                        {order.billRequested
+                          ? 'Cuenta solicitada'
+                          : 'Solicitar cuenta'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onPayAtTable}
+                      className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>Pagar ahora</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -1061,35 +1144,54 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
 
       {/* Bottom Two Buttons (Mobile) */}
       <div className="lg:hidden p-3.5 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] grid grid-cols-2 gap-2.5 shrink-0">
-        <button
-          type="button"
-          onClick={() => onCallWaiter(order.id)}
-          className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
-        >
-          <Bell className="w-4 h-4 text-[var(--accent-primary)]" />
-          <span>
-            {order.waiterRequested ? 'Mesero en camino' : 'Llamar al mesero'}
-          </span>
-        </button>
-
         {order.paid ? (
-          <button
-            type="button"
-            onClick={onGoMenu}
-            className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Pedir más</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setShowTicket(true)}
+              className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+            >
+              <Printer className="w-4 h-4 text-[var(--accent-primary)]" />
+              <span>Ver recibo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onGoMenu}
+              className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Pedir más</span>
+            </button>
+          </>
         ) : (
-          <button
-            type="button"
-            onClick={onPayAtTable}
-            className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
-          >
-            <Lock className="w-4 h-4" />
-            <span>Pagar en mesa</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() =>
+                onRequestBill
+                  ? onRequestBill(order.id)
+                  : onCallWaiter(order.id)
+              }
+              className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+            >
+              <ReceiptText className="w-4 h-4 text-[var(--accent-primary)]" />
+              <span>
+                {order.billRequested
+                  ? 'Cuenta solicitada'
+                  : 'Solicitar cuenta'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onPayAtTable}
+              className="min-h-[48px] px-3 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Pagar ahora</span>
+            </button>
+          </>
         )}
       </div>
 

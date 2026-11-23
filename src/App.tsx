@@ -26,6 +26,7 @@ import {
   TableQrScreen,
   TableSelectScreen,
 } from './components/screens/TablesQrScreen';
+import { TableQrWelcomeScreen } from './components/screens/TableQrWelcomeScreen';
 import { WelcomeScreen } from './components/screens/WelcomeScreen';
 import { useRestaurant } from './context/RestaurantContext';
 import {
@@ -92,6 +93,7 @@ export default function App() {
     orders: kitchenOrders,
     inventory,
     authorizedStaff,
+    customerContacts,
     mozoPin,
     setSelectedDishId,
     selectedDish,
@@ -101,6 +103,7 @@ export default function App() {
     setOrderMode,
     selectedTable,
     handleSelectTable,
+    tableCustomerPhone,
     cart,
     setCart,
     cartCount,
@@ -131,6 +134,7 @@ export default function App() {
     handleCompletePayment,
     handleUpdateOrderStatus,
     handleCallWaiter,
+    handleRequestBill,
     handleDismissWaiterCall,
     handleCollectOrderPayment,
     handleCreatePosOrder,
@@ -153,13 +157,17 @@ export default function App() {
     handleAddAuthorizedStaff,
     handleToggleAuthorizedStaff,
     handleRemoveAuthorizedStaff,
+    handleConfirmQrTableWelcome,
   } = useRestaurant();
 
   const showBottomNav =
-    currentScreen !== 'welcome' && currentScreen !== 'admin-login';
+    currentScreen !== 'welcome' &&
+    currentScreen !== 'table-qr-welcome' &&
+    currentScreen !== 'admin-login';
 
   const showRightCartPanel =
     currentScreen !== 'welcome' &&
+    currentScreen !== 'table-qr-welcome' &&
     currentScreen !== 'admin-login' &&
     (isStaffSession ||
       currentScreen === 'menu' ||
@@ -270,6 +278,7 @@ export default function App() {
       activeTableOrder={activeTableOrder}
       linkedTakeawayOrder={linkedTakeawayOrder}
       linkedDeliveryOrder={linkedDeliveryOrder}
+      tableCustomerPhone={tableCustomerPhone}
       onChangeOrderMode={(m) => setOrderMode(m)}
       onChangeTakeawayInfo={setTakeawayInfo}
       onSelectTable={handleSelectTable}
@@ -298,6 +307,7 @@ export default function App() {
       onUpdateOrderItemQty={handleUpdateOrderItemQty}
       onCollectOrderPayment={handleCollectOrderPayment}
       onCallWaiter={handleCallWaiter}
+      onRequestBill={handleRequestBill}
       onDismissWaiterCall={handleDismissWaiterCall}
       onFreeTable={handleFreeTable}
       onDeleteOrder={handleDeleteOrder}
@@ -402,6 +412,19 @@ export default function App() {
                   onGoAdminLogin={() =>
                     navigate(isAdminAuthenticated ? 'admin-panel' : 'admin-login')
                   }
+                />
+              )}
+
+              {currentScreen === 'table-qr-welcome' && (
+                <TableQrWelcomeScreen
+                  tableNumber={selectedTable}
+                  table={tables.find((t) => t.number === selectedTable)}
+                  initialPhone={tableCustomerPhone}
+                  onConfirmWithPhone={(phone) =>
+                    handleConfirmQrTableWelcome(phone)
+                  }
+                  onSkipToMenu={() => handleConfirmQrTableWelcome('')}
+                  onGoHome={() => navigate('welcome')}
                 />
               )}
 
@@ -541,6 +564,7 @@ export default function App() {
                   onBack={goBack}
                   onGoMenu={() => navigate('menu')}
                   onCallWaiter={handleCallWaiter}
+                  onRequestBill={handleRequestBill}
                   onPayAtTable={() => {
                     setOrderMode('dine-in');
                     setPaymentContext('table');
@@ -668,6 +692,7 @@ export default function App() {
                   tables={tables}
                   inventory={inventory}
                   authorizedStaff={authorizedStaff}
+                  customerContacts={customerContacts}
                   adminEmail={firebaseUser?.email}
                   cartCount={cartCount}
                   orderMode={orderMode}

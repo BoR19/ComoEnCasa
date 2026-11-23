@@ -16,7 +16,9 @@ import {
   buildPlainTextTicket,
   buildWhatsAppShareUrl,
   buildWhatsAppTicketText,
+  formatBoliviaDisplayPhone,
   getTodayDateLabel,
+  validateBoliviaPhone,
 } from '../utils/ticketHelpers';
 import { OfficialLogo } from './BrandAssets';
 
@@ -36,7 +38,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
       order.mode === 'takeaway' && order.pickupNote
         ? order.pickupNote.match(/\b[67]\d{7}\b/)?.[0] || ''
         : '';
-    setWhatsappPhone(order.deliveryPhone || takeawayPhone);
+    const rawPhone =
+      order.customerPhone || order.deliveryPhone || takeawayPhone || '';
+    const parsed = validateBoliviaPhone(rawPhone);
+    setWhatsappPhone(parsed.valid ? parsed.localDigits : rawPhone);
     setCopied(false);
   }, [order]);
 
@@ -228,6 +233,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                   <div className="flex justify-between gap-2">
                     <span className="text-[var(--ink-muted)] font-semibold">Teléfono:</span>
                     <span className="font-semibold tabular-nums">{order.deliveryPhone}</span>
+                  </div>
+                )}
+                {!order.deliveryPhone && order.customerPhone && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[var(--ink-muted)] font-semibold">WhatsApp:</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatBoliviaDisplayPhone(order.customerPhone)}
+                    </span>
                   </div>
                 )}
                 {order.confirmationCode &&

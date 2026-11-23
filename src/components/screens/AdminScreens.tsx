@@ -10,6 +10,7 @@ import {
   KeyRound,
   LogIn,
   LogOut,
+  MessageCircle,
   Pencil,
   Plus,
   Printer,
@@ -25,6 +26,7 @@ import {
 import {
   AdminTab,
   AuthorizedStaffItem,
+  CustomerContactItem,
   DishSizeOption,
   InventoryItem,
   KitchenOrder,
@@ -44,10 +46,15 @@ import {
   getTableStats,
 } from '../../utils/appHelpers';
 import {
+  downloadCustomerContactsCsv,
+  mergeCustomerDirectory,
+} from '../../utils/customerExport';
+import {
   ImageBackupProgress,
   downloadMenuCsvOnly,
   downloadMenuFullBackupZip,
 } from '../../utils/menuImageBackup';
+import { formatBoliviaDisplayPhone } from '../../utils/ticketHelpers';
 import { OfficialLogo } from '../BrandAssets';
 import { CollectPaymentModal } from '../CollectPaymentModal';
 import { OrdersBoard } from '../OrdersBoard';
@@ -195,6 +202,7 @@ interface AdminPanelScreenProps {
   tables: TableItem[];
   inventory: InventoryItem[];
   authorizedStaff: AuthorizedStaffItem[];
+  customerContacts?: CustomerContactItem[];
   adminEmail?: string | null;
   cartCount: number;
   orderMode: OrderMode;
@@ -246,6 +254,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   tables,
   inventory,
   authorizedStaff,
+  customerContacts = [],
   adminEmail,
   cartCount,
   orderMode,
@@ -399,6 +408,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     [kitchenOrders]
   );
 
+  const customerDirectory = useMemo(
+    () => mergeCustomerDirectory(customerContacts, kitchenOrders),
+    [customerContacts, kitchenOrders]
+  );
+
   const filteredMenu = useMemo(() => {
     const q = menuQuery.trim().toLowerCase();
     return menuItems.filter((item) => {
@@ -529,6 +543,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setTimeout(() => setReportMsg(''), 3000);
   };
 
+  const handleDownloadCustomersCsv = () => {
+    const count = downloadCustomerContactsCsv(customerContacts, kitchenOrders);
+    setReportMsg(
+      count > 0
+        ? `Base de clientes exportada (${count} contactos WhatsApp en .csv).`
+        : 'Aún no hay teléfonos WhatsApp registrados para exportar.'
+    );
+    setTimeout(() => setReportMsg(''), 3500);
+  };
+
   const headerTitle =
     activeTab === 'menu'
       ? 'Gestión de Menú'
@@ -631,7 +655,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 >
                   <div className="flex items-center gap-2 text-xs font-bold">
                     <BellRing className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
-                    <span>{req.customerLabel} solicita al mesero</span>
+                    <span>
+                      {req.billRequested
+                        ? `${req.customerLabel} solicita la cuenta`
+                        : `${req.customerLabel} solicita al mesero`}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -1179,13 +1207,79 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 </section>
               </div>
 
+              {/* Base de Clientes WhatsApp */}
+              <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 lg:p-5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)] inline-flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-[var(--status-ok)] shrink-0" />
+                      <span>Base de Clientes WhatsApp</span>
+                    </h3>
+                    <p className="text-xs text-[var(--ink-muted)] mt-0.5">
+                      Números registrados al escanear el QR de mesa o en pedidos para recibos digitales y promociones.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] tabular-nums shrink-0">
+                    {customerDirectory.length}{' '}
+                    {customerDirectory.length === 1 ? 'cliente' : 'clientes'}
+                  </span>
+                </div>
+
+                {customerDirectory.length === 0 ? (
+                  <p className="text-xs text-[var(--ink-muted)] bg-[var(--bg-inset)] border border-[var(--border-subtle)] rounded-xl p-3 text-center">
+                    Todavía no se registraron números de WhatsApp en esta jornada.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-[var(--border-subtle)] max-h-64 overflow-y-auto phone-scroll">
+                    {customerDirectory.map((contact) => {
+                      const modeLabel =
+                        contact.lastMode === 'dine-in'
+                          ? contact.lastTableNumber
+                            ? `Mesa ${contact.lastTableNumber}`
+                            : 'En el local'
+                          : contact.lastMode === 'takeaway'
+                          ? 'Para Llevar'
+                          : 'Delivery';
+                      return (
+                        <div
+                          key={contact.phone}
+                          className="py-2.5 flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-bold text-[var(--ink-primary)] tabular-nums">
+                              {formatBoliviaDisplayPhone(contact.phone)}
+                            </p>
+                            <p className="text-[11px] text-[var(--ink-muted)] truncate tabular-nums">
+                              {modeLabel} · {contact.ordersCount}{' '}
+                              {contact.ordersCount === 1 ? 'pedido' : 'pedidos'}{' '}
+                              · {formatBs(contact.lastOrderTotal)}
+                            </p>
+                          </div>
+
+                          <a
+                            href={`https://wa.me/${contact.phone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Escribir por WhatsApp a ${contact.phone}`}
+                            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-[11px] font-bold inline-flex items-center gap-1 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] shrink-0"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
               {reportMsg && (
                 <p className="text-xs font-bold text-[var(--status-ok)] bg-[var(--status-ok)]/12 px-3 py-2 rounded-xl text-center max-w-md mx-auto">
                   {reportMsg}
                 </p>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md lg:mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-2xl lg:mx-auto">
                 <button
                   type="button"
                   onClick={handleDownloadReport}
@@ -1193,6 +1287,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 >
                   <Download className="w-4 h-4 shrink-0" />
                   <span>Descargar Reporte</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadCustomersCsv}
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                >
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>Exportar Clientes (.csv)</span>
                 </button>
 
                 <button

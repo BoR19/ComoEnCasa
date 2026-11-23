@@ -23,6 +23,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import {
   AuthorizedStaffItem,
+  CustomerContactItem,
   InventoryItem,
   KitchenOrder,
   MenuItem,
@@ -32,6 +33,7 @@ import {
   PaymentMethod,
   TableItem,
 } from '../types/app';
+import { normalizeWhatsAppPhone } from '../utils/ticketHelpers';
 
 export const BOOTSTRAP_ADMIN_EMAIL = 'borbjo637@gmail.com';
 
@@ -291,6 +293,7 @@ export function subscribeOrders(
           paid: Boolean(data.paid),
           paymentMethod: data.paymentMethod,
           waiterRequested: Boolean(data.waiterRequested),
+          billRequested: Boolean(data.billRequested),
           ratingStars: typeof data.ratingStars === 'number' ? data.ratingStars : undefined,
           _createdAtMs: ts,
         };
@@ -301,22 +304,38 @@ export function subscribeOrders(
 
       const enriched = await Promise.all(
         rawDocs.map(async ({ _createdAtMs: _ts, ...ord }) => {
+          let nextOrder: KitchenOrder = ord;
           if (ord.mode === 'delivery') {
             try {
               const piiSnap = await getDoc(doc(db, 'orders', ord.id, 'private', 'delivery'));
               if (piiSnap.exists()) {
                 const pii = piiSnap.data();
-                return {
-                  ...ord,
+                nextOrder = {
+                  ...nextOrder,
                   deliveryAddress: pii.address,
                   deliveryPhone: pii.phone,
+                  customerPhone: normalizeWhatsAppPhone(String(pii.phone || '')) || undefined,
                 };
               }
             } catch {
               // Ignore if private doc does not exist
             }
           }
-          return ord;
+          try {
+            const contactSnap = await getDoc(doc(db, 'orders', ord.id, 'private', 'contact'));
+            if (contactSnap.exists()) {
+              const contactData = contactSnap.data();
+              if (typeof contactData.phone === 'string' && contactData.phone) {
+                nextOrder = {
+                  ...nextOrder,
+                  customerPhone: contactData.phone,
+                };
+              }
+            }
+          } catch {
+            // Ignore if private contact doc does not exist
+          }
+          return nextOrder;
         })
       );
 
@@ -324,6 +343,72 @@ export function subscribeOrders(
     },
     (error) => {
       handleFirestoreError(error, OperationType.LIST, 'orders');
+    }
+  );
+}
+
+export function subscribeTableSessions(
+  onData: (sessions: Record<number, { customerPhone: string; activeOrderId?: string }>) => void
+): () => void {
+  return onSnapshot(
+    collection(db, 'table_sessions'),
+    (snapshot) => {
+      const next: Record<number, { customerPhone: string; activeOrderId?: string }> = {};
+      snapshot.docs.forEach((d) => {
+        const data = d.data();
+        const tableNum = Number(data.tableNumber);
+        const phone = typeof data.customerPhone === 'string' ? data.customerPhone : '';
+        if (Number.isInteger(tableNum) && tableNum >= 1 && tableNum <= 99 && phone) {
+          next[tableNum] = {
+            customerPhone: phone,
+            activeOrderId:
+              typeof data.activeOrderId === 'string' ? data.activeOrderId : undefined,
+          };
+        }
+      });
+      onData(next);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'table_sessions');
+    }
+  );
+}
+
+export function subscribeCustomerContacts(
+  onData: (contacts: CustomerContactItem[]) => void
+): () => void {
+  return onSnapshot(
+    collection(db, 'customer_contacts'),
+    (snapshot) => {
+      const list: CustomerContactItem[] = snapshot.docs.map((d) => {
+        const data = d.data();
+        const updatedDate =
+          data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null;
+        return {
+          phone: String(data.phone || d.id),
+          customerUid: typeof data.customerUid === 'string' ? data.customerUid : undefined,
+          lastTableNumber:
+            typeof data.lastTableNumber === 'number' ? data.lastTableNumber : undefined,
+          lastMode: data.lastMode || 'dine-in',
+          lastOrderCode:
+            typeof data.lastOrderCode === 'string' ? data.lastOrderCode : undefined,
+          lastOrderTotal: Number(data.lastOrderTotal) || 0,
+          ordersCount: Number(data.ordersCount) || 1,
+          source: data.source || 'qr-table',
+          updatedAtLabel: updatedDate
+            ? updatedDate.toLocaleDateString('es-BO', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : undefined,
+        };
+      });
+      onData(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'customer_contacts');
     }
   );
 }
@@ -408,6 +493,101 @@ export async function upsertMenuItemInFirestore(
   }
 }
 
+export async function upsertCustomerContactInFirestore(params: {
+  phone: string;
+  customerUid: string;
+  lastTableNumber?: number;
+  lastMode: OrderMode;
+  lastOrderCode?: string;
+  lastOrderTotal: number;
+  source: 'qr-table' | 'delivery' | 'takeaway' | 'pos';
+}): Promise<void> {
+  const phoneKey = normalizeWhatsAppPhone(params.phone);
+  if (!/^[0-9]{8,15}$/.test(phoneKey)) return;
+
+  try {
+    const ref = doc(db, 'customer_contacts', phoneKey);
+    let existingCreatedAt: unknown = null;
+    let existingOrdersCount = 0;
+    let existingLastCode = '';
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        existingCreatedAt = data.createdAt || null;
+        existingOrdersCount = Number(data.ordersCount) || 0;
+        existingLastCode = typeof data.lastOrderCode === 'string' ? data.lastOrderCode : '';
+      }
+    } catch {
+      // Non-staff user reading another UID's contact doc gets permission-denied; skip silently
+      return;
+    }
+
+    const isNewOrder =
+      Boolean(params.lastOrderCode) && params.lastOrderCode !== existingLastCode;
+    const nextOrdersCount = existingCreatedAt
+      ? existingOrdersCount + (isNewOrder ? 1 : 0)
+      : params.lastOrderCode
+      ? 1
+      : 0;
+
+    const payload: Record<string, unknown> = {
+      phone: phoneKey,
+      customerUid: params.customerUid,
+      lastMode: params.lastMode,
+      lastOrderTotal: Math.max(0, Number(params.lastOrderTotal) || 0),
+      ordersCount: Math.max(0, Math.min(10000, nextOrdersCount)),
+      source: params.source,
+      createdAt: existingCreatedAt || serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    if (typeof params.lastTableNumber === 'number') {
+      payload.lastTableNumber = params.lastTableNumber;
+    }
+    if (params.lastOrderCode && params.lastOrderCode.trim()) {
+      payload.lastOrderCode = params.lastOrderCode.trim().slice(0, 20);
+    }
+
+    await setDoc(ref, payload);
+  } catch {
+    // Non-blocking CRM sync
+  }
+}
+
+export async function upsertTableSessionInFirestore(params: {
+  tableNumber: number;
+  customerUid: string;
+  customerPhone: string;
+  activeOrderId?: string;
+}): Promise<void> {
+  const cleanPhone = normalizeWhatsAppPhone(params.customerPhone);
+  if (!/^[0-9]{8,15}$/.test(cleanPhone)) return;
+  const tableId = `mesa-${params.tableNumber}`;
+  try {
+    const payload: Record<string, unknown> = {
+      tableNumber: params.tableNumber,
+      customerUid: params.customerUid,
+      customerPhone: cleanPhone,
+      updatedAt: serverTimestamp(),
+    };
+    if (params.activeOrderId) {
+      payload.activeOrderId = params.activeOrderId;
+    }
+    await setDoc(doc(db, 'table_sessions', tableId), payload);
+    await upsertCustomerContactInFirestore({
+      phone: cleanPhone,
+      customerUid: params.customerUid,
+      lastTableNumber: params.tableNumber,
+      lastMode: 'dine-in',
+      lastOrderTotal: 0,
+      source: 'qr-table',
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `table_sessions/${tableId}`);
+  }
+}
+
 export async function createOrderInFirestore(params: {
   order: KitchenOrder;
   customerUid: string;
@@ -438,6 +618,7 @@ export async function createOrderInFirestore(params: {
       createdAtLabel: order.createdAt.slice(0, 20),
       paid: Boolean(order.paid),
       waiterRequested: Boolean(order.waiterRequested),
+      billRequested: Boolean(order.billRequested),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -474,6 +655,36 @@ export async function createOrderInFirestore(params: {
       batch.set(doc(db, 'orders', order.id, 'private', 'delivery'), privateDoc);
     }
 
+    const rawContactPhone =
+      order.customerPhone ||
+      order.deliveryPhone ||
+      (order.mode === 'takeaway' && order.pickupNote
+        ? order.pickupNote.match(/\b[67]\d{7}\b/)?.[0] || ''
+        : '');
+    const normalizedContactPhone = normalizeWhatsAppPhone(rawContactPhone);
+
+    if (/^[0-9]{8,15}$/.test(normalizedContactPhone)) {
+      const contactDoc: Record<string, unknown> = {
+        customerUid,
+        phone: normalizedContactPhone,
+        updatedAt: serverTimestamp(),
+      };
+      if (order.mode === 'dine-in' && typeof order.tableNumber === 'number') {
+        contactDoc.tableNumber = order.tableNumber;
+      }
+      batch.set(doc(db, 'orders', order.id, 'private', 'contact'), contactDoc);
+
+      if (order.mode === 'dine-in' && typeof order.tableNumber === 'number' && !order.paid) {
+        batch.set(doc(db, 'table_sessions', `mesa-${order.tableNumber}`), {
+          tableNumber: order.tableNumber,
+          customerUid,
+          customerPhone: normalizedContactPhone,
+          activeOrderId: order.id,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+
     if (
       occupyTableIfNeeded &&
       (occupyTableIfNeeded.isStaff || occupyTableIfNeeded.isCurrentlyFree)
@@ -485,6 +696,23 @@ export async function createOrderInFirestore(params: {
     }
 
     await batch.commit();
+
+    if (/^[0-9]{8,15}$/.test(normalizedContactPhone)) {
+      void upsertCustomerContactInFirestore({
+        phone: normalizedContactPhone,
+        customerUid,
+        lastTableNumber: order.tableNumber,
+        lastMode: order.mode,
+        lastOrderCode: order.code,
+        lastOrderTotal: order.total,
+        source:
+          order.mode === 'dine-in'
+            ? 'qr-table'
+            : order.mode === 'delivery'
+            ? 'delivery'
+            : 'takeaway',
+      });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
   }
@@ -529,13 +757,18 @@ export async function updateOrderStatusInFirestore(
 
 export async function setWaiterCallInFirestore(
   orderId: string,
-  waiterRequested: boolean
+  waiterRequested: boolean,
+  billRequested?: boolean
 ): Promise<void> {
   try {
-    await updateDoc(doc(db, 'orders', orderId), {
+    const payload: Record<string, unknown> = {
       waiterRequested,
       updatedAt: serverTimestamp(),
-    });
+    };
+    if (typeof billRequested === 'boolean') {
+      payload.billRequested = billRequested;
+    }
+    await updateDoc(doc(db, 'orders', orderId), payload);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `orders/${orderId}`);
   }
@@ -567,12 +800,14 @@ export async function deleteOrderInFirestore(params: {
     if (params.isDelivery) {
       batch.delete(doc(db, 'orders', params.orderId, 'private', 'delivery'));
     }
+    batch.delete(doc(db, 'orders', params.orderId, 'private', 'contact'));
     batch.delete(doc(db, 'orders', params.orderId));
     if (typeof params.tableNumberToFree === 'number') {
       batch.update(doc(db, 'tables', `mesa-${params.tableNumberToFree}`), {
         status: 'libre',
         updatedAt: serverTimestamp(),
       });
+      batch.delete(doc(db, 'table_sessions', `mesa-${params.tableNumberToFree}`));
     }
     await batch.commit();
   } catch (error) {
@@ -592,6 +827,7 @@ export async function collectOrderPaymentInFirestore(params: {
       paid: true,
       paymentMethod: params.method,
       waiterRequested: false,
+      billRequested: false,
       updatedAt: serverTimestamp(),
     });
 
@@ -600,6 +836,7 @@ export async function collectOrderPaymentInFirestore(params: {
         status: 'libre',
         updatedAt: serverTimestamp(),
       });
+      batch.delete(doc(db, 'table_sessions', `mesa-${params.tableNumberToFree}`));
     }
 
     await batch.commit();
@@ -625,10 +862,13 @@ export async function customerPayOrderInFirestore(
 
 export async function freeTableInFirestore(tableNumber: number): Promise<void> {
   try {
-    await updateDoc(doc(db, 'tables', `mesa-${tableNumber}`), {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'tables', `mesa-${tableNumber}`), {
       status: 'libre',
       updatedAt: serverTimestamp(),
     });
+    batch.delete(doc(db, 'table_sessions', `mesa-${tableNumber}`));
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `tables/mesa-${tableNumber}`);
   }
@@ -671,6 +911,16 @@ export async function moveTableOrderInFirestore(params: {
   toCustomerLabel: string;
 }): Promise<void> {
   try {
+    let existingSession: Record<string, unknown> | null = null;
+    try {
+      const snap = await getDoc(doc(db, 'table_sessions', `mesa-${params.fromTableNumber}`));
+      if (snap.exists()) {
+        existingSession = snap.data();
+      }
+    } catch {
+      // Ignore if no session doc exists
+    }
+
     const batch = writeBatch(db);
     batch.update(doc(db, 'tables', `mesa-${params.fromTableNumber}`), {
       status: 'libre',
@@ -687,6 +937,21 @@ export async function moveTableOrderInFirestore(params: {
         updatedAt: serverTimestamp(),
       });
     });
+
+    if (existingSession && typeof existingSession.customerPhone === 'string') {
+      const nextSession: Record<string, unknown> = {
+        tableNumber: params.toTableNumber,
+        customerUid: existingSession.customerUid || 'local-staff',
+        customerPhone: existingSession.customerPhone,
+        updatedAt: serverTimestamp(),
+      };
+      if (typeof existingSession.activeOrderId === 'string') {
+        nextSession.activeOrderId = existingSession.activeOrderId;
+      }
+      batch.set(doc(db, 'table_sessions', `mesa-${params.toTableNumber}`), nextSession);
+      batch.delete(doc(db, 'table_sessions', `mesa-${params.fromTableNumber}`));
+    }
+
     await batch.commit();
   } catch (error) {
     handleFirestoreError(

@@ -10,11 +10,13 @@ import {
   KeyRound,
   Lock,
   MapPin,
+  MessageCircle,
   Minus,
   Phone,
   Plus,
   Printer,
   QrCode,
+  ReceiptText,
   ShoppingBag,
   Trash2,
   Unlock,
@@ -44,6 +46,10 @@ import {
   isOrderSettled,
   requiresDeliveryPin,
 } from '../utils/appHelpers';
+import {
+  buildWhatsAppShareUrl,
+  formatBoliviaDisplayPhone,
+} from '../utils/ticketHelpers';
 import { CollectPaymentModal } from './CollectPaymentModal';
 import { TicketModal } from './TicketModal';
 import { VerifyDeliveryCodeModal } from './VerifyDeliveryCodeModal';
@@ -63,6 +69,7 @@ interface LiveCartPanelProps {
   activeTableOrder?: KitchenOrder;
   linkedTakeawayOrder?: KitchenOrder;
   linkedDeliveryOrder?: KitchenOrder;
+  tableCustomerPhone?: string;
   onChangeOrderMode: (mode: OrderMode) => void;
   onChangeTakeawayInfo: (info: TakeawayInfo) => void;
   onSelectTable: (tableNumber: number) => void;
@@ -87,6 +94,7 @@ interface LiveCartPanelProps {
   onUpdateOrderItemQty: (orderId: string, itemIndex: number, delta: number) => void;
   onCollectOrderPayment: (orderId: string, method: PaymentMethod) => void;
   onCallWaiter: (orderId: string) => void;
+  onRequestBill?: (orderId: string) => void;
   onDismissWaiterCall: (orderId: string) => void;
   onFreeTable: (tableNumber: number) => void;
   onDeleteOrder: (order: KitchenOrder) => void;
@@ -106,6 +114,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
   activeTableOrder,
   linkedTakeawayOrder,
   linkedDeliveryOrder,
+  tableCustomerPhone = '',
   onChangeOrderMode,
   onChangeTakeawayInfo,
   onSelectTable,
@@ -126,6 +135,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
   onUpdateOrderItemQty,
   onCollectOrderPayment,
   onCallWaiter,
+  onRequestBill,
   onDismissWaiterCall,
   onFreeTable,
   onDeleteOrder,
@@ -182,6 +192,13 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
 
   const selectedTableObj = tables.find((t) => t.number === selectedTable);
   const isSelectedTableOccupied = selectedTableObj?.status === 'ocupada';
+  const effectivePhone =
+    inspectedOrder?.customerPhone ||
+    inspectedOrder?.deliveryPhone ||
+    (orderMode === 'dine-in'
+      ? selectedTableObj?.customerPhone || tableCustomerPhone
+      : '') ||
+    '';
 
   const activeOrderItemTotalUnits = inspectedOrder
     ? getOrderLinesCount(inspectedOrder.items)
@@ -633,28 +650,41 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       {' '}
                       · {inspectedOrder.createdAt}
                     </span>
+                    {effectivePhone && (
+                      <span className="block text-[10px] font-bold text-[var(--status-ok)] tabular-nums mt-0.5">
+                        WhatsApp: {formatBoliviaDisplayPhone(effectivePhone)}
+                      </span>
+                    )}
                   </div>
                   <span
                     className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
                       inspectedOrder.paid
                         ? 'bg-[var(--status-ok)]/12 text-[var(--status-ok)]'
+                        : inspectedOrder.billRequested
+                        ? 'bg-[var(--accent-gold)]/25 text-[var(--ink-primary)]'
                         : 'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]'
                     }`}
                   >
                     {inspectedOrder.paid
                       ? `Pagado (${inspectedOrder.paymentMethod})`
+                      : inspectedOrder.billRequested
+                      ? 'Por pagar'
                       : 'Pendiente'}
                   </span>
                 </div>
 
-                {/* Waiter Call Alert */}
+                {/* Waiter Call / Bill Request Alert */}
                 {inspectedOrder.waiterRequested && (
                   <div className="rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] px-2.5 py-2 flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold inline-flex items-center gap-1.5">
                       <BellRing className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
                       <span>
                         {isStaffRole
-                          ? '¡Mesa solicita al mesero!'
+                          ? inspectedOrder.billRequested
+                            ? '¡Mesa solicita la cuenta!'
+                            : '¡Mesa solicita al mesero!'
+                          : inspectedOrder.billRequested
+                          ? 'Cuenta solicitada a Caja/Mozo'
                           : 'Mesero notificado'}
                       </span>
                     </span>
@@ -831,6 +861,19 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         </button>
                       )}
 
+                      <a
+                        href={buildWhatsAppShareUrl(
+                          inspectedOrder,
+                          effectivePhone
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="col-span-2 min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Enviar recibo por WhatsApp</span>
+                      </a>
+
                       <button
                         type="button"
                         onClick={() => setTicketOrder(inspectedOrder)}
@@ -947,16 +990,34 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       </button>
 
                       {!inspectedOrder.paid && orderMode === 'dine-in' && (
-                        <button
-                          type="button"
-                          onClick={onPayAtTable}
-                          className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
-                        >
-                          <Lock className="w-3.5 h-3.5" />
-                          <span>
-                            Pagar en mesa · {formatBs(inspectedOrder.total)}
-                          </span>
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRequestBill
+                                ? onRequestBill(inspectedOrder.id)
+                                : onCallWaiter(inspectedOrder.id)
+                            }
+                            className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                          >
+                            <ReceiptText className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                            <span>
+                              {inspectedOrder.billRequested
+                                ? 'Cuenta solicitada'
+                                : 'Solicitar cuenta'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onPayAtTable}
+                            className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>
+                              Pagar en mesa · {formatBs(inspectedOrder.total)}
+                            </span>
+                          </button>
+                        </>
                       )}
 
                       {!inspectedOrder.paid && orderMode === 'takeaway' && (
@@ -980,17 +1041,24 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 Mesa {selectedTable} está ocupada actualmente. Elige una mesa libre en el selector superior o escanea el QR de tu mesa.
               </p>
             ) : (
-              <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--ink-muted)]">
-                <span>Sin pedido activo en Mesa {selectedTable}.</span>
-                {isStaffRole && isSelectedTableOccupied && (
-                  <button
-                    type="button"
-                    onClick={() => onFreeTable(selectedTable)}
-                    className="px-2 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-[10px] font-bold inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
-                  >
-                    <Unlock className="w-3 h-3" />
-                    <span>Liberar</span>
-                  </button>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--ink-muted)]">
+                  <span>Sin pedido activo en Mesa {selectedTable}.</span>
+                  {isStaffRole && isSelectedTableOccupied && (
+                    <button
+                      type="button"
+                      onClick={() => onFreeTable(selectedTable)}
+                      className="px-2 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-[10px] font-bold inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
+                    >
+                      <Unlock className="w-3 h-3" />
+                      <span>Liberar</span>
+                    </button>
+                  )}
+                </div>
+                {effectivePhone && (
+                  <p className="text-[10px] font-bold text-[var(--status-ok)] tabular-nums">
+                    WhatsApp registrado: {formatBoliviaDisplayPhone(effectivePhone)}
+                  </p>
                 )}
               </div>
             )}

@@ -7,6 +7,7 @@ export type ScreenId =
   | 'customize'
   | 'cart'
   | 'tables-select'
+  | 'table-qr-welcome'
   | 'tables-qr'
   | 'tables-order'
   | 'delivery-info'
@@ -85,6 +86,7 @@ export interface TableItem {
   zone?: string;
   status: TableStatus;
   capacity: number;
+  customerPhone?: string;
 }
 
 export type OrderStatus =
@@ -117,6 +119,7 @@ export interface KitchenOrder {
   confirmationCode?: string;
   deliveryAddress?: string;
   deliveryPhone?: string;
+  customerPhone?: string;
   items: OrderLineItem[];
   notes: string;
   status: OrderStatus;
@@ -127,6 +130,7 @@ export interface KitchenOrder {
   paid: boolean;
   paymentMethod?: PaymentMethod;
   waiterRequested?: boolean;
+  billRequested?: boolean;
   ratingStars?: number;
 }
 
@@ -155,6 +159,18 @@ export interface AuthorizedStaffItem {
   email: string;
   name: string;
   active: boolean;
+}
+
+export interface CustomerContactItem {
+  phone: string;
+  customerUid?: string;
+  lastTableNumber?: number;
+  lastMode: OrderMode;
+  lastOrderCode?: string;
+  lastOrderTotal: number;
+  ordersCount: number;
+  source: 'qr-table' | 'delivery' | 'takeaway' | 'pos';
+  updatedAtLabel?: string;
 }
 
 export type AdminTab = 'dashboard' | 'menu' | 'kitchen' | 'reports';

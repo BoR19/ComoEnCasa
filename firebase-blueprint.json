@@ -58,6 +58,7 @@
         "paid": { "type": "boolean" },
         "paymentMethod": { "type": "string", "enum": ["Efectivo", "QR", "Transferencia Bancaria", "Tarjeta"] },
         "waiterRequested": { "type": "boolean" },
+        "billRequested": { "type": "boolean" },
         "ratingStars": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -76,6 +77,49 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerUid", "address", "phone", "updatedAt"]
+    },
+    "OrderPrivateContactDoc": {
+      "title": "OrderPrivateContactDoc",
+      "description": "Teléfono WhatsApp privado (PII) aislado del pedido principal para recibos digitales.",
+      "type": "object",
+      "properties": {
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "phone": { "type": "string", "minLength": 8, "maxLength": 20, "pattern": "^[0-9]{8,15}$" },
+        "tableNumber": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerUid", "phone", "updatedAt"]
+    },
+    "TableSessionDoc": {
+      "title": "TableSessionDoc",
+      "description": "Sesión privada de mesa con teléfono del comensal (PII aislada de /tables).",
+      "type": "object",
+      "properties": {
+        "tableNumber": { "type": "number" },
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "customerPhone": { "type": "string", "minLength": 8, "maxLength": 20, "pattern": "^[0-9]{8,15}$" },
+        "activeOrderId": { "type": "string", "maxLength": 80 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tableNumber", "customerUid", "customerPhone", "updatedAt"]
+    },
+    "CustomerContactDoc": {
+      "title": "CustomerContactDoc",
+      "description": "Base de datos de clientes WhatsApp para recibos digitales y promociones.",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string", "minLength": 8, "maxLength": 20, "pattern": "^[0-9]{8,15}$" },
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "lastTableNumber": { "type": "number" },
+        "lastMode": { "type": "string", "enum": ["dine-in", "takeaway", "delivery"] },
+        "lastOrderCode": { "type": "string", "maxLength": 20 },
+        "lastOrderTotal": { "type": "number" },
+        "ordersCount": { "type": "number" },
+        "source": { "type": "string", "enum": ["qr-table", "delivery", "takeaway", "pos"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["phone", "customerUid", "lastMode", "lastOrderTotal", "ordersCount", "source", "createdAt", "updatedAt"]
     },
     "InventoryItemDoc": {
       "title": "InventoryItemDoc",
@@ -123,6 +167,10 @@
       "schema": { "$ref": "#/entities/TableDoc" },
       "description": "Estado en tiempo real de las mesas del local."
     },
+    "/table_sessions/{tableId}": {
+      "schema": { "$ref": "#/entities/TableSessionDoc" },
+      "description": "Sesiones activas de mesa con teléfono WhatsApp (PII aislada)."
+    },
     "/orders/{orderId}": {
       "schema": { "$ref": "#/entities/OrderDoc" },
       "description": "Pedidos de mesa, para llevar y delivery en tiempo real."
@@ -130,6 +178,14 @@
     "/orders/{orderId}/private/delivery": {
       "schema": { "$ref": "#/entities/OrderPrivateDeliveryDoc" },
       "description": "Dirección y teléfono privados de entrega para delivery."
+    },
+    "/orders/{orderId}/private/contact": {
+      "schema": { "$ref": "#/entities/OrderPrivateContactDoc" },
+      "description": "Teléfono WhatsApp privado asociado al pedido para recibo digital."
+    },
+    "/customer_contacts/{phoneKey}": {
+      "schema": { "$ref": "#/entities/CustomerContactDoc" },
+      "description": "Directorio privado de clientes capturados vía QR/pedidos para recibos y promociones."
     },
     "/inventory/{itemId}": {
       "schema": { "$ref": "#/entities/InventoryItemDoc" },

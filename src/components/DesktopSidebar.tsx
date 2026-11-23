@@ -90,7 +90,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           ? `Mapa de Mesas (Mesa ${selectedTable} activa)`
           : 'Mapa de Mesas y QR',
       icon: QrCode,
-      match: ['tables-select', 'tables-qr', 'tables-order'],
+      match: [
+        'tables-select',
+        'tables-qr',
+        'tables-order',
+        'table-qr-welcome',
+      ],
       badge: orderMode === 'dine-in' ? `M${selectedTable}` : undefined,
     },
     {

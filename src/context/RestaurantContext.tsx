@@ -40,19 +40,23 @@ import {
   seedInitialCatalogIfEmpty,
   setWaiterCallInFirestore,
   subscribeAuthorizedStaff,
+  subscribeCustomerContacts,
   subscribeInventory,
   subscribeMenuItems,
   subscribeOrders,
   subscribeStaffConfig,
+  subscribeTableSessions,
   subscribeTables,
   toggleAuthorizedStaffInFirestore,
   updateOrderItemsInFirestore,
   updateOrderStatusInFirestore,
   upsertMenuItemInFirestore,
+  upsertTableSessionInFirestore,
 } from '../services/firestoreService';
 import {
   AuthorizedStaffItem,
   CartItem,
+  CustomerContactItem,
   DeliveryInfo,
   DishSizeOption,
   ExtraOption,
@@ -67,6 +71,7 @@ import {
   TableItem,
   TakeawayInfo,
 } from '../types/app';
+import { validateBoliviaPhone } from '../utils/ticketHelpers';
 import {
   cartItemsToOrderLines,
   formatBs,
@@ -124,6 +129,7 @@ interface RestaurantContextValue {
   orders: KitchenOrder[];
   inventory: InventoryItem[];
   authorizedStaff: AuthorizedStaffItem[];
+  customerContacts: CustomerContactItem[];
   mozoPin: string;
 
   // Selection & Cart
@@ -135,7 +141,9 @@ interface RestaurantContextValue {
   orderMode: OrderMode;
   setOrderMode: React.Dispatch<React.SetStateAction<OrderMode>>;
   selectedTable: number;
+  tableCustomerPhone: string;
   handleSelectTable: (tableNumber: number) => void;
+  handleConfirmQrTableWelcome: (rawPhone?: string) => void;
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   cartCount: number;
@@ -185,6 +193,7 @@ interface RestaurantContextValue {
     verificationCode?: string
   ) => void;
   handleCallWaiter: (orderId: string) => void;
+  handleRequestBill: (orderId: string) => void;
   handleDismissWaiterCall: (orderId: string) => void;
   handleCollectOrderPayment: (orderId: string, method: PaymentMethod) => void;
   handleCreatePosOrder: (payload: {
@@ -253,6 +262,36 @@ function parseTableParamFromUrl(): number | null {
   return null;
 }
 
+const QR_PHONES_STORAGE_KEY = 'comoencasa_qr_table_phones_v1';
+
+function readStoredTablePhones(): Record<number, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.sessionStorage.getItem(QR_PHONES_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const clean: Record<number, string> = {};
+    Object.entries(parsed).forEach(([k, v]) => {
+      const num = Number.parseInt(k, 10);
+      if (Number.isInteger(num) && typeof v === 'string' && v.trim()) {
+        clean[num] = v.trim();
+      }
+    });
+    return clean;
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredTablePhones(map: Record<number, string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(QR_PHONES_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 const RestaurantContext = createContext<RestaurantContextValue | null>(null);
 
 export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -260,7 +299,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const initialQrTableRef = useRef<number | null>(parseTableParamFromUrl());
   const [history, setHistory] = useState<ScreenId[]>(() =>
-    initialQrTableRef.current ? ['welcome', 'menu'] : ['welcome']
+    initialQrTableRef.current ? ['welcome', 'table-qr-welcome'] : ['welcome']
   );
   const [navDirection, setNavDirection] = useState<number>(1);
   const currentScreen = history[history.length - 1];
@@ -329,6 +368,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   const [authorizedStaff, setAuthorizedStaff] = useState<AuthorizedStaffItem[]>(
     []
   );
+  const [customerContacts, setCustomerContacts] = useState<
+    CustomerContactItem[]
+  >([]);
+  const [cloudTableSessions, setCloudTableSessions] = useState<
+    Record<number, { customerPhone: string; activeOrderId?: string }>
+  >({});
+  const [tablePhonesByNumber, setTablePhonesByNumber] = useState<
+    Record<number, string>
+  >(() => readStoredTablePhones());
   const [mozoPin, setMozoPin] = useState<string>('1234');
   const [toastMsg, setToastMsg] = useState<string>('');
 
@@ -354,7 +402,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (initialQrTableRef.current) {
-      showToast(`Vinculado a Mesa ${initialQrTableRef.current} · Escaneaste el QR`);
+      showToast(`Mesa ${initialQrTableRef.current} detectada por QR`);
       initialQrTableRef.current = null;
     }
   }, [showToast]);
@@ -506,13 +554,21 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => unsubOrders();
   }, [authReady, authLoading, firebaseUser, isStaff]);
 
-  // Staff-gated real-time Mozo PIN config listener
+  // Staff-gated real-time Mozo PIN, Table Sessions & Customer Contacts listeners
   useEffect(() => {
     if (!authReady || authLoading || !firebaseUser || !isStaff) {
+      setCloudTableSessions({});
+      setCustomerContacts([]);
       return;
     }
     const unsubConfig = subscribeStaffConfig(setMozoPin);
-    return () => unsubConfig();
+    const unsubSessions = subscribeTableSessions(setCloudTableSessions);
+    const unsubContacts = subscribeCustomerContacts(setCustomerContacts);
+    return () => {
+      unsubConfig();
+      unsubSessions();
+      unsubContacts();
+    };
   }, [authReady, authLoading, firebaseUser, isStaff]);
 
   // Admin-gated real-time Inventory & Authorized Staff listeners
@@ -527,6 +583,18 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       unsubStaff();
     };
   }, [authReady, authLoading, firebaseUser, isAdminUser]);
+
+  // Sync locally captured QR table phone to Firestore once customer verifies Google account
+  useEffect(() => {
+    if (!firebaseUser || !firebaseUser.emailVerified) return;
+    const localPhone = tablePhonesByNumber[selectedTable];
+    if (!localPhone) return;
+    void upsertTableSessionInFirestore({
+      tableNumber: selectedTable,
+      customerUid: firebaseUser.uid,
+      customerPhone: localPhone,
+    });
+  }, [firebaseUser, selectedTable, tablePhonesByNumber]);
 
   const handleGoogleSignIn = useCallback(async () => {
     if (popupInFlightRef.current) return;
@@ -670,9 +738,64 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     [orders, lastPaidOrderId]
   );
 
+  const enrichedTables = useMemo(
+    () =>
+      tables.map((t) => {
+        const cloudPhone = cloudTableSessions[t.number]?.customerPhone;
+        const localPhone = tablePhonesByNumber[t.number];
+        const phone = cloudPhone || localPhone;
+        return phone ? { ...t, customerPhone: phone } : t;
+      }),
+    [tables, cloudTableSessions, tablePhonesByNumber]
+  );
+
+  const tableCustomerPhone = useMemo(
+    () =>
+      cloudTableSessions[selectedTable]?.customerPhone ||
+      tablePhonesByNumber[selectedTable] ||
+      activeTableOrder?.customerPhone ||
+      '',
+    [
+      activeTableOrder?.customerPhone,
+      cloudTableSessions,
+      selectedTable,
+      tablePhonesByNumber,
+    ]
+  );
+
   const handleSelectTable = useCallback((tableNumber: number) => {
     setSelectedTable(tableNumber);
   }, []);
+
+  const handleConfirmQrTableWelcome = useCallback(
+    (rawPhone?: string) => {
+      setOrderMode('dine-in');
+      if (rawPhone && rawPhone.trim()) {
+        const parsed = validateBoliviaPhone(rawPhone);
+        if (parsed.valid) {
+          setTablePhonesByNumber((prev) => {
+            const next = { ...prev, [selectedTable]: parsed.whatsappDigits };
+            writeStoredTablePhones(next);
+            return next;
+          });
+          if (firebaseUser && firebaseUser.emailVerified) {
+            void upsertTableSessionInFirestore({
+              tableNumber: selectedTable,
+              customerUid: firebaseUser.uid,
+              customerPhone: parsed.whatsappDigits,
+            });
+          }
+          showToast(
+            `WhatsApp ${parsed.display} guardado · Bienvenido a Mesa ${selectedTable}`
+          );
+        }
+      } else {
+        showToast(`Mesa ${selectedTable} lista · Elige tus platillos`);
+      }
+      navigate('menu');
+    },
+    [firebaseUser, navigate, selectedTable, showToast]
+  );
 
   const handleSelectTakeawayOrder = useCallback((orderId: string | null) => {
     setSelectedTakeawayOrderId(orderId);
@@ -821,6 +944,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   const executeDineInOrder = useCallback(
     (ownerUid: string, stayInWorkspace = false) => {
       const lines = cartItemsToOrderLines(cart);
+      const capturedPhone =
+        tablePhonesByNumber[selectedTable] ||
+        cloudTableSessions[selectedTable]?.customerPhone ||
+        undefined;
       const existingUnpaid = orders.find(
         (o) =>
           o.mode === 'dine-in' &&
@@ -835,6 +962,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       if (existingUnpaid) {
         const updatedItems = [...existingUnpaid.items, ...lines];
         const updatedTotal = existingUnpaid.total + cartTotal;
+        const resolvedPhone = existingUnpaid.customerPhone || capturedPhone;
         setOrders((prev) =>
           prev.map((o) =>
             o.id === existingUnpaid.id
@@ -843,6 +971,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
                   items: updatedItems,
                   total: updatedTotal,
                   status: 'Preparando',
+                  customerPhone: resolvedPhone,
                 }
               : o
           )
@@ -855,6 +984,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
             total: updatedTotal,
             status: 'Preparando',
           });
+          if (resolvedPhone) {
+            void upsertTableSessionInFirestore({
+              tableNumber: selectedTable,
+              customerUid: ownerUid,
+              customerPhone: resolvedPhone,
+              activeOrderId: existingUnpaid.id,
+            });
+          }
         }
       } else {
         const newOrderId = `ord-mesa-${Date.now()}`;
@@ -865,6 +1002,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           mode: 'dine-in',
           tableNumber: selectedTable,
           customerLabel: `Mesa ${selectedTable}`,
+          customerPhone: capturedPhone,
           items: lines,
           notes: isStaffSession
             ? 'Tomado desde Comanda en Vivo'
@@ -875,6 +1013,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           createdAt: getCurrentTimeLabel(),
           paid: false,
           waiterRequested: false,
+          billRequested: false,
         };
         const tableObj = tables.find((t) => t.number === selectedTable);
         setOrders((prev) => [newOrder, ...prev]);
@@ -914,6 +1053,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     [
       cart,
       cartTotal,
+      cloudTableSessions,
       firebaseUser,
       isStaff,
       isStaffSession,
@@ -921,6 +1061,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       orders,
       selectedTable,
       showToast,
+      tablePhonesByNumber,
       tables,
     ]
   );
@@ -1328,6 +1469,23 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     [firebaseUser, selectedTable, showToast]
   );
 
+  const handleRequestBill = useCallback(
+    (orderId: string) => {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? { ...o, waiterRequested: true, billRequested: true }
+            : o
+        )
+      );
+      if (firebaseUser) {
+        void setWaiterCallInFirestore(orderId, true, true);
+      }
+      showToast(`Cuenta solicitada · Mesa ${selectedTable} marcada Por pagar`);
+    },
+    [firebaseUser, selectedTable, showToast]
+  );
+
   const handleDismissWaiterCall = useCallback(
     (orderId: string) => {
       setOrders((prev) =>
@@ -1341,6 +1499,22 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [firebaseUser, isStaff]
   );
+
+  const clearTablePhoneSession = useCallback((tableNum: number) => {
+    setTablePhonesByNumber((prev) => {
+      if (!(tableNum in prev)) return prev;
+      const next = { ...prev };
+      delete next[tableNum];
+      writeStoredTablePhones(next);
+      return next;
+    });
+    setCloudTableSessions((prev) => {
+      if (!(tableNum in prev)) return prev;
+      const next = { ...prev };
+      delete next[tableNum];
+      return next;
+    });
+  }, []);
 
   // Bug 2 Fix: Collecting payment marks order as 'Cobrado', moves it to history,
   // frees the table immediately, and clears the active cart for that table (items: [], Bs. 0.00).
@@ -1357,6 +1531,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
                 paid: true,
                 paymentMethod: method,
                 waiterRequested: false,
+                billRequested: false,
               }
             : o
         )
@@ -1381,6 +1556,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
               t.number === tableNum ? { ...t, status: 'libre' } : t
             )
           );
+          clearTablePhoneSession(tableNum);
           if (activeTableOrderId === orderId) {
             setActiveTableOrderId(null);
           }
@@ -1422,6 +1598,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [
       activeTableOrderId,
+      clearTablePhoneSession,
       firebaseUser,
       isStaff,
       orderMode,
@@ -1554,6 +1731,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           t.number === tableNumber ? { ...t, status: 'libre' } : t
         )
       );
+      clearTablePhoneSession(tableNumber);
       if (
         activeTableOrder &&
         activeTableOrder.tableNumber === tableNumber &&
@@ -1571,6 +1749,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [
       activeTableOrder,
+      clearTablePhoneSession,
       firebaseUser,
       isStaff,
       orderMode,
@@ -1713,6 +1892,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           return t;
         })
       );
+
+      setTablePhonesByNumber((prev) => {
+        const movedPhone = prev[fromTableNumber];
+        if (!movedPhone) return prev;
+        const next = { ...prev, [toTableNumber]: movedPhone };
+        delete next[fromTableNumber];
+        writeStoredTablePhones(next);
+        return next;
+      });
 
       if (selectedTable === fromTableNumber) {
         setSelectedTable(toTableNumber);
@@ -2092,10 +2280,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     handleMozoLoginSuccess,
     handleMozoLogout,
     menuItems,
-    tables,
+    tables: enrichedTables,
     orders,
     inventory,
     authorizedStaff,
+    customerContacts,
     mozoPin,
     selectedDishId,
     setSelectedDishId,
@@ -2105,7 +2294,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     orderMode,
     setOrderMode,
     selectedTable,
+    tableCustomerPhone,
     handleSelectTable,
+    handleConfirmQrTableWelcome,
     cart,
     setCart,
     cartCount,
@@ -2136,6 +2327,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     handleCompletePayment,
     handleUpdateOrderStatus,
     handleCallWaiter,
+    handleRequestBill,
     handleDismissWaiterCall,
     handleCollectOrderPayment,
     handleCreatePosOrder,

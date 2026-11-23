@@ -319,15 +319,30 @@ export function subscribeTables(
           typeof data.name === 'string' && data.name.trim()
             ? data.name.trim()
             : `Mesa ${num}`;
+        const status = data.status === 'ocupada' ? 'ocupada' : 'libre';
         return {
           id: d.id,
           number: num,
           name,
           zone,
-          status: data.status === 'ocupada' ? 'ocupada' : 'libre',
+          status,
           capacity: Number(data.capacity) || 4,
+          customerPhone: status === 'ocupada' && typeof data.customerPhone === 'string' ? data.customerPhone : undefined,
         };
       });
+
+      snapshot.docs.forEach((d) => {
+        const data = d.data();
+        const status = data.status === 'ocupada' ? 'ocupada' : 'libre';
+        if (status === 'libre' && typeof data.customerPhone === 'string' && data.customerPhone.trim().length > 0) {
+          void updateDoc(d.ref, {
+            customerPhone: '',
+            updatedAt: serverTimestamp(),
+          }).catch(() => {});
+          void deleteDoc(doc(db, 'table_sessions', d.id)).catch(() => {});
+        }
+      });
+
       onData(list);
     },
     (error) => {

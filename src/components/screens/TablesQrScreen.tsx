@@ -270,7 +270,7 @@ export const TableSelectScreen: React.FC<TableSelectScreenProps> = ({
                       activeOrder.billRequested)
                 );
                 const tablePhone =
-                  table.customerPhone || activeOrder?.customerPhone || '';
+                  isOccupied ? (table.customerPhone || activeOrder?.customerPhone || '') : '';
                 const isSelected = table.number === selectedTable;
                 const displayName =
                   table.name?.trim() || `Mesa ${table.number}`;

@@ -1407,12 +1407,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     );
 
     return tables.map((t) => {
-      const cloudPhone = cloudTableSessions[t.number]?.customerPhone;
-      const localPhone = tablePhonesByNumber[t.number];
-      const phone = cloudPhone || localPhone;
       const nextStatus = activeOccupiedTableNums.has(t.number)
         ? ('ocupada' as const)
         : t.status;
+      if (nextStatus === 'libre') {
+        return { ...t, status: 'libre' as const, customerPhone: undefined };
+      }
+      const cloudPhone = cloudTableSessions[t.number]?.customerPhone;
+      const localPhone = tablePhonesByNumber[t.number];
+      const phone = cloudPhone || localPhone;
       return phone
         ? { ...t, status: nextStatus, customerPhone: phone }
         : nextStatus !== t.status

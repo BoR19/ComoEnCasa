@@ -43,29 +43,29 @@ export class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen w-full bg-[#3B1F0E] text-[#FFF8E8] flex items-center justify-center p-6">
-          <div className="w-full max-w-md rounded-3xl bg-[#FFF8E8] text-[#2B1A0E] border-2 border-[#D9A441] p-6 shadow-2xl text-center space-y-4">
+        <div className="min-h-screen w-full bg-[var(--bg-canvas)] text-[var(--ink-primary)] flex items-center justify-center p-6">
+          <div className="w-full max-w-md rounded-3xl bg-[var(--bg-surface)] text-[var(--ink-primary)] border border-[var(--border-subtle)] p-6 shadow-xl text-center space-y-4">
             <div className="flex justify-center">
               <OfficialLogo size="sm" />
             </div>
 
-            <div className="w-12 h-12 rounded-2xl bg-[#B84A27]/15 text-[#B84A27] flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--accent-primary)]/12 text-[var(--accent-primary)] flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
-            <h1 className="font-serif-display text-xl font-bold text-[#3B1F0E]">
+            <h1 className="font-serif-display text-xl font-bold text-[var(--ink-primary)]">
               Algo salió mal
             </h1>
-            <p className="text-xs font-semibold text-[#7A5A3A] leading-relaxed">
+            <p className="text-xs font-medium text-[var(--ink-muted)] leading-relaxed">
               {this.state.message}
             </p>
 
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="w-full min-h-[46px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-[#4A2C1A] cursor-pointer"
+              className="w-full min-h-[46px] rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             >
-              <RotateCcw className="w-4 h-4 text-[#D9A441]" />
+              <RotateCcw className="w-4 h-4 text-[var(--bg-surface)]" />
               <span>Recargar aplicación</span>
             </button>
           </div>

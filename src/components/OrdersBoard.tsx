@@ -142,16 +142,16 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
           {waiterRequests.map((req) => (
             <div
               key={`waiter-${req.id}`}
-              className="rounded-2xl bg-[#B84A27] text-[#FFF8E8] p-3 flex items-center justify-between gap-2 shadow-sm"
+              className="rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] p-3 flex items-center justify-between gap-2 shadow-sm"
             >
-              <div className="flex items-center gap-2 text-xs font-extrabold">
-                <BellRing className="w-4 h-4 text-[#D9A441] shrink-0" />
+              <div className="flex items-center gap-2 text-xs font-bold">
+                <BellRing className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
                 <span>{req.customerLabel} solicita al mesero</span>
               </div>
               <button
                 type="button"
                 onClick={() => onDismissWaiterCall(req.id)}
-                className="px-2.5 py-1 rounded-xl bg-[#FFF8E8] text-[#2B1A0E] text-[11px] font-extrabold cursor-pointer shrink-0"
+                className="px-2.5 py-1 rounded-xl bg-[var(--bg-surface)] text-[var(--ink-primary)] text-xs font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Atendido
               </button>
@@ -162,16 +162,16 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
 
       {/* Unified Filter Tabs & Quick Actions Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/55">
+        <div className="w-full lg:w-auto max-w-full min-w-0 flex items-center gap-1 p-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] overflow-x-auto no-scrollbar">
           {ORDER_FILTER_TABS.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => setOrderFilter(f.id)}
-              className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-extrabold transition-colors cursor-pointer whitespace-nowrap ${
+              className={`min-h-[38px] px-3 rounded-lg text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                 orderFilter === f.id
-                  ? 'bg-[#3B1F0E] text-[#FFF8E8] shadow-xs'
-                  : 'text-[#7A5A3A] hover:text-[#2B1A0E]'
+                  ? 'bg-[var(--ink-primary)] text-[var(--bg-surface)] shadow-xs'
+                  : 'text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
               }`}
             >
               {f.label}
@@ -179,51 +179,53 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
           ))}
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-2">
-          <span className="text-xs font-bold text-[#7A5A3A] tabular-nums">
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 shrink-0">
+          <span className="text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
             {filteredOrders.length}{' '}
             {filteredOrders.length === 1 ? 'comanda' : 'comandas'}
           </span>
 
-          {showCartaShortcut && onGoMenu && (
-            <button
-              type="button"
-              onClick={onGoMenu}
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 text-[#3B1F0E] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#E8C87A]/35 cursor-pointer"
-            >
-              <UtensilsCrossed className="w-3.5 h-3.5 text-[#B84A27]" />
-              <span>Carta</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {showCartaShortcut && onGoMenu && (
+              <button
+                type="button"
+                onClick={onGoMenu}
+                className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+              >
+                <UtensilsCrossed className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                <span>Carta</span>
+              </button>
+            )}
 
-          {isStaff && onCreatePosOrder && (
-            <button
-              type="button"
-              onClick={() => setShowPosModal(true)}
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#C95B34] cursor-pointer shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
-              <span>{newOrderLabel}</span>
-            </button>
-          )}
+            {isStaff && onCreatePosOrder && (
+              <button
+                type="button"
+                onClick={() => setShowPosModal(true)}
+                className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
+              >
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                <span>{newOrderLabel}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Unified Dark Pro Ticket Cards Grid */}
+      {/* Unified Dark Graphite Operational Ticket Cards Grid */}
       {filteredOrders.length === 0 ? (
-        <div className="rounded-3xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#2A2A2A] p-6 sm:p-8 text-center max-w-xl mx-auto space-y-4 shadow-md">
-          <div className="w-12 h-12 rounded-2xl bg-[#2A2A2A] border border-[#D9A441]/35 flex items-center justify-center text-[#D9A441] mx-auto">
+        <div className="rounded-3xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--ops-border)] p-6 sm:p-8 text-center max-w-xl mx-auto space-y-4 shadow-md">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/35 flex items-center justify-center text-[var(--accent-gold)] mx-auto">
             <ShoppingBag className="w-6 h-6" />
           </div>
           <div className="space-y-1">
-            <h2 className="font-serif-display text-xl font-bold text-[#FFF8E8]">
+            <h2 className="font-serif-display text-xl font-bold text-[var(--bg-surface)]">
               {orderFilter === 'active'
                 ? 'Sin comandas activas'
                 : orderFilter === 'collected'
                 ? 'Sin comandas pagadas en el historial'
                 : 'No hay comandas en esta vista'}
             </h2>
-            <p className="text-xs text-[#FFF8E8]/70 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-white/70 max-w-sm mx-auto leading-relaxed">
               {orderFilter === 'collected'
                 ? 'Las comandas cobradas desaparecerán de la vista activa y aparecerán automáticamente aquí.'
                 : isStaff
@@ -236,7 +238,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
               <button
                 type="button"
                 onClick={onGoMenu}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-xs font-extrabold hover:bg-[#E8C87A] cursor-pointer"
+                className="min-h-[40px] px-5 py-2 rounded-xl bg-[var(--accent-gold)] text-[var(--ink-primary)] text-xs font-bold hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Ir a Carta Digital
               </button>
@@ -245,7 +247,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
               <button
                 type="button"
                 onClick={() => setShowPosModal(true)}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#2A2A2A] border border-[#D9A441]/40 text-[#FFF8E8] text-xs font-extrabold hover:bg-[#333333] cursor-pointer"
+                className="min-h-[40px] px-5 py-2 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/40 text-[var(--bg-surface)] text-xs font-bold hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
               >
                 + {newOrderLabel}
               </button>
@@ -254,9 +256,9 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                 <button
                   type="button"
                   onClick={onEditTable}
-                  className="min-h-[40px] px-5 py-2 rounded-xl bg-[#2A2A2A] border border-[#D9A441]/40 text-[#FFF8E8] text-xs font-extrabold hover:bg-[#333333] cursor-pointer"
+                  className="min-h-[40px] px-5 py-2 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/40 text-[var(--bg-surface)] text-xs font-bold hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                 >
-                  Seleccionar Mesa
+                  Seleccionar mesa
                 </button>
               )
             )}
@@ -293,10 +295,10 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
             return (
               <article
                 key={order.id}
-                className={`rounded-3xl bg-[#1E1E1E] text-[#FFF8E8] p-4 sm:p-5 space-y-3.5 shadow-md transition-all border ${
+                className={`rounded-3xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] p-4 sm:p-5 space-y-3.5 shadow-md transition-[border-color,box-shadow] duration-150 ease-[var(--ease-out)] border ${
                   isSelectedCard
-                    ? 'border-[#D9A441] ring-2 ring-[#D9A441]/35'
-                    : 'border-[#2A2A2A] hover:border-[#D9A441]/55'
+                    ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold)]/35'
+                    : 'border-[var(--ops-border)] hover:border-[var(--accent-gold)]/55'
                 }`}
               >
                 {/* Clickable Header + Order Code (loads order into right panel COMANDA EN VIVO) */}
@@ -309,27 +311,27 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                       ? 'Cargar este pedido en Comanda en Vivo'
                       : undefined
                   }
-                  className={`group w-full text-left space-y-2 rounded-2xl transition-colors focus:outline-none ${
+                  className={`group w-full text-left space-y-2 rounded-2xl transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)] ${
                     onSelectOrderCard
-                      ? 'cursor-pointer hover:bg-[#252525]/80 -m-1.5 p-1.5'
+                      ? 'cursor-pointer hover:bg-white/5 active:scale-[0.98] -m-1.5 p-1.5'
                       : 'cursor-default'
                   }`}
                 >
                   {/* Row 1: Order Code + Timestamp */}
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`font-mono text-xs font-bold truncate transition-colors ${
+                      className={`font-mono text-xs font-bold truncate transition-colors duration-150 ${
                         onSelectOrderCard
-                          ? 'text-[#D9A441] group-hover:text-[#E64833]'
-                          : 'text-[#D9A441]'
+                          ? 'text-[var(--accent-gold)] group-hover:text-[var(--ops-accent)]'
+                          : 'text-[var(--accent-gold)]'
                       }`}
                     >
                       {order.code} · {order.id}
                     </span>
 
-                    <div className="flex items-center gap-2 shrink-0 text-xs text-[#FFF8E8]/75 font-semibold tabular-nums">
+                    <div className="flex items-center gap-2 shrink-0 text-xs text-white/75 font-semibold tabular-nums">
                       {onSelectOrderCard && (
-                        <span className="hidden sm:inline-block text-[10px] font-bold text-[#E64833] opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="hidden sm:inline-block text-[11px] font-bold text-[var(--ops-accent)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                           Editar en vivo
                         </span>
                       )}
@@ -345,29 +347,29 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                     order.mode === 'delivery') && (
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {order.mode === 'takeaway' && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#E64833]/20 border border-[#E64833]/60 text-[#FF9B8A] text-[11px] font-extrabold">
-                          <ShoppingBag className="w-3.5 h-3.5 text-[#E64833] shrink-0" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--ops-accent)]/20 border border-[var(--ops-accent)]/60 text-white text-xs font-bold">
+                          <ShoppingBag className="w-3.5 h-3.5 text-[var(--ops-accent)] shrink-0" />
                           <span>Para Llevar • {takeawayName}</span>
                         </span>
                       )}
 
                       {!isStaff && order.confirmationCode && !settled && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#D9A441]/20 border border-[#D9A441]/60 text-[#D9A441] text-[11px] font-mono font-extrabold tracking-wider">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--accent-gold)]/20 border border-[var(--accent-gold)]/60 text-[var(--accent-gold)] text-xs font-mono font-bold tracking-wider">
                           <KeyRound className="w-3 h-3 shrink-0" />
                           <span>Código: {order.confirmationCode}</span>
                         </span>
                       )}
 
                       {isStaff && requiresDeliveryPin(order) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#2A2A2A] border border-[#D9A441]/40 text-[#E8C87A] text-[10px] font-extrabold">
-                          <KeyRound className="w-3 h-3 text-[#D9A441] shrink-0" />
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] text-[11px] font-bold">
+                          <KeyRound className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
                           <span>PIN al entregar</span>
                         </span>
                       )}
 
                       {(order.status === 'Entregado' || settled) &&
                         order.confirmationCode && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#2E6F32]/20 border border-[#2E6F32]/50 text-[#9CE5A2] text-[10px] font-extrabold">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--status-ok)]/25 border border-[var(--status-ok)]/55 text-[var(--status-ok-text)] text-[11px] font-bold">
                             <CheckCircle2 className="w-3 h-3 shrink-0" />
                             <span>Entrega verificada</span>
                           </span>
@@ -378,17 +380,17 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                   <div className="flex items-baseline justify-between gap-3">
                     <div className="min-w-0">
                       <h3
-                        className={`font-serif-display text-lg sm:text-xl font-bold truncate transition-colors ${
+                        className={`font-serif-display text-lg sm:text-xl font-bold min-w-0 [overflow-wrap:break-word] transition-colors duration-150 ${
                           onSelectOrderCard
-                            ? 'text-[#FFF8E8] group-hover:text-[#E64833]'
-                            : 'text-[#FFF8E8]'
+                            ? 'text-[var(--bg-surface)] group-hover:text-[var(--ops-accent)]'
+                            : 'text-[var(--bg-surface)]'
                         }`}
                       >
                         {order.mode === 'takeaway'
                           ? takeawayName
                           : order.customerLabel}
                       </h3>
-                      <p className="text-[11px] text-[#FFF8E8]/65 truncate mt-0.5">
+                      <p className="text-xs text-white/65 truncate mt-0.5">
                         {[
                           settled
                             ? `Pagado (${order.paymentMethod || 'Cobrado'})`
@@ -403,13 +405,13 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                       </p>
                     </div>
 
-                    <span className="text-base sm:text-lg font-extrabold text-[#D9A441] tabular-nums whitespace-nowrap shrink-0">
+                    <span className="text-base sm:text-lg font-bold text-[var(--accent-gold)] tabular-nums whitespace-nowrap shrink-0">
                       Bs. {order.total.toFixed(2)}
                     </span>
                   </div>
                 </button>
 
-                <div className="border-t border-[#2E2E2E]" />
+                <div className="border-t border-[var(--ops-border)]" />
 
                 {/* Itemized Dish Rows */}
                 <div className="space-y-2">
@@ -419,44 +421,44 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                       className="flex items-start justify-between gap-3"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-[13px] font-bold text-[#FFF8E8] uppercase tracking-wide leading-snug">
+                        <p className="text-xs sm:text-[13px] font-semibold text-[var(--bg-surface)] leading-snug min-w-0 [overflow-wrap:break-word]">
                           {it.quantity}x {it.name}
                           {it.sizeLabel ? ` (${it.sizeLabel})` : ''}
                         </p>
                         {it.extrasSummary && (
-                          <p className="text-[11px] text-[#E8C87A]/75 mt-0.5">
+                          <p className="text-[11px] text-[var(--accent-gold)]/85 mt-0.5">
                             {it.extrasSummary}
                           </p>
                         )}
                       </div>
-                      <span className="text-xs sm:text-[13px] font-semibold text-[#FFF8E8]/85 tabular-nums whitespace-nowrap shrink-0">
+                      <span className="text-xs sm:text-[13px] font-semibold text-white/85 tabular-nums whitespace-nowrap shrink-0">
                         Bs. {(it.price * it.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-[#2E2E2E]" />
+                <div className="border-t border-[var(--ops-border)]" />
 
                 {/* Bottom Action Bar */}
                 {isStaff ? (
                   settled ? (
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                      <span className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#2E6F32]/25 text-[#9CE5A2] text-xs font-extrabold inline-flex items-center justify-center gap-1.5">
+                      <span className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[var(--status-ok)]/25 text-[var(--status-ok-text)] text-xs font-bold inline-flex items-center justify-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>
                           Pagado ({order.paymentMethod || 'Cobrado'})
                         </span>
                       </span>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {order.mode === 'dine-in' &&
                           order.tableNumber &&
                           isTableOccupied && (
                             <button
                               type="button"
                               onClick={() => onFreeTable(order.tableNumber!)}
-                              className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#2A2A2A] border border-[#D9A441]/50 text-[#D9A441] text-xs font-extrabold inline-flex items-center justify-center gap-1 hover:bg-[#353535] cursor-pointer whitespace-nowrap"
+                              className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/50 text-[var(--accent-gold)] text-xs font-bold inline-flex items-center justify-center gap-1 hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                             >
                               <Unlock className="w-3.5 h-3.5" />
                               <span>Liberar Mesa {order.tableNumber}</span>
@@ -466,7 +468,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                         <button
                           type="button"
                           onClick={() => setTicketOrder(order)}
-                          className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#2A2A2A] border border-[#D9A441]/60 text-[#D9A441] text-xs font-extrabold inline-flex items-center justify-center gap-1.5 hover:bg-[#D9A441] hover:text-[#2B1A0E] transition-colors cursor-pointer whitespace-nowrap"
+                          className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/60 text-[var(--accent-gold)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-[var(--accent-gold)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           <span>Ticket / WA</span>
@@ -475,16 +477,16 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-2 pt-0.5">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() =>
                             onUpdateOrderStatus(order.id, 'Preparando')
                           }
-                          className={`flex-1 min-w-[82px] min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                          className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                             order.status === 'Preparando'
-                              ? 'bg-[#D9A441] text-[#2B1A0E]'
-                              : 'bg-[#2A2A2A] text-[#FFF8E8]/85 hover:bg-[#353535]'
+                              ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                              : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
                           }`}
                         >
                           Preparando
@@ -495,10 +497,10 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                           onClick={() =>
                             onUpdateOrderStatus(order.id, middleStatus)
                           }
-                          className={`flex-1 min-w-[74px] min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                          className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                             order.status === middleStatus
-                              ? 'bg-[#D9A441] text-[#2B1A0E]'
-                              : 'bg-[#2A2A2A] text-[#FFF8E8]/85 hover:bg-[#353535]'
+                              ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                              : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
                           }`}
                         >
                           {middleLabel}
@@ -513,14 +515,14 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                               onUpdateOrderStatus(order.id, 'Entregado');
                             }
                           }}
-                          className={`flex-1 min-w-[74px] min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1 ${
+                          className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                             order.status === 'Entregado'
-                              ? 'bg-[#D9A441] text-[#2B1A0E]'
-                              : 'bg-[#2A2A2A] text-[#FFF8E8]/85 hover:bg-[#353535]'
+                              ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                              : 'bg-[var(--ops-elevated)] text-white/85 hover:bg-white/10'
                           }`}
                         >
                           {requiresDeliveryPin(order) && (
-                            <KeyRound className="w-3 h-3 text-[#E64833] shrink-0" />
+                            <KeyRound className="w-3.5 h-3.5 text-[var(--ops-accent)] shrink-0" />
                           )}
                           <span>
                             {order.mode === 'dine-in' ? 'Servido' : 'Entregado'}
@@ -530,21 +532,21 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                         <button
                           type="button"
                           onClick={() => setCollectingOrder(order)}
-                          className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#2E6F32] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center justify-center gap-1.5 hover:brightness-110 cursor-pointer shrink-0 whitespace-nowrap"
+                          className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                         >
-                          <Banknote className="w-3.5 h-3.5" />
+                          <Banknote className="w-3.5 h-3.5 shrink-0" />
                           <span>Pagado / Cobrar</span>
                         </button>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {onAddDishesToOrder && (
                           <button
                             type="button"
                             onClick={() => onAddDishesToOrder(order)}
-                            className="flex-1 min-h-[36px] px-3 py-1.5 rounded-xl bg-[#2A2A2A] border border-[#3A3A3A] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center justify-center gap-1 hover:bg-[#353535] hover:border-[#E64833]/60 transition-colors cursor-pointer whitespace-nowrap"
+                            className="min-h-[44px] px-3 py-2 rounded-xl bg-[var(--ops-elevated)] border border-[var(--ops-border)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1 hover:bg-white/10 hover:border-[var(--ops-accent)]/60 active:scale-[0.97] transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)]"
                           >
-                            <Plus className="w-3.5 h-3.5 text-[#E64833]" />
+                            <Plus className="w-3.5 h-3.5 text-[var(--ops-accent)] shrink-0" />
                             <span>Agregar platos</span>
                           </button>
                         )}
@@ -552,9 +554,11 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                         <button
                           type="button"
                           onClick={() => setTicketOrder(order)}
-                          className="flex-1 min-h-[36px] px-3 py-1.5 rounded-xl bg-[#2A2A2A] border border-[#D9A441]/55 text-[#D9A441] text-xs font-extrabold inline-flex items-center justify-center gap-1.5 hover:bg-[#D9A441] hover:text-[#2B1A0E] transition-colors cursor-pointer whitespace-nowrap"
+                          className={`min-h-[44px] px-3 py-2 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/55 text-[var(--accent-gold)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-[var(--accent-gold)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
+                            !onAddDishesToOrder ? 'col-span-2' : ''
+                          }`}
                         >
-                          <Printer className="w-3.5 h-3.5" />
+                          <Printer className="w-3.5 h-3.5 shrink-0" />
                           <span>Ticket / WA</span>
                         </button>
                       </div>
@@ -562,7 +566,7 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                   )
                 ) : (
                   <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                    <span className="flex-1 min-h-[38px] px-3 py-1.5 rounded-xl bg-[#2A2A2A] text-[#E8C87A] text-xs font-bold inline-flex items-center justify-center gap-1.5">
+                    <span className="flex-1 min-h-[44px] px-3 py-1.5 rounded-xl bg-[var(--ops-elevated)] text-[var(--accent-gold)] text-xs font-bold inline-flex items-center justify-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
                       <span>{order.status}</span>
                     </span>
@@ -571,9 +575,9 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                       <button
                         type="button"
                         onClick={() => onCallWaiter(order.id)}
-                        className="flex-1 min-h-[38px] px-3 py-1.5 rounded-xl bg-[#2A2A2A] text-[#FFF8E8] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-[#353535] cursor-pointer whitespace-nowrap"
+                        className="flex-1 min-h-[44px] px-3 py-1.5 rounded-xl bg-[var(--ops-elevated)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                       >
-                        <Bell className="w-3.5 h-3.5 text-[#D9A441]" />
+                        <Bell className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
                         <span>
                           {order.waiterRequested ? 'En camino' : 'Llamar mozo'}
                         </span>
@@ -584,13 +588,13 @@ export const OrdersBoard: React.FC<OrdersBoardProps> = ({
                       <button
                         type="button"
                         onClick={() => onPayTableOrder(order)}
-                        className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#2E6F32] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center justify-center gap-1.5 hover:brightness-110 cursor-pointer shrink-0 whitespace-nowrap"
+                        className="min-h-[44px] px-4 py-1.5 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                       >
                         <Lock className="w-3.5 h-3.5" />
                         <span>Pagar</span>
                       </button>
                     ) : (
-                      <span className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#2E6F32]/25 text-[#9CE5A2] text-xs font-extrabold inline-flex items-center justify-center gap-1 shrink-0 whitespace-nowrap">
+                      <span className="min-h-[44px] px-3 py-1.5 rounded-xl bg-[var(--status-ok)]/25 text-[var(--status-ok-text)] text-xs font-bold inline-flex items-center justify-center gap-1 shrink-0 whitespace-nowrap">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Pagado</span>
                       </span>

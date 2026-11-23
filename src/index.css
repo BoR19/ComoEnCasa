@@ -1,75 +1,140 @@
+/* hallmark: v2.0.0 | theme: fonda-editorial-bento (by request) | genre: editorial | fonts: Fraunces + Plus Jakarta Sans | ops: dark-graphite */
+/* critique: Fonda Editorial warm paper canvas paired with Bento 3-way welcome hero; dark graphite reserved strictly for Cocina/Orders operational surfaces; zero transition-all, clip overflow, reduced-motion & pointer-hover safe */
+
 @import "tailwindcss";
+
+@custom-variant hover {
+  &:hover {
+    @media (hover: hover) and (pointer: fine) {
+      @slot;
+    }
+  }
+}
 
 @layer base {
   :root {
-    /* Paleta oficial extraída del logotipo Como en Casa (Tupiza • Potosí • Bolivia) */
-    --brown-dark: #3B1F0E;
-    --brown-secondary: #4A2C1A;
-    --terracotta: #B84A27;
-    --terracotta-soft: #C95B34;
-    --cream-bg: #FFF8E8;
-    --cream-card: #FDF2D6;
-    --gold-primary: #D9A441;
-    --gold-light: #E8C87A;
-    --text-primary: #2B1A0E;
-    --text-secondary: #7A5A3A;
-    --cactus-green: #2E6F32;
-    --river-teal: #1E8299;
-    --canyon-red: #B83227;
-    --green-success: #2E9E5B;
+    --bg-canvas: #FAF5EC;
+    --bg-surface: #FFFFFF;
+    --bg-inset: #F1E7D5;
+    --border-subtle: #E2D3BA;
+    --ink-primary: #26160C;
+    --ink-muted: #6E5239;
+    --accent-primary: #C84B28;
+    --accent-gold: #C8932B;
+    --ops-canvas: #141414;
+    --ops-surface: #1E1E1E;
+    --ops-accent: #E64833;
+    --ops-elevated: #282828;
+    --ops-border: #2E2E2E;
+    --status-ok: #2E6F32;
+    --status-ok-bright: #3CA364;
+    --status-ok-text: #9CE5A2;
+    --status-info: #1E8299;
+    --status-danger: #B83227;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   html,
   body,
   #root {
     height: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   body {
-    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
-    color: #2B1A0E;
-    background-color: #EDE1C9;
+    font-family: var(--font-sans);
+    color: var(--ink-primary);
+    background-color: var(--bg-canvas);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
   }
-}
 
-.font-script {
-  font-family: 'Dancing Script', cursive;
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
 }
 
 .font-serif-display {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
 }
 
 .font-body {
-  font-family: 'Nunito', system-ui, -apple-system, sans-serif;
-}
-
-.linen-backdrop {
-  background-color: #EDE1C9;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      rgba(59, 31, 14, 0.025) 0px,
-      rgba(59, 31, 14, 0.025) 1px,
-      transparent 1px,
-      transparent 4px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(59, 31, 14, 0.025) 0px,
-      rgba(59, 31, 14, 0.025) 1px,
-      transparent 1px,
-      transparent 4px
-    ),
-    radial-gradient(circle at 28% 20%, rgba(255, 248, 232, 0.72), rgba(217, 164, 65, 0.14));
+  font-family: var(--font-sans);
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+.ease-out-ui {
+  transition-timing-function: var(--ease-out);
+}
+
+.ease-drawer-ui {
+  transition-timing-function: var(--ease-drawer);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-surface {
+  transform-origin: center;
+  animation: modalEnter 200ms var(--ease-out) both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dish-card-interactive:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-primary);
+  }
+
+  .phone-scroll::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-surface {
+    animation-duration: 1ms;
+    transform: none;
+  }
+
+  .dish-card-interactive:hover {
+    transform: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
 }
 
 .phone-scroll::-webkit-scrollbar {
@@ -81,12 +146,8 @@
 }
 
 .phone-scroll::-webkit-scrollbar-thumb {
-  background: rgba(122, 90, 58, 0.28);
+  background: color-mix(in srgb, var(--ink-muted) 28%, transparent);
   border-radius: 9999px;
-}
-
-.phone-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(184, 74, 39, 0.5);
 }
 
 @media print {
@@ -100,7 +161,7 @@
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
-    background: #FFFFFF !important;
+    background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -112,7 +173,7 @@
   .ticket-print-modal-root {
     position: static !important;
     inset: auto !important;
-    background: #FFFFFF !important;
+    background: #ffffff !important;
     padding: 0 !important;
     display: block !important;
     overflow: visible !important;
@@ -126,7 +187,7 @@
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    background: #FFFFFF !important;
+    background: #ffffff !important;
     padding: 0 !important;
     margin: 0 auto !important;
   }
@@ -139,7 +200,7 @@
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    background: #FFFFFF !important;
+    background: #ffffff !important;
     margin: 0 auto !important;
     color: #000000 !important;
   }
@@ -164,4 +225,3 @@
     padding: 8mm !important;
   }
 }
-

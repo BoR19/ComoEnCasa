@@ -38,40 +38,40 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onGoAdminLogin,
 }) => {
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader title="Perfil" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-3xl mx-auto w-full px-4 lg:px-8 pt-5 lg:pt-8 pb-6 space-y-5">
           <div className="flex flex-col items-center text-center">
             <OfficialLogo size="sm" />
-            <h2 className="font-serif-display text-xl lg:text-2xl font-bold text-[#2B1A0E] mt-2">
+            <h2 className="font-serif-display text-xl lg:text-2xl font-bold text-[var(--ink-primary)] mt-2">
               {firebaseUser?.displayName || 'Cliente Como en Casa'}
             </h2>
-            <p className="text-xs lg:text-sm text-[#7A5A3A]">
+            <p className="text-xs lg:text-sm text-[var(--ink-muted)]">
               {orderMode === 'dine-in'
                 ? `Comiendo en el local · Mesa ${selectedTable}`
                 : orderMode === 'takeaway'
-                ? 'Modo Para Llevar activo'
+                ? 'Modo Para llevar activo'
                 : 'Modo Delivery activo'}
             </p>
 
             {/* Google Account Sync Card */}
-            <div className="mt-3 w-full max-w-md rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 p-3 flex items-center justify-between gap-2 text-left">
+            <div className="mt-3 w-full max-w-md rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 flex items-center justify-between gap-2 text-left">
               {firebaseUser ? (
                 <>
                   <div className="min-w-0">
-                    <p className="text-xs font-extrabold text-[#2E6F32]">
+                    <p className="text-xs font-bold text-[var(--status-ok)]">
                       Cuenta Google conectada
                     </p>
-                    <p className="text-[11px] font-semibold text-[#7A5A3A] truncate">
+                    <p className="text-[11px] font-semibold text-[var(--ink-muted)] truncate">
                       {firebaseUser.email}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={onGoogleSignOut}
-                    className="px-3 py-1.5 rounded-xl bg-[#FFF8E8] border border-[#3B1F0E]/30 text-[#3B1F0E] text-xs font-extrabold inline-flex items-center gap-1 hover:bg-[#E8C87A]/30 cursor-pointer shrink-0"
+                    className="px-3 py-1.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Salir</span>
@@ -80,10 +80,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               ) : (
                 <>
                   <div className="min-w-0">
-                    <p className="text-xs font-extrabold text-[#3B1F0E]">
+                    <p className="text-xs font-bold text-[var(--ink-primary)]">
                       Sincroniza tus pedidos
                     </p>
-                    <p className="text-[11px] text-[#7A5A3A]">
+                    <p className="text-[11px] text-[var(--ink-muted)]">
                       Inicia sesión con Google para enviar pedidos en vivo.
                     </p>
                   </div>
@@ -91,9 +91,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     type="button"
                     disabled={authLoading}
                     onClick={onGoogleSignIn}
-                    className="px-3 py-2 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#4A2C1A] disabled:opacity-50 cursor-pointer shrink-0"
+                    className="px-3 py-2 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] text-xs font-bold inline-flex items-center gap-1.5 hover:opacity-95 disabled:opacity-50 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                   >
-                    <LogIn className="w-3.5 h-3.5 text-[#D9A441]" />
+                    <LogIn className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
                     <span>Conectar</span>
                   </button>
                 </>
@@ -105,10 +105,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <button
               type="button"
               onClick={onGoTables}
-              className="w-full min-h-[54px] px-4 py-3 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 flex items-center justify-between text-sm font-bold text-[#2B1A0E] hover:border-[#B84A27] cursor-pointer md:col-span-2"
+              className="w-full min-h-[54px] px-4 py-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.98] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer md:col-span-2"
             >
               <span className="inline-flex items-center gap-2.5">
-                <UtensilsCrossed className="w-4 h-4 text-[#B84A27]" />
+                <UtensilsCrossed className="w-4 h-4 text-[var(--accent-primary)]" />
                 <span>Seleccionar Mesa (Actual: Mesa {selectedTable})</span>
               </span>
             </button>
@@ -116,13 +116,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <button
               type="button"
               onClick={onGoTableOrder}
-              className="w-full min-h-[54px] px-4 py-3 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 flex items-center justify-between text-sm font-bold text-[#2B1A0E] hover:border-[#B84A27] cursor-pointer"
+              className="w-full min-h-[54px] px-4 py-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.98] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               <span className="inline-flex items-center gap-2.5">
-                <QrCode className="w-4 h-4 text-[#B84A27]" />
+                <QrCode className="w-4 h-4 text-[var(--accent-primary)]" />
                 <span>Ver Pedido en Mesa {selectedTable}</span>
               </span>
-              <span className="text-xs font-extrabold text-[#B84A27] tabular-nums">
+              <span className="text-xs font-bold text-[var(--accent-primary)] tabular-nums">
                 {activeTableOrder ? formatBs(activeTableOrder.total) : 'Sin pedido'}
               </span>
             </button>
@@ -130,13 +130,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <button
               type="button"
               onClick={onGoDeliveryTracking}
-              className="w-full min-h-[54px] px-4 py-3 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 flex items-center justify-between text-sm font-bold text-[#2B1A0E] hover:border-[#B84A27] cursor-pointer"
+              className="w-full min-h-[54px] px-4 py-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.98] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               <span className="inline-flex items-center gap-2.5">
-                <Bike className="w-4 h-4 text-[#1E8299]" />
+                <Bike className="w-4 h-4 text-[var(--status-info)]" />
                 <span>Seguimiento de Delivery</span>
               </span>
-              <span className="text-xs font-extrabold text-[#1E8299] tabular-nums">
+              <span className="text-xs font-bold text-[var(--status-info)] tabular-nums">
                 {activeDeliveryOrder ? activeDeliveryOrder.status : 'Sin envío'}
               </span>
             </button>
@@ -146,9 +146,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <button
               type="button"
               onClick={onGoAdminLogin}
-              className="w-full min-h-[52px] px-4 py-3 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 shadow-sm hover:bg-[#4A2C1A] cursor-pointer"
+              className="w-full min-h-[52px] px-4 py-3 rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
-              <ShieldCheck className="w-5 h-5 text-[#D9A441]" />
+              <ShieldCheck className="w-5 h-5 text-[var(--accent-gold)]" />
               <span>Acceso Administrador / Caja</span>
             </button>
           </section>

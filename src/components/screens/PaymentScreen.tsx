@@ -3,6 +3,7 @@ import {
   Banknote,
   Building2,
   CheckCircle2,
+  ChevronLeft,
   CreditCard,
   KeyRound,
   Printer,
@@ -42,14 +43,14 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({
   onBack,
 }) => {
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader title="Métodos de Pago" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto phone-scroll">
         <div className="max-w-xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-8 pb-6 space-y-5">
           <div className="text-center space-y-1.5">
-            <p className="font-bold text-sm lg:text-base text-[#2B1A0E]">{summaryLabel}</p>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-[#B84A27] text-[#FFF8E8] font-extrabold text-sm tabular-nums">
+            <p className="font-bold text-sm lg:text-base text-[var(--ink-primary)]">{summaryLabel}</p>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-sm tabular-nums">
               <span>Total {formatBs(totalAmount)}</span>
             </div>
           </div>
@@ -63,21 +64,21 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({
                   key={method}
                   type="button"
                   onClick={() => onSelectMethod(method)}
-                  className={`w-full min-h-[54px] px-4 py-3 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
+                  className={`w-full min-h-[54px] px-4 py-3 rounded-2xl border flex items-center justify-between transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer ${
                     active
-                      ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E] font-extrabold shadow-xs'
-                      : 'bg-[#FDF2D6] border-[#D9A441]/60 text-[#2B1A0E] font-bold hover:border-[#B84A27]'
+                      ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)] font-bold'
+                      : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] font-semibold hover:border-[var(--accent-primary)]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                        active ? 'border-[#3B1F0E]' : 'border-[#7A5A3A]'
+                        active ? 'border-[var(--ink-primary)]' : 'border-[var(--ink-muted)]'
                       }`}
                     >
-                      {active && <span className="w-2.5 h-2.5 rounded-full bg-[#3B1F0E]" />}
+                      {active && <span className="w-2.5 h-2.5 rounded-full bg-[var(--ink-primary)]" />}
                     </span>
-                    <Icon className="w-5 h-5 text-[#3B1F0E] shrink-0" />
+                    <Icon className="w-5 h-5 text-[var(--ink-primary)] shrink-0" />
                     <span className="text-sm text-left">{method}</span>
                   </div>
                 </button>
@@ -87,16 +88,16 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({
         </div>
       </div>
 
-      <div className="p-3.5 bg-[#FFF8E8] border-t border-[#D9A441]/40 shrink-0">
+      <div className="p-3.5 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] shrink-0">
         <div className="max-w-md mx-auto w-full">
           <button
             type="button"
             onClick={onContinue}
-            className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center hover:bg-[#4A2C1A] active:scale-[0.98] transition-all cursor-pointer tabular-nums"
+            className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
           >
             {selectedMethod === 'QR'
-              ? `Pagar con QR • ${formatBs(totalAmount)}`
-              : `Confirmar pago (${selectedMethod}) • ${formatBs(totalAmount)}`}
+              ? `Pagar con QR · ${formatBs(totalAmount)}`
+              : `Confirmar pago (${selectedMethod}) · ${formatBs(totalAmount)}`}
           </button>
         </div>
       </div>
@@ -116,35 +117,35 @@ export const PaymentQrScreen: React.FC<PaymentQrScreenProps> = ({
   onBack,
 }) => {
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader title="Pago con QR" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto phone-scroll px-5 py-6 flex flex-col">
         <div className="my-auto mx-auto w-full max-w-md flex flex-col items-center text-center space-y-4">
-          <div className="p-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/70 shadow-sm">
+          <div className="w-full max-w-[228px] p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center">
             <QrCodeSvg seed={`como-en-casa-pago-${totalAmount}`} size={196} />
           </div>
 
           <div className="space-y-1">
-            <h2 className="font-serif-display text-2xl font-bold text-[#2B1A0E]">
+            <h2 className="font-serif-display text-2xl font-bold text-[var(--ink-primary)]">
               Como en Casa
             </h2>
-            <p className="text-lg font-extrabold text-[#B84A27] tabular-nums">
+            <p className="text-lg font-bold text-[var(--accent-primary)] tabular-nums">
               Total {formatBs(totalAmount)}
             </p>
-            <p className="text-xs font-bold text-[#7A5A3A]">
+            <p className="text-xs font-semibold text-[var(--ink-muted)]">
               Instrucciones: Escanea y paga
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-3.5 bg-[#FFF8E8] border-t border-[#D9A441]/40 shrink-0">
+      <div className="p-3.5 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] shrink-0">
         <div className="max-w-md mx-auto w-full">
           <button
             type="button"
             onClick={onPaid}
-            className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-2 shadow-sm hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Ya pagué</span>
@@ -195,23 +196,23 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
   }, [paidOrder, customerThanks, totalAmount, paymentMethod]);
 
   return (
-    <div className="relative flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="relative flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader title="Confirmación de Pago" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto phone-scroll px-5 py-6 sm:py-8 flex flex-col">
         <div className="my-auto mx-auto max-w-md w-full space-y-4 flex flex-col items-center text-center">
-          <div className="w-18 h-18 rounded-full bg-[#2E6F32]/15 flex items-center justify-center">
-            <CheckCircle2 className="w-14 h-14 text-[#2E6F32]" strokeWidth={2.2} />
+          <div className="w-18 h-18 rounded-full bg-[var(--status-ok)]/12 flex items-center justify-center">
+            <CheckCircle2 className="w-14 h-14 text-[var(--status-ok)]" strokeWidth={2.2} />
           </div>
 
           <div className="space-y-1">
-            <h2 className="font-serif-display text-2xl font-bold text-[#2B1A0E]">
+            <h2 className="font-serif-display text-2xl font-bold text-[var(--ink-primary)]">
               Pago Exitoso
             </h2>
-            <p className="text-3xl font-extrabold text-[#B84A27] tabular-nums">
+            <p className="text-3xl font-bold text-[var(--accent-primary)] tabular-nums">
               {formatBs(totalAmount)}
             </p>
-            <p className="text-sm font-bold text-[#7A5A3A] pt-1">
+            <p className="text-sm font-bold text-[var(--ink-muted)] pt-1">
               {customerThanks}
             </p>
           </div>
@@ -219,17 +220,17 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
           {paidOrder &&
             (paidOrder.mode === 'takeaway' || paidOrder.mode === 'delivery') &&
             paidOrder.confirmationCode && (
-              <div className="w-full rounded-2xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#D9A441]/55 p-3.5 flex items-center justify-between gap-3 text-left shadow-sm">
+              <div className="w-full rounded-2xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--ops-border)] p-3.5 flex items-center justify-between gap-3 text-left">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#E8C87A] inline-flex items-center gap-1">
-                    <KeyRound className="w-3.5 h-3.5 text-[#D9A441] shrink-0" />
+                  <p className="text-xs font-bold text-[var(--accent-gold)] inline-flex items-center gap-1">
+                    <KeyRound className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
                     <span>Código de entrega</span>
                   </p>
-                  <p className="text-[11px] text-[#FFF8E8]/75 mt-0.5 leading-snug">
+                  <p className="text-[11px] text-[var(--bg-canvas)]/75 mt-0.5 leading-snug">
                     Muestra este código al personal al recibir tu pedido.
                   </p>
                 </div>
-                <span className="px-3 py-1.5 rounded-xl bg-[#141414] border border-[#D9A441]/60 font-mono text-lg font-extrabold tracking-widest text-[#D9A441] tabular-nums shrink-0">
+                <span className="px-3 py-1.5 rounded-xl bg-[var(--ops-canvas)] border border-[var(--accent-gold)]/55 font-mono text-lg font-bold tracking-widest text-[var(--accent-gold)] tabular-nums shrink-0">
                   {paidOrder.confirmationCode}
                 </span>
               </div>
@@ -240,7 +241,7 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
               <button
                 type="button"
                 onClick={onTrackDelivery}
-                className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#1E8299] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 hover:opacity-95 cursor-pointer"
+                className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--status-info)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <span>Seguir mi Delivery</span>
               </button>
@@ -249,7 +250,7 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
             <button
               type="button"
               onClick={() => setShowReceipt(true)}
-              className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-[#E8C87A] cursor-pointer"
+              className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Ver / Imprimir Ticket (WhatsApp)</span>
@@ -258,9 +259,10 @@ export const PaymentConfirmScreen: React.FC<PaymentConfirmScreenProps> = ({
             <button
               type="button"
               onClick={onBackToMenu}
-              className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#FDF2D6] border border-[#3B1F0E] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center hover:bg-[#E8C87A]/25 cursor-pointer"
+              className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-sm flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
-              ← Volver al Menú
+              <ChevronLeft className="w-4 h-4" />
+              <span>Volver al Menú</span>
             </button>
           </div>
         </div>

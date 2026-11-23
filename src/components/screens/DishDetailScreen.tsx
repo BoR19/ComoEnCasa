@@ -43,7 +43,7 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
   const finalPrice = selectedSize.price + extrasTotal;
 
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader
         title="Detalle del plato"
         onBack={onBack}
@@ -52,11 +52,13 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
             type="button"
             onClick={() => onToggleFavorite(item.id)}
             aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] cursor-pointer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
           >
             <Heart
               className={`w-5 h-5 ${
-                isFavorite ? 'fill-[#B84A27] text-[#B84A27]' : 'text-[#FFF8E8]'
+                isFavorite
+                  ? 'fill-[var(--accent-primary)] text-[var(--accent-primary)]'
+                  : 'text-[var(--ink-primary)]'
               }`}
             />
           </button>
@@ -68,23 +70,23 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
           <div className="space-y-4 lg:grid lg:grid-cols-12 lg:gap-6 lg:space-y-0 lg:items-start">
             {/* Left column on PC: Dish photo + Ingredients */}
             <div className="space-y-4 lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden border border-[#D9A441]/60 bg-[#FDF2D6] h-44 lg:h-64 shadow-xs">
+              <div className="rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-inset)] h-44 lg:h-64">
                 <DishIllustration visualType={item.visualType} dishId={item.id} name={item.name} className="w-full h-full object-cover" />
               </div>
 
-              <section className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-3.5 hidden lg:block">
+              <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 hidden lg:block">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-sm font-extrabold text-[#2B1A0E]">Ingredientes</h3>
+                  <h3 className="text-sm font-bold text-[var(--ink-primary)]">Ingredientes</h3>
                   <button
                     type="button"
                     onClick={onOpenCustomize}
-                    className="text-xs font-extrabold text-[#B84A27] inline-flex items-center gap-1 underline decoration-[#B84A27]/60 cursor-pointer"
+                    className="text-xs font-bold text-[var(--accent-primary)] inline-flex items-center gap-1 underline decoration-[var(--accent-primary)]/60 cursor-pointer"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
                     Personalizar
                   </button>
                 </div>
-                <p className="text-xs text-[#7A5A3A] leading-relaxed">
+                <p className="text-xs text-[var(--ink-muted)] leading-relaxed">
                   {item.ingredients.join(', ')}.
                 </p>
               </section>
@@ -95,33 +97,33 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
               <div>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] leading-tight">
+                    <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[var(--ink-primary)] leading-tight">
                       {item.name}
                     </h2>
-                    <p className="text-lg font-extrabold text-[#B84A27] mt-0.5 tabular-nums">
+                    <p className="text-lg font-bold text-[var(--accent-primary)] mt-0.5 tabular-nums">
                       {formatBs(selectedSize.price)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 text-xs font-bold text-[#7A5A3A] pt-1 shrink-0">
-                    <span className="inline-flex items-center gap-1 text-[#2B1A0E]">
-                      <Star className="w-4 h-4 fill-[#D9A441] text-[#D9A441]" />
+                  <div className="flex items-center gap-3 text-xs font-bold text-[var(--ink-muted)] pt-1 shrink-0">
+                    <span className="inline-flex items-center gap-1 text-[var(--ink-primary)] tabular-nums">
+                      <Star className="w-4 h-4 fill-[var(--accent-gold)] text-[var(--accent-gold)]" />
                       {item.rating.toFixed(1)}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="w-4 h-4 text-[#B84A27]" />
+                      <Clock className="w-4 h-4 text-[var(--accent-primary)]" />
                       {item.prepTime}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-sm text-[#7A5A3A] leading-relaxed mt-2">
+                <p className="text-sm text-[var(--ink-muted)] leading-relaxed mt-2">
                   {item.description}
                 </p>
               </div>
 
               {/* Size Selector */}
               <section>
-                <h3 className="text-sm font-extrabold text-[#2B1A0E] mb-2">Tamaño</h3>
+                <h3 className="text-sm font-bold text-[var(--ink-primary)] mb-2">Tamaño</h3>
                 <div
                   className={`grid gap-2.5 ${
                     item.sizes.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
@@ -134,14 +136,14 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
                         key={size.id}
                         type="button"
                         onClick={() => setSelectedSize(size)}
-                        className={`min-h-[46px] px-3 py-2 rounded-2xl border text-center transition-all cursor-pointer ${
+                        className={`min-h-[46px] px-3 py-2 rounded-2xl border text-center transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer ${
                           active
-                            ? 'bg-[#B84A27] border-[#B84A27] text-[#FFF8E8] font-extrabold shadow-xs'
-                            : 'bg-[#FDF2D6] border-[#D9A441]/60 text-[#2B1A0E] font-bold hover:border-[#B84A27]'
+                            ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold'
+                            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] font-semibold hover:border-[var(--accent-primary)]'
                         }`}
                       >
                         <span className="block text-xs">{size.label}</span>
-                        <span className="block text-xs font-extrabold tabular-nums">
+                        <span className="block text-xs font-bold tabular-nums">
                           {formatBs(size.price)}
                         </span>
                       </button>
@@ -153,7 +155,7 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
               {/* Extras (for food categories) */}
               {item.category !== 'Jugos' && (
                 <section>
-                  <h3 className="text-sm font-extrabold text-[#2B1A0E] mb-2">Extras</h3>
+                  <h3 className="text-sm font-bold text-[var(--ink-primary)] mb-2">Extras</h3>
                   <div className="space-y-2">
                     {DISH_EXTRAS.map((extra) => {
                       const checked = selectedExtras.some((e) => e.id === extra.id);
@@ -162,25 +164,25 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
                           key={extra.id}
                           type="button"
                           onClick={() => toggleExtra(extra)}
-                          className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl border flex items-center justify-between text-sm transition-colors cursor-pointer ${
+                          className={`w-full min-h-[44px] px-3.5 py-2 rounded-2xl border flex items-center justify-between text-sm transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-out)] active:scale-[0.98] cursor-pointer ${
                             checked
-                              ? 'bg-[#FDF2D6] border-[#B84A27] text-[#2B1A0E]'
-                              : 'bg-[#FFFDF8] border-[#D9A441]/50 text-[#2B1A0E]'
+                              ? 'bg-[var(--bg-inset)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
+                              : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)]'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
                             <span
                               className={`w-5 h-5 rounded-md border flex items-center justify-center ${
                                 checked
-                                  ? 'bg-[#B84A27] border-[#B84A27] text-[#FFF8E8]'
-                                  : 'border-[#7A5A3A]/60 bg-white'
+                                  ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--bg-canvas)]'
+                                  : 'border-[var(--ink-muted)]/60 bg-[var(--bg-surface)]'
                               }`}
                             >
                               {checked && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                             </span>
                             <span className="font-semibold">{extra.label}</span>
                           </div>
-                          <span className="font-extrabold text-[#B84A27] tabular-nums">
+                          <span className="font-bold text-[var(--accent-primary)] tabular-nums">
                             +Bs {extra.price.toFixed(2)}
                           </span>
                         </button>
@@ -191,19 +193,19 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
               )}
 
               {/* Ingredients on Mobile */}
-              <section className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-3.5 lg:hidden">
+              <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 lg:hidden">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <h3 className="text-sm font-extrabold text-[#2B1A0E]">Ingredientes</h3>
+                  <h3 className="text-sm font-bold text-[var(--ink-primary)]">Ingredientes</h3>
                   <button
                     type="button"
                     onClick={onOpenCustomize}
-                    className="text-xs font-extrabold text-[#B84A27] inline-flex items-center gap-1 underline decoration-[#B84A27]/60 cursor-pointer"
+                    className="text-xs font-bold text-[var(--accent-primary)] inline-flex items-center gap-1 underline decoration-[var(--accent-primary)]/60 cursor-pointer"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
                     Personalizar
                   </button>
                 </div>
-                <p className="text-xs text-[#7A5A3A] leading-relaxed">
+                <p className="text-xs text-[var(--ink-muted)] leading-relaxed">
                   {item.ingredients.join(', ')}.
                 </p>
               </section>
@@ -212,9 +214,9 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onAddToCart(item, selectedSize, selectedExtras)}
-                className="hidden lg:flex w-full min-h-[52px] px-5 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm items-center justify-center shadow-sm hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer tabular-nums"
+                className="hidden lg:flex w-full min-h-[52px] px-5 py-3 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-sm items-center justify-center hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
               >
-                Agregar al carrito • {formatBs(finalPrice)}
+                Agregar al carrito · {formatBs(finalPrice)}
               </button>
             </div>
           </div>
@@ -222,13 +224,13 @@ export const DishDetailScreen: React.FC<DishDetailScreenProps> = ({
       </div>
 
       {/* Fixed Bottom CTA (Mobile) */}
-      <div className="lg:hidden p-3.5 bg-[#FFF8E8] border-t border-[#D9A441]/40 shrink-0">
+      <div className="lg:hidden p-3.5 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] shrink-0">
         <button
           type="button"
           onClick={() => onAddToCart(item, selectedSize, selectedExtras)}
-          className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center shadow-sm hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer tabular-nums"
+          className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
         >
-          Agregar al carrito • {formatBs(finalPrice)}
+          Agregar al carrito · {formatBs(finalPrice)}
         </button>
       </div>
     </div>

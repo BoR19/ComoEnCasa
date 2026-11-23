@@ -111,17 +111,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
       aria-modal="true"
       aria-label={`Ticket ${order.code}`}
     >
-      <div className="ticket-print-shell w-full max-w-2xl max-h-[92dvh] bg-[#FFF8E8] rounded-3xl border-2 border-[#D9A441] shadow-2xl flex flex-col overflow-hidden">
+      <div className="ticket-print-shell modal-surface w-full max-w-2xl max-h-[92dvh] bg-[var(--bg-canvas)] rounded-3xl border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden">
         {/* Top Bar (hidden on print) */}
-        <div className="no-print px-4 py-3 bg-[#3B1F0E] text-[#FFF8E8] flex items-center justify-between gap-2 shrink-0 border-b border-[#D9A441]/30">
+        <div className="no-print px-4 py-3 bg-[var(--ink-primary)] text-[var(--bg-canvas)] flex items-center justify-between gap-2 shrink-0 border-b border-[var(--accent-gold)]/25">
           <div className="flex items-center gap-2 min-w-0">
-            <ReceiptText className="w-5 h-5 text-[#D9A441] shrink-0" />
+            <ReceiptText className="w-5 h-5 text-[var(--accent-gold)] shrink-0" />
             <div className="min-w-0">
               <h3 className="font-serif-display text-base sm:text-lg font-bold truncate">
                 Ticket / Comprobante {order.code}
               </h3>
-              <p className="text-[11px] text-[#E8C87A] truncate">
-                {order.customerLabel} · {order.paid ? 'Pagado' : 'Pre-cuenta'}
+              <p className="text-xs text-[var(--accent-gold)] truncate">
+                {order.customerLabel} — {order.paid ? 'Pagado' : 'Pre-cuenta'}
               </p>
             </div>
           </div>
@@ -130,7 +130,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
             type="button"
             onClick={onClose}
             aria-label="Cerrar ticket"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#FFF8E8] hover:bg-[#4A2C1A] cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--bg-canvas)] hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -139,8 +139,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto phone-scroll p-4 sm:p-5 space-y-4">
           {/* Paper size selector (hidden on print) */}
-          <div className="no-print flex flex-wrap items-center justify-between gap-2 bg-[#FDF2D6] border border-[#D9A441]/55 rounded-2xl px-3 py-2">
-            <span className="text-xs font-extrabold text-[#3B1F0E]">
+          <div className="no-print flex flex-wrap items-center justify-between gap-2 bg-[var(--bg-inset)] border border-[var(--border-subtle)] rounded-2xl px-3 py-2">
+            <span className="text-xs font-bold text-[var(--ink-primary)]">
               Formato de impresión:
             </span>
             <div className="flex items-center gap-1.5">
@@ -155,10 +155,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                   key={opt.id}
                   type="button"
                   onClick={() => setPaperSize(opt.id)}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                     paperSize === opt.id
-                      ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                      : 'bg-[#FFFDF8] border-[#D9A441]/60 text-[#3B1F0E] hover:bg-[#E8C87A]/25'
+                      ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--bg-surface)]'
+                      : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:bg-[var(--bg-canvas)]'
                   }`}
                 >
                   {opt.label}
@@ -170,41 +170,41 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
           {/* Printable Ticket Sheet */}
           <div className="flex justify-center">
             <div
-              className={`ticket-paper w-full ${paperWidthClass} bg-[#FFFDF8] text-[#2B1A0E] rounded-2xl border border-dashed border-[#7A5A3A]/60 p-4 sm:p-5 shadow-sm space-y-3`}
+              className={`ticket-paper w-full ${paperWidthClass} bg-[var(--bg-surface)] text-[var(--ink-primary)] rounded-2xl border border-dashed border-[var(--ink-muted)]/60 p-4 sm:p-5 shadow-sm space-y-3`}
             >
               {/* Brand Header */}
-              <div className="text-center space-y-1 border-b border-dashed border-[#7A5A3A]/50 pb-3">
+              <div className="text-center space-y-1 border-b border-dashed border-[var(--ink-muted)]/50 pb-3">
                 <div className="flex justify-center">
                   <OfficialLogo size="sm" />
                 </div>
-                <p className="font-serif-display font-bold text-sm text-[#3B1F0E]">
-                  Comida Tradicional • Tupiza
+                <p className="font-serif-display font-bold text-sm text-[var(--ink-primary)]">
+                  Comida Tradicional · Tupiza
                 </p>
-                <p className="text-[10px] font-bold text-[#7A5A3A]">
+                <p className="text-[11px] font-semibold text-[var(--ink-muted)]">
                   Potosí, Bolivia · Tel: +591 71234567
                 </p>
                 <div className="pt-1">
-                  <span className="inline-block px-2.5 py-0.5 rounded-md border border-[#3B1F0E] text-[10px] font-extrabold uppercase tracking-wider text-[#3B1F0E]">
-                    {order.paid ? 'Comprobante de Pago' : 'Pre-Cuenta / Ticket'}
+                  <span className="inline-block px-2.5 py-0.5 rounded-md border border-[var(--ink-primary)] text-[11px] font-bold text-[var(--ink-primary)]">
+                    {order.paid ? 'Comprobante de pago' : 'Pre-cuenta / Ticket'}
                   </span>
                 </div>
               </div>
 
               {/* Metadata */}
-              <div className="space-y-1 text-[11px] border-b border-dashed border-[#7A5A3A]/50 pb-2.5">
+              <div className="space-y-1 text-[11px] border-b border-dashed border-[var(--ink-muted)]/50 pb-2.5">
                 <div className="flex justify-between gap-2">
-                  <span className="text-[#7A5A3A] font-bold">Ticket Nº:</span>
-                  <span className="font-extrabold tabular-nums">{order.code}</span>
+                  <span className="text-[var(--ink-muted)] font-semibold">Ticket Nº:</span>
+                  <span className="font-bold tabular-nums">{order.code}</span>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-[#7A5A3A] font-bold">Fecha y Hora:</span>
-                  <span className="font-bold tabular-nums">
+                  <span className="text-[var(--ink-muted)] font-semibold">Fecha y hora:</span>
+                  <span className="font-semibold tabular-nums">
                     {dateLabel} · {order.createdAt}
                   </span>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <span className="text-[#7A5A3A] font-bold">Modalidad:</span>
-                  <span className="font-extrabold text-right">
+                  <span className="text-[var(--ink-muted)] font-semibold">Modalidad:</span>
+                  <span className="font-bold text-right">
                     {order.mode === 'dine-in'
                       ? `Local (${order.tableNumber ? `Mesa ${order.tableNumber}` : order.customerLabel})`
                       : order.mode === 'takeaway'
@@ -214,36 +214,36 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                 </div>
                 {order.pickupNote && (
                   <div className="flex justify-between gap-2">
-                    <span className="text-[#7A5A3A] font-bold shrink-0">Retiro / Tel:</span>
-                    <span className="font-bold text-right">{order.pickupNote}</span>
+                    <span className="text-[var(--ink-muted)] font-semibold shrink-0">Retiro / Tel:</span>
+                    <span className="font-semibold text-right">{order.pickupNote}</span>
                   </div>
                 )}
                 {order.deliveryAddress && (
                   <div className="flex justify-between gap-2">
-                    <span className="text-[#7A5A3A] font-bold shrink-0">Dirección:</span>
-                    <span className="font-bold text-right">{order.deliveryAddress}</span>
+                    <span className="text-[var(--ink-muted)] font-semibold shrink-0">Dirección:</span>
+                    <span className="font-semibold text-right">{order.deliveryAddress}</span>
                   </div>
                 )}
                 {order.deliveryPhone && (
                   <div className="flex justify-between gap-2">
-                    <span className="text-[#7A5A3A] font-bold">Teléfono:</span>
-                    <span className="font-bold tabular-nums">{order.deliveryPhone}</span>
+                    <span className="text-[var(--ink-muted)] font-semibold">Teléfono:</span>
+                    <span className="font-semibold tabular-nums">{order.deliveryPhone}</span>
                   </div>
                 )}
                 {order.confirmationCode &&
                   (order.mode === 'takeaway' || order.mode === 'delivery') && (
                     <div className="flex justify-between gap-2">
-                      <span className="text-[#7A5A3A] font-bold">
+                      <span className="text-[var(--ink-muted)] font-semibold">
                         Código entrega:
                       </span>
-                      <span className="font-mono font-extrabold tracking-wider text-[#B84A27] tabular-nums">
+                      <span className="font-mono font-bold tracking-wider text-[var(--accent-primary)] tabular-nums">
                         {order.confirmationCode}
                       </span>
                     </div>
                   )}
                 <div className="flex justify-between gap-2">
-                  <span className="text-[#7A5A3A] font-bold">Estado:</span>
-                  <span className="font-extrabold">
+                  <span className="text-[var(--ink-muted)] font-semibold">Estado:</span>
+                  <span className="font-bold">
                     {order.paid
                       ? `PAGADO (${order.paymentMethod || 'Confirmado'})`
                       : 'PENDIENTE DE COBRO'}
@@ -252,8 +252,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
               </div>
 
               {/* Line Items */}
-              <div className="space-y-1.5 border-b border-dashed border-[#7A5A3A]/50 pb-2.5">
-                <div className="flex justify-between text-[10px] font-extrabold uppercase text-[#7A5A3A]">
+              <div className="space-y-1.5 border-b border-dashed border-[var(--ink-muted)]/50 pb-2.5">
+                <div className="flex justify-between text-[11px] font-bold text-[var(--ink-muted)]">
                   <span>Cant. / Platillo</span>
                   <span>Subtotal</span>
                 </div>
@@ -262,14 +262,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                     <div className="flex justify-between items-start gap-2 font-bold">
                       <span className="leading-snug">
                         {item.quantity}x {item.name}{' '}
-                        <span className="text-[#7A5A3A]">({item.sizeLabel})</span>
+                        <span className="text-[var(--ink-muted)]">({item.sizeLabel})</span>
                       </span>
-                      <span className="font-extrabold tabular-nums shrink-0">
+                      <span className="font-bold tabular-nums shrink-0">
                         {formatBs(item.price * item.quantity)}
                       </span>
                     </div>
                     {item.extrasSummary && (
-                      <p className="text-[10px] text-[#7A5A3A] pl-3 leading-snug">
+                      <p className="text-[11px] text-[var(--ink-muted)] pl-3 leading-snug">
                         {item.extrasSummary}
                       </p>
                     )}
@@ -278,43 +278,43 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
               </div>
 
               {order.notes && (
-                <div className="text-[10px] bg-[#FDF2D6]/60 rounded-lg px-2.5 py-1.5 border border-[#D9A441]/30">
-                  <span className="font-extrabold text-[#3B1F0E]">Notas: </span>
-                  <span className="text-[#2B1A0E]">{order.notes}</span>
+                <div className="text-[11px] bg-[var(--bg-inset)] rounded-lg px-2.5 py-1.5 border border-[var(--border-subtle)]">
+                  <span className="font-bold text-[var(--ink-primary)]">Notas: </span>
+                  <span className="text-[var(--ink-primary)]">{order.notes}</span>
                 </div>
               )}
 
               {/* Totals */}
               <div className="space-y-1 pt-0.5">
-                <div className="flex justify-between items-center text-sm font-extrabold text-[#3B1F0E]">
-                  <span>TOTAL</span>
-                  <span className="text-base text-[#B84A27] tabular-nums">
+                <div className="flex justify-between items-center text-sm font-bold text-[var(--ink-primary)]">
+                  <span>Total</span>
+                  <span className="text-base text-[var(--accent-primary)] tabular-nums">
                     {formatBs(order.total)}
                   </span>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="text-center pt-2 border-t border-dashed border-[#7A5A3A]/50 space-y-0.5 text-[10px] text-[#7A5A3A]">
-                <p className="font-extrabold text-[#3B1F0E]">
+              <div className="text-center pt-2 border-t border-dashed border-[var(--ink-muted)]/50 space-y-0.5 text-[11px] text-[var(--ink-muted)]">
+                <p className="font-bold text-[var(--ink-primary)]">
                   ¡Gracias por su preferencia!
                 </p>
-                <p>Auténtica comida tradicional • Hecho como en casa</p>
+                <p>Auténtica comida tradicional · Hecho como en casa</p>
               </div>
             </div>
           </div>
 
           {/* WhatsApp Recipient Box (hidden on print) */}
-          <div className="no-print rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/70 p-3.5 space-y-2.5">
+          <div className="no-print rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <label
                 htmlFor="wa-ticket-phone"
-                className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5"
+                className="text-xs font-bold text-[var(--ink-primary)] inline-flex items-center gap-1.5"
               >
-                <MessageCircle className="w-4 h-4 text-[#2E6F32]" />
+                <MessageCircle className="w-4 h-4 text-[var(--status-ok)]" />
                 <span>Enviar ticket por WhatsApp</span>
               </label>
-              <span className="text-[10px] font-bold text-[#7A5A3A]">
+              <span className="text-[11px] font-semibold text-[var(--ink-muted)]">
                 Bolivia (+591) automático
               </span>
             </div>
@@ -326,14 +326,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
                 value={whatsappPhone}
                 onChange={(e) => setWhatsappPhone(e.target.value)}
                 placeholder="Ej. 71234567 (o deja vacío para elegir contacto)"
-                className="flex-1 h-10 px-3 rounded-xl bg-[#FFFDF8] border border-[#D9A441] text-xs font-bold text-[#2B1A0E] placeholder:text-[#7A5A3A]/60 tabular-nums focus:outline-none focus:ring-2 focus:ring-[#2E6F32]"
+                className="flex-1 h-10 px-3 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]/60 tabular-nums focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--status-ok)]"
               />
 
               <a
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-[#2E6F32] text-[#FFF8E8] font-extrabold text-xs inline-flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.98] transition-all shrink-0"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs inline-flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>Abrir WhatsApp</span>
@@ -343,24 +343,24 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
         </div>
 
         {/* Footer Actions (hidden on print) */}
-        <div className="no-print p-3.5 bg-[#FFF8E8] border-t border-[#D9A441]/40 grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
+        <div className="no-print p-3.5 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
           <button
             type="button"
             onClick={handlePrint}
-            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#4A2C1A] cursor-pointer"
+            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           >
-            <Printer className="w-4 h-4 text-[#D9A441]" />
-            <span>Imprimir Ticket</span>
+            <Printer className="w-4 h-4 text-[var(--accent-gold)]" />
+            <span>Imprimir ticket</span>
           </button>
 
           <button
             type="button"
             onClick={handleCopyText}
-            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 text-[#2E6F32]" />
+                <Check className="w-4 h-4 text-[var(--status-ok)]" />
                 <span>¡Texto copiado!</span>
               </>
             ) : (
@@ -374,7 +374,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({ order, onClose }) => {
           <button
             type="button"
             onClick={handleDownloadTxt}
-            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-[#FDF2D6] border border-[#3B1F0E] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A]/30 cursor-pointer"
+            className="min-h-[44px] px-4 py-2.5 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--ink-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           >
             <Download className="w-4 h-4" />
             <span>Descargar .TXT</span>

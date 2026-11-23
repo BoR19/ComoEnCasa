@@ -145,19 +145,19 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   return (
     <aside
       aria-label="Barra lateral de navegación"
-      className="hidden lg:flex w-[86px] shrink-0 flex-col items-center justify-between bg-[#3B1F0E] text-[#FFF8E8] py-3.5 px-2 border-r border-[#D9A441]/25 select-none"
+      className="hidden md:flex w-[76px] lg:w-[86px] shrink-0 flex-col items-center justify-between bg-[var(--ink-primary)] text-[var(--bg-canvas)] py-3.5 px-1.5 lg:px-2 border-r border-[var(--accent-gold)]/20 select-none"
     >
       {/* Top Brand Mark */}
       <button
         type="button"
         onClick={() => onNavigate('welcome')}
         title="Inicio · Como en Casa"
-        className="w-full flex flex-col items-center gap-1.5 group cursor-pointer rounded-xl py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441]"
+        className="w-full flex flex-col items-center gap-1.5 group cursor-pointer rounded-xl py-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
       >
-        <div className="rounded-2xl ring-2 ring-[#D9A441]/45 group-hover:ring-[#D9A441] transition-all">
+        <div className="rounded-2xl ring-2 ring-[var(--accent-gold)]/45 group-hover:ring-[var(--accent-gold)] transition-shadow duration-150 ease-[var(--ease-out)]">
           <AppIcon size="md" />
         </div>
-        <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#D9A441] text-center leading-tight">
+        <span className="text-[10px] font-semibold text-[var(--accent-gold)] text-center leading-tight">
           Como en Casa
         </span>
       </button>
@@ -178,35 +178,35 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               title={item.title}
               aria-current={active ? 'page' : undefined}
               onClick={() => onNavigate(item.id)}
-              className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
+              className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                 active
-                  ? 'bg-[#E64833] text-[#FFF8E8] shadow-xs'
-                  : 'text-[#E8C87A]/80 hover:bg-[#4A2C1A] hover:text-[#FFF8E8]'
+                  ? 'bg-[var(--accent-primary)] text-[var(--bg-surface)] shadow-xs'
+                  : 'text-[var(--bg-canvas)]/80 hover:bg-white/10 hover:text-[var(--bg-surface)]'
               }`}
             >
               {active && (
                 <span
                   aria-hidden="true"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#D9A441]"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[var(--accent-gold)]"
                 />
               )}
 
               <span className="relative inline-flex items-center justify-center">
                 <Icon
-                  className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                    active ? 'text-[#FFF8E8]' : 'text-[#D9A441]'
+                  className={`w-[18px] h-[18px] shrink-0 transition-colors duration-150 ${
+                    active ? 'text-[var(--bg-surface)]' : 'text-[var(--accent-gold)]'
                   }`}
                   strokeWidth={active ? 2.4 : 2}
                 />
 
                 {item.badge !== undefined && (
                   <span
-                    className={`absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none border ${
+                    className={`absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center tabular-nums leading-none border ${
                       item.accentBadge
-                        ? 'bg-[#D9A441] text-[#2B1A0E] border-[#3B1F0E]'
+                        ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)] border-[var(--ink-primary)]'
                         : active
-                        ? 'bg-[#3B1F0E] text-[#FFF8E8] border-[#FFF8E8]/25'
-                        : 'bg-[#4A2C1A] text-[#E8C87A] border-[#D9A441]/35'
+                        ? 'bg-[var(--ink-primary)] text-[var(--bg-surface)] border-white/25'
+                        : 'bg-white/10 text-[var(--bg-canvas)] border-[var(--accent-gold)]/35'
                     }`}
                   >
                     {item.badge}
@@ -216,7 +216,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                 {item.badge === undefined && item.showVerifiedDot && (
                   <span
                     aria-hidden="true"
-                    className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[#2E9E5B] ring-2 ring-[#3B1F0E]"
+                    className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[var(--status-ok-bright)] ring-2 ring-[var(--ink-primary)]"
                   />
                 )}
 
@@ -225,12 +225,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                   item.accentBadge && (
                     <span
                       aria-hidden="true"
-                      className="absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full bg-[#D9A441] ring-2 ring-[#3B1F0E]"
+                      className="absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full bg-[var(--accent-gold)] ring-2 ring-[var(--ink-primary)]"
                     />
                   )}
               </span>
 
-              <span className="text-[10px] font-bold leading-none whitespace-nowrap">
+              <span className="text-[10px] font-semibold leading-none whitespace-nowrap">
                 {item.label}
               </span>
             </button>
@@ -239,7 +239,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       </nav>
 
       {/* Bottom Role Switcher (Separated from Primary Nav) */}
-      <div className="w-full pt-2.5 border-t border-[#D9A441]/20 flex flex-col items-center gap-1.5 shrink-0">
+      <div className="w-full pt-2.5 border-t border-[var(--accent-gold)]/20 flex flex-col items-center gap-1.5 shrink-0">
         {isMozoAuthenticated && (
           <button
             type="button"
@@ -249,18 +249,20 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                 ? 'Modo Mozo activo · Ir a Comandas'
                 : 'Cambiar a modo Mozo'
             }
-            className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
+            className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
               userRole === 'mozo'
-                ? 'bg-[#2E6F32] border-[#5AC761]/55 text-[#FFF8E8] shadow-xs'
-                : 'bg-[#4A2C1A] border-[#D9A441]/25 text-[#FFF8E8]/85 hover:border-[#5AC761]/60 hover:text-[#FFF8E8]'
+                ? 'bg-[var(--status-ok)] border-[var(--status-ok-bright)]/55 text-[var(--bg-surface)] shadow-xs'
+                : 'bg-white/10 border-[var(--accent-gold)]/25 text-[var(--bg-canvas)]/90 hover:border-[var(--status-ok-bright)]/60 hover:text-[var(--bg-surface)]'
             }`}
           >
             <ChefHat
               className={`w-4 h-4 shrink-0 ${
-                userRole === 'mozo' ? 'text-[#FFF8E8]' : 'text-[#5AC761]'
+                userRole === 'mozo'
+                  ? 'text-[var(--bg-surface)]'
+                  : 'text-[var(--status-ok-bright)]'
               }`}
             />
-            <span className="text-[10px] font-extrabold leading-none whitespace-nowrap">
+            <span className="text-[10px] font-bold leading-none whitespace-nowrap">
               Mozo
             </span>
           </button>
@@ -277,29 +279,27 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               : 'Acceso Administrador'
           }
           aria-current={isAdminRoute ? 'page' : undefined}
-          className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441] ${
+          className={`relative w-full py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
             isAdminRoute || userRole === 'admin'
-              ? 'bg-[#D9A441] border-[#D9A441] text-[#2B1A0E]'
-              : 'bg-[#4A2C1A] border-[#D9A441]/30 text-[#FFF8E8] hover:border-[#D9A441]/70'
+              ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-[var(--ink-primary)]'
+              : 'bg-white/10 border-[var(--accent-gold)]/30 text-[var(--bg-canvas)] hover:border-[var(--accent-gold)]/70'
           }`}
         >
           <span className="relative inline-flex items-center justify-center">
             <ShieldCheck
               className={`w-4 h-4 shrink-0 ${
                 isAdminRoute || userRole === 'admin'
-                  ? 'text-[#2B1A0E]'
-                  : 'text-[#D9A441]'
+                  ? 'text-[var(--ink-primary)]'
+                  : 'text-[var(--accent-gold)]'
               }`}
             />
             {isAdminAuthenticated && activeOrdersCount > 0 && (
-              <span className="absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-[#E64833] text-[#FFF8E8] text-[9px] font-extrabold flex items-center justify-center tabular-nums leading-none border border-[#3B1F0E]">
+              <span className="absolute -top-1.5 -right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--ops-accent)] text-[var(--bg-surface)] text-[9px] font-bold flex items-center justify-center tabular-nums leading-none border border-[var(--ink-primary)]">
                 {activeOrdersCount}
               </span>
             )}
           </span>
-          <span className="text-[10px] font-extrabold leading-none">
-            Admin
-          </span>
+          <span className="text-[10px] font-bold leading-none">Admin</span>
         </button>
       </div>
     </aside>

@@ -84,12 +84,12 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
     return (
       <div
         key={item.id}
-        className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-3 space-y-2"
+        className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2"
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="font-bold text-sm text-[#2B1A0E]">{item.name}</span>
+          <span className="font-bold text-sm text-[var(--ink-primary)]">{item.name}</span>
           {chosenSizeId && (
-            <span className="text-[11px] font-extrabold text-[#2E6F32] inline-flex items-center gap-1">
+            <span className="text-[11px] font-bold text-[var(--status-ok)] inline-flex items-center gap-1">
               <Check className="w-3.5 h-3.5" /> Seleccionado
             </span>
           )}
@@ -106,10 +106,10 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
                 key={size.id}
                 type="button"
                 onClick={() => toggleItemSize(item.id, size.id)}
-                className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border text-xs font-extrabold transition-colors cursor-pointer tabular-nums ${
+                className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer tabular-nums ${
                   active
-                    ? 'bg-[#B84A27] border-[#B84A27] text-[#FFF8E8]'
-                    : 'bg-[#FFFDF8] border-[#D9A441]/50 text-[#3B1F0E] hover:border-[#B84A27]'
+                    ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--bg-canvas)]'
+                    : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)]'
                 }`}
               >
                 {size.label} Bs {size.price}
@@ -122,7 +122,7 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader title="Personaliza tu platillo" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto phone-scroll">
@@ -132,8 +132,8 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
             <div className="space-y-5 lg:col-span-5">
               {/* Base */}
               <section>
-                <h2 className="font-serif-display text-base font-bold text-[#3B1F0E] mb-2">
-                  1. Elige tu Base
+                <h2 className="font-serif-display text-base font-bold text-[var(--ink-primary)] mb-2">
+                  1. Elige tu base
                 </h2>
                 <div className="grid grid-cols-2 gap-2">
                   {CUSTOMIZE_BASES.map((base) => {
@@ -143,10 +143,10 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
                         key={base}
                         type="button"
                         onClick={() => setSelectedBase(base)}
-                        className={`min-h-[42px] px-3 rounded-2xl border text-xs font-extrabold transition-colors cursor-pointer ${
+                        className={`min-h-[42px] px-3 rounded-2xl border text-xs font-bold transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer ${
                           active
-                            ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                            : 'bg-[#FDF2D6] border-[#D9A441]/60 text-[#2B1A0E]'
+                            ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--bg-canvas)]'
+                            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)]'
                         }`}
                       >
                         {base}
@@ -158,7 +158,7 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
 
               {/* Toppings */}
               <section>
-                <h2 className="font-serif-display text-base font-bold text-[#3B1F0E] mb-2">
+                <h2 className="font-serif-display text-base font-bold text-[var(--ink-primary)] mb-2">
                   2. Toppings
                 </h2>
                 <div className="grid grid-cols-2 gap-2">
@@ -169,10 +169,10 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
                         key={topping}
                         type="button"
                         onClick={() => toggleTopping(topping)}
-                        className={`min-h-[42px] px-3 rounded-2xl border text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                        className={`min-h-[42px] px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer ${
                           active
-                            ? 'bg-[#D9A441] border-[#D9A441] text-[#2B1A0E]'
-                            : 'bg-[#FDF2D6] border-[#D9A441]/60 text-[#2B1A0E]'
+                            ? 'bg-[var(--accent-gold)] border-[var(--accent-gold)] text-[var(--ink-primary)]'
+                            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)]'
                         }`}
                       >
                         {active && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
@@ -185,7 +185,7 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
 
               {/* Acompañamiento */}
               <section>
-                <h2 className="font-serif-display text-base font-bold text-[#3B1F0E] mb-2">
+                <h2 className="font-serif-display text-base font-bold text-[var(--ink-primary)] mb-2">
                   3. Acompañamiento
                 </h2>
                 <div className="grid grid-cols-2 gap-2">
@@ -196,10 +196,10 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
                         key={side}
                         type="button"
                         onClick={() => setSelectedSide(side)}
-                        className={`min-h-[42px] px-3 rounded-2xl border text-xs font-extrabold transition-colors cursor-pointer ${
+                        className={`min-h-[42px] px-3 rounded-2xl border text-xs font-bold transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer ${
                           active
-                            ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                            : 'bg-[#FDF2D6] border-[#D9A441]/60 text-[#2B1A0E]'
+                            ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--bg-canvas)]'
+                            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)]'
                         }`}
                       >
                         {side}
@@ -213,9 +213,9 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
               <button
                 type="button"
                 onClick={handleSave}
-                className="hidden lg:flex w-full min-h-[52px] px-5 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm items-center justify-center shadow-sm hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer tabular-nums"
+                className="hidden lg:flex w-full min-h-[52px] px-5 py-3 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-sm items-center justify-center hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
               >
-                Guardar • Continuar ({formatBs(livePrice)})
+                Guardar · Continuar ({formatBs(livePrice)})
               </button>
             </div>
 
@@ -223,10 +223,10 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
             <div className="space-y-5 lg:col-span-7">
               <section>
                 <div className="flex items-baseline justify-between mb-2">
-                  <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+                  <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                     Guisos
                   </h2>
-                  <span className="text-[11px] font-bold text-[#B84A27]">
+                  <span className="text-[11px] font-bold text-[var(--accent-primary)]">
                     Chanfaina Entero Bs 10
                   </span>
                 </div>
@@ -236,7 +236,7 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
               </section>
 
               <section>
-                <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E] mb-2">
+                <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)] mb-2">
                   Sopas
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -245,7 +245,7 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
               </section>
 
               <section>
-                <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E] mb-2">
+                <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)] mb-2">
                   Jugos
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -258,13 +258,13 @@ export const CustomizeDishScreen: React.FC<CustomizeDishScreenProps> = ({
       </div>
 
       {/* Bottom Save Button (Mobile) */}
-      <div className="lg:hidden p-3.5 bg-[#FFF8E8] border-t border-[#D9A441]/40 shrink-0">
+      <div className="lg:hidden p-3.5 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] shrink-0">
         <button
           type="button"
           onClick={handleSave}
-          className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center shadow-sm hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer tabular-nums"
+          className="w-full min-h-[50px] px-5 py-3 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
         >
-          Guardar • Continuar ({formatBs(livePrice)})
+          Guardar · Continuar ({formatBs(livePrice)})
         </button>
       </div>
     </div>

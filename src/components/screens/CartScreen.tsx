@@ -143,9 +143,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader
-        title={userRole === 'mozo' ? 'Comandas · Mozo' : 'Comandas'}
+        title={userRole === 'mozo' ? 'Comandas — Mozo' : 'Comandas'}
         onBack={onBack}
         rightSlot={
           <div className="flex items-center gap-1">
@@ -155,7 +155,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 onClick={() => setOpenNewOrderSignal((n) => n + 1)}
                 aria-label="Nueva comanda"
                 title="Nueva Comanda"
-                className="min-h-[38px] px-2.5 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-[11px] font-extrabold inline-flex items-center gap-1 hover:bg-[#E8C87A] cursor-pointer"
+                className="min-h-[38px] px-2.5 rounded-xl bg-[var(--accent-gold)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                 <span className="hidden sm:inline">Nueva</span>
@@ -166,11 +166,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               onClick={onOpenComandaDrawer}
               aria-label="Abrir Comanda en Vivo"
               title="Comanda en Vivo"
-              className="xl:hidden relative min-w-[40px] min-h-[40px] px-2 flex items-center justify-center rounded-xl bg-[#4A2C1A] text-[#D9A441] hover:bg-[#4A2C1A]/80 cursor-pointer"
+              className="xl:hidden relative min-w-[40px] min-h-[40px] px-2 flex items-center justify-center rounded-xl bg-white/10 text-[var(--accent-gold)] hover:bg-white/15 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
             >
               <ShoppingBag className="w-4 h-4" />
               {cartCount > 0 && (
-                <span className="ml-1 text-[10px] font-extrabold text-[#FFF8E8] tabular-nums">
+                <span className="ml-1 text-[10px] font-bold text-[var(--bg-surface)] tabular-nums">
                   {cartCount}
                 </span>
               )}
@@ -181,7 +181,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 onClick={onMozoLogout}
                 aria-label="Cerrar sesión de mozo"
                 title="Cerrar sesión Mozo"
-                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] cursor-pointer"
+                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-[var(--accent-gold)] hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -191,17 +191,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       />
 
       <div className="flex-1 overflow-y-auto phone-scroll">
-        <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-8 space-y-5">
-          {/* Mozo Google Sync Status (compact, non-duplicated) */}
+        <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-24 xl:pb-8 space-y-5">
+          {/* Mozo Google Sync Status */}
           {userRole === 'mozo' && (!firebaseUser || !isStaff) && (
-            <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441]/60 p-3 flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
+            <div className="rounded-2xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--accent-gold)]/50 p-3.5 flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-extrabold text-[#D9A441]">
+                <p className="text-xs font-bold text-[var(--accent-gold)]">
                   {firebaseUser
                     ? `Cuenta (${firebaseUser.email}) sin permiso de personal`
                     : 'Conecta una cuenta Google autorizada para sincronizar en vivo'}
                 </p>
-                <p className="text-[11px] text-[#FFF8E8]/80 truncate">
+                <p className="text-xs text-white/75 truncate">
                   {firebaseUser
                     ? 'Pide al Administrador autorizar este correo en Panel Admin.'
                     : 'Sincroniza mesas y pedidos con Cocina en tiempo real.'}
@@ -210,7 +210,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               <button
                 type="button"
                 onClick={onGoogleSignIn}
-                className="px-3 py-1.5 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0"
+                className="px-3 py-1.5 rounded-xl bg-[var(--accent-gold)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>{firebaseUser ? 'Cambiar cuenta' : 'Conectar Google'}</span>
@@ -218,24 +218,24 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             </div>
           )}
 
-          {/* Active Draft Comanda Card (only when user has items queued to send) */}
+          {/* Active Draft Comanda Card */}
           {cart.length > 0 && (
             <section
               aria-label="Borrador de comanda listo para enviar"
-              className="rounded-3xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#D9A441]/45 p-4 sm:p-5 shadow-md space-y-3.5"
+              className="rounded-3xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--accent-gold)]/45 p-4 sm:p-5 shadow-md space-y-3.5"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="font-mono font-bold text-[#D9A441] tracking-wide">
-                  BORRADOR · {cartCount} {cartCount === 1 ? 'ÍTEM' : 'ÍTEMS'}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <span className="font-mono font-bold text-[var(--accent-gold)] shrink-0">
+                  Borrador — {cartCount} {cartCount === 1 ? 'ítem' : 'ítems'}
                 </span>
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="w-full sm:w-auto max-w-full min-w-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   <button
                     type="button"
                     onClick={() => onChangeOrderMode('dine-in')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold inline-flex items-center gap-1 cursor-pointer ${
+                    className={`min-h-[36px] px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                       orderMode === 'dine-in'
-                        ? 'bg-[#D9A441] text-[#2B1A0E]'
-                        : 'bg-[#2A2A2A] text-[#FFF8E8]/80'
+                        ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                        : 'bg-[var(--ops-elevated)] text-white/80'
                     }`}
                   >
                     <UtensilsCrossed className="w-3 h-3" />
@@ -244,10 +244,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => onChangeOrderMode('takeaway')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold inline-flex items-center gap-1 cursor-pointer ${
+                    className={`min-h-[36px] px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                       orderMode === 'takeaway'
-                        ? 'bg-[#D9A441] text-[#2B1A0E]'
-                        : 'bg-[#2A2A2A] text-[#FFF8E8]/80'
+                        ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                        : 'bg-[var(--ops-elevated)] text-white/80'
                     }`}
                   >
                     <ShoppingBag className="w-3 h-3" />
@@ -256,10 +256,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => onChangeOrderMode('delivery')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold inline-flex items-center gap-1 cursor-pointer ${
+                    className={`min-h-[36px] px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                       orderMode === 'delivery'
-                        ? 'bg-[#D9A441] text-[#2B1A0E]'
-                        : 'bg-[#2A2A2A] text-[#FFF8E8]/80'
+                        ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                        : 'bg-[var(--ops-elevated)] text-white/80'
                     }`}
                   >
                     <Bike className="w-3 h-3" />
@@ -269,7 +269,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={onEditTable}
-                      className="px-2.5 py-1 rounded-lg bg-[#2A2A2A] text-[#E8C87A] text-[11px] font-bold inline-flex items-center gap-1 hover:bg-[#353535] cursor-pointer"
+                      className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[var(--ops-elevated)] text-[var(--accent-gold)] text-xs font-bold inline-flex items-center gap-1 shrink-0 whitespace-nowrap hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                     >
                       <Pencil className="w-3 h-3" />
                       <span>Cambiar</span>
@@ -279,16 +279,16 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               </div>
 
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-serif-display text-xl font-bold text-[#FFF8E8]">
+                <h2 className="font-serif-display text-xl font-bold text-[var(--bg-surface)]">
                   {orderMode === 'dine-in'
-                    ? `Nueva Comanda · Mesa ${selectedTable}`
+                    ? `Nueva comanda — Mesa ${selectedTable}`
                     : orderMode === 'takeaway'
                     ? linkedTakeawayOrder
-                      ? `Sumar a Para Llevar · ${getTakeawayCustomerName(linkedTakeawayOrder)}`
-                      : 'Nueva Comanda · Para Llevar'
-                    : 'Nueva Comanda · Delivery'}
+                      ? `Sumar a Para Llevar — ${getTakeawayCustomerName(linkedTakeawayOrder)}`
+                      : 'Nueva comanda — Para Llevar'
+                    : 'Nueva comanda — Delivery'}
                 </h2>
-                <span className="text-lg font-extrabold text-[#D9A441] tabular-nums shrink-0">
+                <span className="text-lg font-bold text-[var(--accent-gold)] tabular-nums shrink-0">
                   Bs. {subtotal.toFixed(2)}
                 </span>
               </div>
@@ -296,7 +296,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               {orderMode === 'takeaway' && !linkedTakeawayOrder && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#E8C87A]/80 mb-1">
+                    <label className="block text-xs font-semibold text-[var(--accent-gold)]/90 mb-1">
                       Nombre del cliente *
                     </label>
                     <input
@@ -310,16 +310,16 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         });
                       }}
                       placeholder="Ej. Carlos"
-                      className={`w-full h-9 px-3 rounded-xl bg-[#141414] border text-xs font-semibold text-[#FFF8E8] placeholder:text-[#FFF8E8]/35 focus:outline-none focus:border-[#E64833] ${
+                      className={`w-full h-9 px-3 rounded-xl bg-[var(--ops-canvas)] border text-xs font-semibold text-[var(--bg-surface)] placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)] ${
                         takeawayNameError && !takeawayInfo.customerName.trim()
-                          ? 'border-[#E64833]'
-                          : 'border-[#2E2E2E]'
+                          ? 'border-[var(--ops-accent)]'
+                          : 'border-[var(--ops-border)]'
                       }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#E8C87A]/80 mb-1">
-                      Teléfono / Hora de retiro (opcional)
+                    <label className="block text-xs font-semibold text-[var(--accent-gold)]/90 mb-1">
+                      Teléfono o hora de retiro (opcional)
                     </label>
                     <input
                       type="text"
@@ -331,13 +331,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         })
                       }
                       placeholder="Ej. Retira en 15 min · 724..."
-                      className="w-full h-9 px-3 rounded-xl bg-[#141414] border border-[#2E2E2E] text-xs font-semibold text-[#FFF8E8] placeholder:text-[#FFF8E8]/35 focus:outline-none focus:border-[#E64833]"
+                      className="w-full h-9 px-3 rounded-xl bg-[var(--ops-canvas)] border border-[var(--ops-border)] text-xs font-semibold text-[var(--bg-surface)] placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)]"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="border-t border-[#2E2E2E] pt-3 space-y-2.5">
+              <div className="border-t border-[var(--ops-border)] pt-3 space-y-2.5">
                 {cart.map((item) => {
                   const sourceMenu = menuItems.find(
                     (m) => m.id === item.menuItemId
@@ -349,14 +349,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       className="flex flex-wrap items-center justify-between gap-2"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-[13px] font-bold text-[#FFF8E8] uppercase tracking-wide">
+                        <p className="text-xs sm:text-[13px] font-bold text-[var(--bg-surface)] min-w-0 [overflow-wrap:break-word]">
                           {item.quantity}x {item.name}{' '}
-                          <span className="text-[#E8C87A]/80 font-semibold normal-case">
+                          <span className="text-[var(--accent-gold)]/85 font-semibold">
                             ({item.sizeLabel})
                           </span>
                         </p>
                         {item.extras.length > 0 && (
-                          <p className="text-[11px] text-[#E8C87A]/75">
+                          <p className="text-xs text-[var(--accent-gold)]/80">
                             Extras: {item.extras.map((e) => e.label).join(', ')}
                           </p>
                         )}
@@ -371,10 +371,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                                   onClick={() =>
                                     onChangeItemSize(item.cartItemId, sz.id)
                                   }
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold cursor-pointer tabular-nums ${
+                                  className={`px-2 py-0.5 rounded-md text-[11px] font-bold active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums ${
                                     active
-                                      ? 'bg-[#D9A441] text-[#2B1A0E]'
-                                      : 'bg-[#2A2A2A] text-[#FFF8E8]/80'
+                                      ? 'bg-[var(--accent-gold)] text-[var(--ink-primary)]'
+                                      : 'bg-[var(--ops-elevated)] text-white/80'
                                   }`}
                                 >
                                   {sz.label} Bs {sz.price}
@@ -386,31 +386,31 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <div className="inline-flex items-center gap-1 rounded-lg bg-[#2A2A2A] p-0.5">
+                        <div className="inline-flex items-center gap-1 rounded-lg bg-[var(--ops-elevated)] p-0.5">
                           <button
                             type="button"
                             onClick={() =>
                               onUpdateQuantity(item.cartItemId, -1)
                             }
                             aria-label={`Disminuir ${item.name}`}
-                            className="w-6 h-6 rounded flex items-center justify-center text-[#FFF8E8] hover:bg-[#141414] cursor-pointer"
+                            className="w-6 h-6 rounded flex items-center justify-center text-[var(--bg-surface)] hover:bg-[var(--ops-canvas)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
-                          <span className="w-5 text-center text-xs font-extrabold tabular-nums">
+                          <span className="w-5 text-center text-xs font-bold tabular-nums">
                             {item.quantity}
                           </span>
                           <button
                             type="button"
                             onClick={() => onUpdateQuantity(item.cartItemId, 1)}
                             aria-label={`Aumentar ${item.name}`}
-                            className="w-6 h-6 rounded flex items-center justify-center bg-[#D9A441] text-[#2B1A0E] cursor-pointer"
+                            className="w-6 h-6 rounded flex items-center justify-center bg-[var(--accent-gold)] text-[var(--ink-primary)] active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
 
-                        <span className="text-xs sm:text-[13px] font-bold text-[#FFF8E8] tabular-nums w-18 text-right">
+                        <span className="text-xs sm:text-[13px] font-bold text-[var(--bg-surface)] tabular-nums w-18 text-right">
                           Bs. {lineTotal.toFixed(2)}
                         </span>
 
@@ -418,7 +418,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           type="button"
                           onClick={() => onRemoveItem(item.cartItemId)}
                           aria-label={`Eliminar ${item.name}`}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#E8C87A]/70 hover:text-[#FFF8E8] hover:bg-[#B83227]/40 cursor-pointer"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--accent-gold)]/70 hover:text-[var(--bg-surface)] hover:bg-[var(--ops-accent)]/35 active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -428,11 +428,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 })}
               </div>
 
-              <div className="border-t border-[#2E2E2E] pt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="border-t border-[var(--ops-border)] pt-3 flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={onClearCart}
-                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#2A2A2A] text-[#FFF8E8]/85 text-xs font-bold hover:text-[#FFF8E8] cursor-pointer"
+                  className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--ops-elevated)] text-white/85 text-xs font-bold hover:text-white active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                 >
                   Vaciar borrador
                 </button>
@@ -440,12 +440,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleProceedClick}
-                  className="flex-1 sm:flex-none min-h-[40px] px-5 py-2 rounded-xl bg-[#2E6F32] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center justify-center gap-2 hover:brightness-110 cursor-pointer tabular-nums"
+                  className="flex-1 sm:flex-none min-h-[44px] px-5 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>
                     {orderMode === 'dine-in'
-                      ? `Enviar a Cocina · Mesa ${selectedTable} (${formatBs(subtotal)})`
+                      ? `Enviar a cocina — Mesa ${selectedTable} (${formatBs(subtotal)})`
                       : orderMode === 'takeaway'
                       ? linkedTakeawayOrder
                         ? `Sumar a ${linkedTakeawayOrder.code} (${formatBs(subtotal)})`

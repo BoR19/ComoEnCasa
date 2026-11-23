@@ -4,6 +4,7 @@ import {
   BarChart3,
   BellRing,
   ChefHat,
+  ChevronLeft,
   Clock,
   Download,
   KeyRound,
@@ -88,40 +89,41 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
   const displayedError = errorMsg || authError;
 
   return (
-    <div className="flex-1 flex flex-col bg-[#3B1F0E] text-[#FFF8E8] min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--ops-canvas)] text-[var(--bg-canvas)] min-h-0">
       <div className="px-3 pt-3 flex items-center justify-between">
         <button
           type="button"
           onClick={onBack}
-          className="text-xs font-bold text-[#E8C87A] hover:underline px-2 py-1.5 cursor-pointer"
+          className="text-xs font-bold text-[var(--accent-gold)] hover:underline px-2 py-1.5 inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
         >
-          ← Volver a la app
+          <ChevronLeft className="w-4 h-4" />
+          <span>Volver a la app</span>
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto phone-scroll px-5 sm:px-6 py-4 flex flex-col">
-        <div className="my-auto max-w-md w-full mx-auto lg:rounded-3xl lg:border lg:border-[#D9A441]/30 lg:bg-[#4A2C1A]/45 lg:p-8">
+        <div className="my-auto max-w-md w-full mx-auto lg:rounded-3xl lg:border lg:border-[var(--ops-border)] lg:bg-[var(--ops-surface)] lg:p-8">
           <div className="flex flex-col items-center">
             <OfficialLogo size="sm" />
-            <h1 className="font-serif-display text-2xl font-bold text-[#FFF8E8] mt-3 text-center">
+            <h1 className="font-serif-display text-2xl font-bold text-[var(--bg-canvas)] mt-3 text-center">
               Acceso Administrador
             </h1>
-            <p className="text-xs text-[#E8C87A]/85 text-center mt-1">
+            <p className="text-xs text-[var(--bg-canvas)]/75 text-center mt-1">
               Inicia sesión con tu cuenta Google de administración para sincronizar pedidos, menú y mesas en tiempo real.
             </p>
           </div>
 
           <div className="space-y-3.5 my-6">
             {firebaseUser && (
-              <div className="rounded-2xl bg-[#3B1F0E]/80 border border-[#D9A441]/40 p-3.5 text-center space-y-1">
-                <p className="text-[11px] font-bold text-[#E8C87A]">
+              <div className="rounded-2xl bg-[var(--ops-elevated)] border border-[var(--ops-border)] p-3.5 text-center space-y-1">
+                <p className="text-[11px] font-bold text-[var(--accent-gold)]">
                   Cuenta actual conectada
                 </p>
-                <p className="text-sm font-extrabold text-[#FFF8E8] truncate">
+                <p className="text-sm font-bold text-[var(--bg-canvas)] truncate">
                   {firebaseUser.email}
                 </p>
                 {!isAdmin && !authLoading && (
-                  <p className="text-xs font-bold text-[#E8C87A] pt-1">
+                  <p className="text-xs font-bold text-[var(--ops-accent)] pt-1">
                     Esta cuenta no tiene permisos de Administrador.
                   </p>
                 )}
@@ -129,7 +131,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
             )}
 
             {displayedError && (
-              <p className="text-xs font-bold text-[#E8C87A] bg-[#4A2C1A] px-3 py-2 rounded-xl border border-[#D9A441]/40">
+              <p className="text-xs font-bold text-[var(--accent-gold)] bg-[var(--ops-elevated)] px-3 py-2 rounded-xl border border-[var(--ops-border)]">
                 {displayedError}
               </p>
             )}
@@ -138,7 +140,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
               <button
                 type="button"
                 onClick={onEnterAdminPanel}
-                className="w-full min-h-[50px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[50px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShieldCheck className="w-5 h-5" />
                 <span>Entrar al Panel Administrador</span>
@@ -148,7 +150,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                 type="button"
                 disabled={authLoading}
                 onClick={handleGoogleAccess}
-                className="w-full min-h-[50px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="w-full min-h-[50px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
                 <span>
@@ -165,7 +167,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
               <button
                 type="button"
                 onClick={() => void onGoogleSignOut()}
-                className="w-full min-h-[42px] rounded-2xl border border-[#D9A441]/50 text-[#FFF8E8] font-bold text-xs hover:bg-[#4A2C1A] cursor-pointer"
+                className="w-full min-h-[42px] rounded-2xl border border-[var(--ops-border)] text-[var(--bg-canvas)] font-bold text-xs hover:bg-[var(--ops-elevated)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 Cerrar cuenta Google actual
               </button>
@@ -173,11 +175,11 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
           </div>
 
           <footer className="text-center space-y-1 pt-2">
-            <p className="text-xs font-bold text-[#E8C87A]">
+            <p className="text-xs font-bold text-[var(--accent-gold)]">
               Solo personal autorizado
             </p>
-            <p className="text-[11px] text-[#FFF8E8]/70">
-              Sincronización en vivo • Firebase Firestore
+            <p className="text-[11px] text-[var(--bg-canvas)]/70">
+              Sincronización en vivo · Firebase Firestore
             </p>
           </footer>
         </div>
@@ -535,7 +537,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       : 'Panel Administrador';
 
   return (
-    <div className="relative flex-1 flex flex-col bg-[#FFF8E8] min-h-0">
+    <div className="relative flex-1 flex flex-col bg-[var(--bg-canvas)] min-h-0">
       <MobileHeader
         title={headerTitle}
         onBack={onBack}
@@ -546,11 +548,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               onClick={onOpenComanda}
               aria-label="Abrir Comanda en Vivo"
               title="Comanda en Vivo"
-              className="xl:hidden relative min-w-[40px] min-h-[40px] px-2 flex items-center justify-center rounded-xl bg-[#4A2C1A] text-[#D9A441] hover:bg-[#4A2C1A]/80 cursor-pointer"
+              className="xl:hidden relative min-w-[40px] min-h-[40px] px-2 flex items-center justify-center rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4 text-[var(--accent-primary)]" />
               {cartCount > 0 && (
-                <span className="ml-1 text-[10px] font-extrabold text-[#FFF8E8] tabular-nums">
+                <span className="ml-1 text-[10px] font-bold text-[var(--ink-primary)] tabular-nums">
                   {cartCount}
                 </span>
               )}
@@ -560,7 +562,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               onClick={onLogout}
               aria-label="Cerrar sesión de administrador"
               title="Cerrar sesión"
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#D9A441] hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -569,8 +571,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       />
 
       {/* Admin Sub-Navigation Bar */}
-      <div className="bg-[#4A2C1A] px-2 py-2 shrink-0">
-        <div className="max-w-6xl mx-auto w-full grid grid-cols-4 gap-1 lg:gap-2">
+      <div className="bg-[var(--ops-surface)] border-b border-[var(--ops-border)] px-3 py-2 shrink-0">
+        <div className="max-w-6xl mx-auto w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-4 sm:gap-2">
           {(
             [
               { id: 'dashboard', label: 'Panel', icon: BarChart3 },
@@ -590,14 +592,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => switchTab(tab.id)}
-                className={`min-h-[36px] lg:min-h-[40px] px-1 sm:px-2 py-1 rounded-xl text-[10px] sm:text-xs font-extrabold flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer min-w-0 ${
+                className={`min-h-[42px] px-3.5 sm:px-2 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer min-w-0 ${
                   active
-                    ? 'bg-[#D9A441] text-[#2B1A0E]'
-                    : 'text-[#FFF8E8]/85 hover:bg-[#3B1F0E]'
+                    ? 'bg-[var(--ops-accent)] text-white'
+                    : 'text-[var(--bg-canvas)]/80 hover:bg-[var(--ops-elevated)]'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{tab.label}</span>
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -606,15 +608,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto phone-scroll">
-        <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-6 space-y-4 lg:space-y-5">
+        <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 lg:pt-6 pb-24 xl:pb-8 space-y-4 lg:space-y-5">
           {activeTab === 'dashboard' && (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#2B1A0E] text-center lg:text-left">
+                <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[var(--ink-primary)] text-center lg:text-left">
                   Hola Administrador
                 </h2>
                 {adminEmail && (
-                  <span className="text-xs font-bold text-[#2E6F32]">
+                  <span className="text-xs font-bold text-[var(--status-ok)]">
                     En vivo · {adminEmail}
                   </span>
                 )}
@@ -623,16 +625,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               {waiterRequests.map((req) => (
                 <div
                   key={`waiter-${req.id}`}
-                  className="rounded-2xl bg-[#B84A27] text-[#FFF8E8] p-3 flex items-center justify-between gap-2 shadow-sm"
+                  className="rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] p-3 flex items-center justify-between gap-2"
                 >
-                  <div className="flex items-center gap-2 text-xs font-extrabold">
-                    <BellRing className="w-4 h-4 text-[#D9A441] shrink-0" />
+                  <div className="flex items-center gap-2 text-xs font-bold">
+                    <BellRing className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
                     <span>{req.customerLabel} solicita al mesero</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => onDismissWaiterCall(req.id)}
-                    className="px-2.5 py-1 rounded-xl bg-[#FFF8E8] text-[#2B1A0E] text-[11px] font-extrabold cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded-xl bg-[var(--bg-surface)] text-[var(--ink-primary)] text-[11px] font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                   >
                     Atendido
                   </button>
@@ -641,21 +643,21 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
               {/* KPI Row */}
               <div className="space-y-2.5 lg:grid lg:grid-cols-12 lg:gap-4 lg:space-y-0">
-                <div className="rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] p-4 shadow-sm flex items-center justify-between gap-2 lg:col-span-6">
+                <div className="rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] p-4 flex items-center justify-between gap-2 lg:col-span-6">
                   <div>
-                    <p className="text-xs font-bold text-[#E8C87A]">
+                    <p className="text-xs font-bold text-[var(--accent-gold)]">
                       Ventas cobradas hoy
                     </p>
-                    <p className="text-3xl font-extrabold mt-0.5 tabular-nums">
+                    <p className="text-3xl font-bold mt-0.5 tabular-nums">
                       {formatBs(totalSalesBs)}
                     </p>
                   </div>
                   {pendingSalesBs > 0 && (
                     <div className="text-right">
-                      <p className="text-[11px] font-bold text-[#E8C87A]">
+                      <p className="text-[11px] font-bold text-[var(--accent-gold)]">
                         Por cobrar
                       </p>
-                      <p className="text-base font-extrabold text-[#D9A441] tabular-nums">
+                      <p className="text-base font-bold text-[var(--accent-gold)] tabular-nums">
                         {formatBs(pendingSalesBs)}
                       </p>
                     </div>
@@ -663,19 +665,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5 lg:col-span-6 lg:gap-4">
-                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 lg:p-4 flex flex-col justify-center">
-                    <p className="text-xs font-bold text-[#7A5A3A]">
+                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 lg:p-4 flex flex-col justify-center">
+                    <p className="text-xs font-semibold text-[var(--ink-muted)]">
                       Pedidos hoy
                     </p>
-                    <p className="text-xl lg:text-2xl font-extrabold text-[#2B1A0E] mt-0.5 tabular-nums">
+                    <p className="text-xl lg:text-2xl font-bold text-[var(--ink-primary)] mt-0.5 tabular-nums">
                       {ordersTodayCount}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 lg:p-4 flex flex-col justify-center">
-                    <p className="text-xs font-bold text-[#7A5A3A]">
+                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 lg:p-4 flex flex-col justify-center">
+                    <p className="text-xs font-semibold text-[var(--ink-muted)]">
                       Mesas ocupadas
                     </p>
-                    <p className="text-xl lg:text-2xl font-extrabold text-[#2B1A0E] mt-0.5 tabular-nums">
+                    <p className="text-xl lg:text-2xl font-bold text-[var(--ink-primary)] mt-0.5 tabular-nums">
                       {occupiedTablesCount}/{tables.length}
                     </p>
                   </div>
@@ -685,32 +687,32 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="space-y-4 lg:grid lg:grid-cols-12 lg:gap-5 lg:space-y-0 lg:items-start">
                 {/* Actividad Reciente */}
                 <section className="space-y-2 lg:col-span-7">
-                  <h3 className="text-sm font-extrabold text-[#2B1A0E] inline-flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-[#B84A27]" />
+                  <h3 className="text-sm font-bold text-[var(--ink-primary)] inline-flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[var(--accent-primary)]" />
                     <span>Actividad Reciente</span>
                   </h3>
 
                   {kitchenOrders.length === 0 ? (
-                    <div className="rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 p-4 text-center space-y-1">
-                      <p className="text-xs font-extrabold text-[#3B1F0E]">
+                    <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-4 text-center space-y-1">
+                      <p className="text-xs font-bold text-[var(--ink-primary)]">
                         Sin pedidos registrados aún
                       </p>
-                      <p className="text-[11px] text-[#7A5A3A]">
-                        Crea un pedido desde Cliente (Mesa, Para Llevar o Delivery) o desde Cocina/Caja.
+                      <p className="text-[11px] text-[var(--ink-muted)]">
+                        Crea un pedido desde Cliente (Mesa, Para llevar o Delivery) o desde Cocina/Caja.
                       </p>
                     </div>
                   ) : (
-                    <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 divide-y divide-[#D9A441]/30">
+                    <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
                       {kitchenOrders.slice(0, 6).map((ord) => (
                         <div
                           key={ord.id}
                           className="p-3 flex items-center justify-between gap-2"
                         >
                           <div className="min-w-0">
-                            <p className="font-extrabold text-sm text-[#2B1A0E] truncate tabular-nums">
+                            <p className="font-bold text-sm text-[var(--ink-primary)] truncate tabular-nums">
                               Pedido {ord.code} - {formatBs(ord.total)}
                             </p>
-                            <p className="text-[11px] text-[#7A5A3A]">
+                            <p className="text-[11px] text-[var(--ink-muted)]">
                               {ord.customerLabel} · {ord.createdAt} ·{' '}
                               {ord.paid
                                 ? `Pagado (${ord.paymentMethod})`
@@ -723,7 +725,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                               onClick={() => setTicketOrder(ord)}
                               aria-label={`Ver ticket ${ord.code}`}
                               title="Imprimir o enviar ticket por WhatsApp"
-                              className="w-8 h-8 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-[#3B1F0E] flex items-center justify-center hover:bg-[#E8C87A]/35 cursor-pointer"
+                              className="w-8 h-8 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] flex items-center justify-center hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                             >
                               <Printer className="w-3.5 h-3.5" />
                             </button>
@@ -732,12 +734,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setCollectingOrder(ord)}
-                                className="px-2.5 py-1.5 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-[11px] font-extrabold shrink-0 cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-[11px] font-bold shrink-0 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                               >
                                 Cobrar
                               </button>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#2E6F32]/15 text-[#2E6F32] shrink-0">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--status-ok)]/12 text-[var(--status-ok)] shrink-0">
                                 {ord.status}
                               </span>
                             )}
@@ -750,21 +752,21 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                 {/* Quick actions */}
                 <div className="space-y-3 lg:col-span-5">
-                  <h3 className="hidden lg:block text-sm font-extrabold text-[#2B1A0E]">
+                  <h3 className="hidden lg:block text-sm font-bold text-[var(--ink-primary)]">
                     Acciones rápidas
                   </h3>
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
                       type="button"
                       onClick={() => switchTab('menu')}
-                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[#FFFDF8] border border-[#D9A441] text-[#2B1A0E] font-extrabold text-xs hover:bg-[#FDF2D6] cursor-pointer"
+                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                     >
                       Gestión de Menú
                     </button>
                     <button
                       type="button"
                       onClick={() => switchTab('kitchen')}
-                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[#FFFDF8] border border-[#D9A441] text-[#2B1A0E] font-extrabold text-xs hover:bg-[#FDF2D6] cursor-pointer"
+                      className="min-h-[44px] px-3 py-2 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                     >
                       Cocina y Caja
                     </button>
@@ -776,7 +778,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       switchTab('kitchen');
                       setOpenKitchenPosSignal((n) => n + 1);
                     }}
-                    className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+                    className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                   >
                     <Plus className="w-4 h-4" strokeWidth={2.5} />
                     <span>Nuevo Pedido / Cobro en Caja</span>
@@ -784,13 +786,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                   {/* Ajustes / Configuración (Admin-Only Discrete Backup Tool) */}
                   {isAdmin && (
-                    <div className="rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A] p-3.5 space-y-2.5 text-[#F5F5F5]">
+                    <div className="rounded-2xl bg-[var(--ops-surface)] border border-[var(--ops-border)] p-3.5 space-y-2.5 text-[var(--bg-canvas)]">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold tracking-wide text-[#E5E5E5] inline-flex items-center gap-1.5">
-                          <Download className="w-3.5 h-3.5 text-[#A3A3A3]" />
+                        <span className="text-[11px] font-bold text-[var(--bg-canvas)] inline-flex items-center gap-1.5">
+                          <Download className="w-3.5 h-3.5 text-[var(--bg-canvas)]/70" />
                           <span>Ajustes · Respaldo de Carta</span>
                         </span>
-                        <span className="text-[10px] font-semibold text-[#A3A3A3] tabular-nums">
+                        <span className="text-[10px] font-semibold text-[var(--bg-canvas)]/65 tabular-nums">
                           {menuItems.length} ítems
                         </span>
                       </div>
@@ -800,9 +802,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           type="button"
                           disabled={isBackingUpImages}
                           onClick={() => void handleDownloadFullBackupZip()}
-                          className="flex-1 min-h-[38px] px-3 py-2 rounded-xl bg-[#2A2A2A] hover:bg-[#343434] border border-[#3A3A3A] text-[#F5F5F5] text-[11px] font-bold flex items-center justify-center gap-1.5 disabled:opacity-55 cursor-pointer transition-colors"
+                          className="flex-1 min-h-[38px] px-3 py-2 rounded-xl bg-[var(--ops-elevated)] hover:opacity-90 border border-[var(--ops-border)] text-[var(--bg-canvas)] text-[11px] font-bold flex items-center justify-center gap-1.5 disabled:opacity-55 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                         >
-                          <Download className="w-3.5 h-3.5 text-[#D4D4D4] shrink-0" />
+                          <Download className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
                           <span>
                             {isBackingUpImages
                               ? `Exportando ${backupProgress?.percent ?? 0}%`
@@ -814,7 +816,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           type="button"
                           disabled={isBackingUpImages}
                           onClick={handleDownloadCsvOnly}
-                          className="min-h-[38px] px-3 py-2 rounded-xl bg-[#141414] hover:bg-[#252525] border border-[#2A2A2A] text-[#D4D4D4] text-[11px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-55 cursor-pointer transition-colors shrink-0"
+                          className="min-h-[38px] px-3 py-2 rounded-xl bg-[var(--ops-canvas)] hover:bg-[var(--ops-elevated)] border border-[var(--ops-border)] text-[var(--bg-canvas)]/85 text-[11px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-55 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                         >
                           <span>Solo exportar Excel .csv</span>
                         </button>
@@ -822,40 +824,45 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                       {backupProgress && (
                         <div className="space-y-1 pt-0.5">
-                          <div className="flex items-center justify-between text-[10px] font-semibold text-[#D4D4D4] gap-2">
+                          <div className="flex items-center justify-between text-[10px] font-semibold text-[var(--bg-canvas)]/80 gap-2">
                             <span className="truncate">
                               {backupProgress.phase === 'compressing'
                                 ? backupProgress.currentName
                                 : `(${backupProgress.current}/${backupProgress.total}) ${backupProgress.currentName}`}
                             </span>
-                            <span className="tabular-nums shrink-0 text-[#F5F5F5]">
+                            <span className="tabular-nums shrink-0 text-[var(--bg-canvas)]">
                               {backupProgress.percent}%
                             </span>
                           </div>
-                          <div className="w-full h-1.5 rounded-full bg-[#141414] overflow-hidden border border-[#2A2A2A]">
+                          <div className="w-full h-1.5 rounded-full bg-[var(--ops-canvas)] overflow-hidden border border-[var(--ops-border)]">
                             <div
-                              className="h-full rounded-full bg-[#D9A441] transition-all duration-150"
-                              style={{ width: `${backupProgress.percent}%` }}
+                              className="w-full h-full rounded-full bg-[var(--accent-gold)] origin-left transition-transform duration-150 ease-[var(--ease-out)]"
+                              style={{
+                                transform: `scaleX(${Math.max(
+                                  0,
+                                  Math.min(1, backupProgress.percent / 100)
+                                )})`,
+                              }}
                             />
                           </div>
                         </div>
                       )}
 
                       {backupSummary && !isBackingUpImages && (
-                        <p className="text-[11px] font-semibold text-[#A3E6A8] bg-[#141414] border border-[#2A2A2A] px-2.5 py-1.5 rounded-xl">
+                        <p className="text-[11px] font-semibold text-[var(--status-ok-bright)] bg-[var(--ops-canvas)] border border-[var(--ops-border)] px-2.5 py-1.5 rounded-xl">
                           {backupSummary}
                         </p>
                       )}
                     </div>
                   )}
 
-                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3 space-y-2">
+                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
-                        <KeyRound className="w-3.5 h-3.5 text-[#B84A27]" />
+                      <span className="text-xs font-bold text-[var(--ink-primary)] inline-flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                         <span>PIN de Mozo (4 dígitos)</span>
                       </span>
-                      <span className="text-[10px] font-bold text-[#7A5A3A]">
+                      <span className="text-[10px] font-semibold text-[var(--ink-muted)]">
                         5 toques al logo
                       </span>
                     </div>
@@ -871,13 +878,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           )
                         }
                         placeholder="1234"
-                        className="flex-1 h-9 px-3 rounded-xl bg-[#FFF8E8] border border-[#D9A441] text-xs font-extrabold tracking-widest text-center text-[#2B1A0E] tabular-nums focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
+                        className="flex-1 h-9 px-3 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold tracking-widest text-center text-[var(--ink-primary)] tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                       />
                       <button
                         type="button"
                         disabled={pinDraft.length !== 4 || pinDraft === mozoPin}
                         onClick={() => onUpdateMozoPin(pinDraft)}
-                        className="h-9 px-3 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
+                        className="h-9 px-3 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] text-xs font-bold disabled:opacity-45 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                       >
                         Guardar PIN
                       </button>
@@ -885,13 +892,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </div>
 
                   {/* Authorized Mozos (Google Accounts) */}
-                  <div className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3 space-y-2.5">
+                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-[#B84A27]" />
+                      <span className="text-xs font-bold text-[var(--ink-primary)] inline-flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                         <span>Mozos autorizados (Google)</span>
                       </span>
-                      <span className="text-[10px] font-bold text-[#7A5A3A] tabular-nums">
+                      <span className="text-[10px] font-semibold text-[var(--ink-muted)] tabular-nums">
                         {authorizedStaff.length} registrados
                       </span>
                     </div>
@@ -902,14 +909,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         value={newStaffName}
                         onChange={(e) => setNewStaffName(e.target.value)}
                         placeholder="Nombre (Ej. Carlos)"
-                        className="h-9 px-2.5 rounded-xl bg-[#FFF8E8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                        className="h-9 px-2.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                       />
                       <input
                         type="email"
                         value={newStaffEmail}
                         onChange={(e) => setNewStaffEmail(e.target.value)}
                         placeholder="correo.mozo@gmail.com"
-                        className="h-9 px-2.5 rounded-xl bg-[#FFF8E8] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                        className="h-9 px-2.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                       />
                     </div>
                     <button
@@ -923,7 +930,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         setNewStaffEmail('');
                         setNewStaffName('');
                       }}
-                      className="w-full h-9 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold disabled:opacity-45 cursor-pointer"
+                      className="w-full h-9 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] text-xs font-bold disabled:opacity-45 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                     >
                       Autorizar Mozo
                     </button>
@@ -933,13 +940,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         {authorizedStaff.map((staff) => (
                           <div
                             key={staff.email}
-                            className="flex items-center justify-between gap-2 rounded-xl bg-[#FDF2D6]/60 border border-[#D9A441]/40 px-2.5 py-1.5 text-[11px]"
+                            className="flex items-center justify-between gap-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] px-2.5 py-1.5 text-[11px]"
                           >
                             <div className="min-w-0">
-                              <p className="font-extrabold text-[#2B1A0E] truncate">
+                              <p className="font-bold text-[var(--ink-primary)] truncate">
                                 {staff.name}
                               </p>
-                              <p className="text-[10px] text-[#7A5A3A] truncate">
+                              <p className="text-[10px] text-[var(--ink-muted)] truncate">
                                 {staff.email}
                               </p>
                             </div>
@@ -952,10 +959,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                                     !staff.active
                                   )
                                 }
-                                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer ${
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer ${
                                   staff.active
-                                    ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
-                                    : 'bg-[#7A5A3A]/15 text-[#7A5A3A]'
+                                    ? 'bg-[var(--status-ok)]/12 text-[var(--status-ok)]'
+                                    : 'bg-[var(--ink-muted)]/12 text-[var(--ink-muted)]'
                                 }`}
                               >
                                 {staff.active ? 'Activo' : 'Pausado'}
@@ -966,7 +973,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                                   onRemoveAuthorizedStaff(staff.email)
                                 }
                                 aria-label={`Eliminar ${staff.email}`}
-                                className="w-6 h-6 rounded-lg text-[#B83227] hover:bg-[#B83227]/10 flex items-center justify-center cursor-pointer"
+                                className="w-6 h-6 rounded-lg text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 active:scale-[0.95] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] flex items-center justify-center cursor-pointer"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -985,13 +992,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <>
               <div className="space-y-3 lg:space-y-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
                 <div className="relative lg:w-72 shrink-0">
-                  <Search className="w-4 h-4 text-[#7A5A3A] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={menuQuery}
                     onChange={(e) => setMenuQuery(e.target.value)}
                     placeholder="Buscar plato..."
-                    className="w-full h-10 pl-10 pr-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 text-xs text-[#2B1A0E] font-semibold focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
+                    className="w-full h-10 pl-10 pr-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--ink-primary)] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                   />
                 </div>
 
@@ -1006,7 +1013,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <button
                   type="button"
                   onClick={openAddModal}
-                  className="hidden lg:inline-flex min-h-[40px] px-4 py-2 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer shrink-0 whitespace-nowrap"
+                  className="hidden lg:inline-flex min-h-[40px] px-4 py-2 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-xs items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" strokeWidth={2.5} />
                   <span>Agregar nuevo plato</span>
@@ -1017,13 +1024,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 {filteredMenu.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                   >
                     <div className="min-w-0">
-                      <p className="font-extrabold text-sm text-[#2B1A0E] truncate">
+                      <p className="font-bold text-sm text-[var(--ink-primary)] truncate">
                         {item.name}
                       </p>
-                      <p className="text-[11px] font-bold text-[#B84A27] tabular-nums">
+                      <p className="text-[11px] font-bold text-[var(--accent-primary)] tabular-nums">
                         {item.priceBadge}
                       </p>
                     </div>
@@ -1032,7 +1039,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       <button
                         type="button"
                         onClick={() => openEditModal(item)}
-                        className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#D9A441]/40 text-[#2B1A0E] text-[11px] font-extrabold inline-flex items-center gap-1 hover:bg-[#D9A441] cursor-pointer"
+                        className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold inline-flex items-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                       >
                         <Pencil className="w-3 h-3" />
                         Editar
@@ -1041,10 +1048,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       <button
                         type="button"
                         onClick={() => onToggleDishAvailability(item.id)}
-                        className={`min-h-[34px] px-2.5 py-1 rounded-xl text-[11px] font-extrabold cursor-pointer transition-colors ${
+                        className={`min-h-[34px] px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] ${
                           item.available
-                            ? 'bg-[#2E6F32] text-[#FFF8E8]'
-                            : 'bg-[#B83227] text-[#FFF8E8]'
+                            ? 'bg-[var(--status-ok)] text-[var(--bg-canvas)]'
+                            : 'bg-[var(--status-danger)] text-[var(--bg-canvas)]'
                         }`}
                       >
                         {item.available ? 'Disponible' : 'Agotado'}
@@ -1057,7 +1064,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <button
                 type="button"
                 onClick={openAddModal}
-                className="lg:hidden w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-sm flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+                className="lg:hidden w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-sm flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <Plus className="w-4 h-4" strokeWidth={2.5} />
                 <span>Agregar nuevo plato</span>
@@ -1094,12 +1101,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           {activeTab === 'reports' && (
             <div className="space-y-4">
               <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
-                <section className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3.5 lg:p-5 space-y-3">
+                <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 lg:p-5 space-y-3">
                   <div className="flex items-baseline justify-between">
-                    <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
+                    <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                       Ventas por categoría
                     </h3>
-                    <span className="text-[11px] font-bold text-[#7A5A3A] tabular-nums">
+                    <span className="text-[11px] font-bold text-[var(--ink-muted)] tabular-nums">
                       Total: {formatBs(totalSalesBs)}
                     </span>
                   </div>
@@ -1107,16 +1114,21 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <div className="space-y-2.5">
                     {categoryReport.map((row) => (
                       <div key={row.category} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-extrabold text-[#2B1A0E]">
+                        <div className="flex items-center justify-between text-xs font-bold text-[var(--ink-primary)]">
                           <span>{row.category}</span>
                           <span className="tabular-nums">
                             {row.percent}% ({formatBs(row.amount)})
                           </span>
                         </div>
-                        <div className="w-full h-3 rounded-full bg-[#E8C87A]/35 overflow-hidden">
+                        <div className="w-full h-3 rounded-full bg-[var(--bg-inset)] overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-[#B84A27] transition-all"
-                            style={{ width: `${row.percent}%` }}
+                            className="w-full h-full rounded-full bg-[var(--accent-primary)] origin-left transition-transform duration-200 ease-[var(--ease-out)]"
+                            style={{
+                              transform: `scaleX(${Math.max(
+                                0,
+                                Math.min(1, row.percent / 100)
+                              )})`,
+                            }}
                           />
                         </div>
                       </div>
@@ -1124,11 +1136,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </div>
                 </section>
 
-                <section className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3.5 lg:p-5 space-y-2.5">
-                  <h3 className="font-serif-display text-lg font-bold text-[#2B1A0E]">
+                <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 lg:p-5 space-y-2.5">
+                  <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                     Inventario
                   </h3>
-                  <div className="divide-y divide-[#D9A441]/30">
+                  <div className="divide-y divide-[var(--border-subtle)]">
                     {inventory.map((inv) => {
                       const isLow = inv.status === 'Bajo stock';
                       return (
@@ -1136,13 +1148,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           key={inv.id}
                           className="py-2 flex items-center justify-between text-xs font-bold"
                         >
-                          <span className="text-[#2B1A0E] tabular-nums">
+                          <span className="text-[var(--ink-primary)] tabular-nums">
                             {inv.name} · {inv.quantity}
                             {inv.unit}
                           </span>
                           <span
-                            className={`font-extrabold ${
-                              isLow ? 'text-[#B83227]' : 'text-[#2E6F32]'
+                            className={`font-bold ${
+                              isLow
+                                ? 'text-[var(--status-danger)]'
+                                : 'text-[var(--status-ok)]'
                             }`}
                           >
                             {inv.status}
@@ -1155,7 +1169,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               </div>
 
               {reportMsg && (
-                <p className="text-xs font-bold text-[#2E6F32] bg-[#2E6F32]/15 px-3 py-2 rounded-xl text-center max-w-md mx-auto">
+                <p className="text-xs font-bold text-[var(--status-ok)] bg-[var(--status-ok)]/12 px-3 py-2 rounded-xl text-center max-w-md mx-auto">
                   {reportMsg}
                 </p>
               )}
@@ -1164,7 +1178,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleDownloadReport}
-                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                 >
                   <Download className="w-4 h-4 shrink-0" />
                   <span>Descargar Reporte</span>
@@ -1176,7 +1190,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     setInvDraft(inventory);
                     setShowInvModal(true);
                   }}
-                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[#FFFDF8] border border-[#3B1F0E] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#FDF2D6] cursor-pointer"
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                   <span>Actualizar Inventario</span>
@@ -1211,10 +1225,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto flex p-4">
           <form
             onSubmit={handleSaveDishModal}
-            className="my-auto mx-auto w-full max-w-md max-h-[92dvh] overflow-y-auto phone-scroll bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl"
+            className="modal-surface my-auto mx-auto w-full max-w-md max-h-[92dvh] overflow-y-auto phone-scroll bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-subtle)] p-4 space-y-3 shadow-xl"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+              <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                 {editingDish ? 'Editar plato' : 'Agregar nuevo plato'}
               </h3>
               <button
@@ -1224,14 +1238,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   setIsAddingDish(false);
                 }}
                 aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
+              <label className="block text-xs font-bold text-[var(--ink-primary)] mb-1">
                 Nombre del plato
               </label>
               <input
@@ -1240,13 +1254,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 value={dishName}
                 onChange={(e) => setDishName(e.target.value)}
                 placeholder="Ej. Pique Macho"
-                className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-sm font-semibold text-[#2B1A0E]"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-sm font-semibold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
             </div>
 
             {isAddingDish && (
               <div>
-                <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
+                <label className="block text-xs font-bold text-[var(--ink-primary)] mb-1">
                   Categoría
                 </label>
                 <select
@@ -1256,7 +1270,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       e.target.value as MenuCategory
                     )
                   }
-                  className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-sm font-semibold text-[#2B1A0E]"
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-sm font-semibold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                 >
                   {MENU_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -1274,7 +1288,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             >
               {dishSizePrices.map((sz, idx) => (
                 <div key={sz.id}>
-                  <label className="block text-[11px] font-bold text-[#3B1F0E] mb-1 truncate">
+                  <label className="block text-[11px] font-bold text-[var(--ink-primary)] mb-1 truncate">
                     {sz.label} (Bs)
                   </label>
                   <input
@@ -1289,27 +1303,27 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         )
                       );
                     }}
-                    className="w-full px-2.5 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-sm font-bold text-[#2B1A0E] tabular-nums"
+                    className="w-full px-2.5 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-sm font-bold text-[var(--ink-primary)] tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                   />
                 </div>
               ))}
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
+              <label className="block text-xs font-bold text-[var(--ink-primary)] mb-1">
                 Descripción
               </label>
               <textarea
                 rows={2}
                 value={dishDesc}
                 onChange={(e) => setDishDesc(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E] resize-none"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full min-h-[44px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-xs cursor-pointer"
+              className="w-full min-h-[44px] rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] font-bold text-xs hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               Guardar cambios
             </button>
@@ -1320,16 +1334,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       {/* Modal: Update Inventory */}
       {showInvModal && (
         <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto flex p-4">
-          <div className="my-auto mx-auto w-full max-w-md max-h-[92dvh] overflow-y-auto phone-scroll bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 space-y-3 shadow-xl">
+          <div className="modal-surface my-auto mx-auto w-full max-w-md max-h-[92dvh] overflow-y-auto phone-scroll bg-[var(--bg-surface)] rounded-2xl border border-[var(--border-subtle)] p-4 space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+              <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                 Actualizar Inventario
               </h3>
               <button
                 type="button"
                 onClick={() => setShowInvModal(false)}
                 aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1339,9 +1353,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               {invDraft.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-2 bg-[#FDF2D6] p-2.5 rounded-xl border border-[#D9A441]/50"
+                  className="flex items-center justify-between gap-2 bg-[var(--bg-inset)] p-2.5 rounded-xl border border-[var(--border-subtle)]"
                 >
-                  <span className="font-bold text-xs text-[#2B1A0E]">
+                  <span className="font-bold text-xs text-[var(--ink-primary)]">
                     {item.name} ({item.unit})
                   </span>
                   <input
@@ -1362,7 +1376,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         )
                       );
                     }}
-                    className="w-20 px-2.5 py-1 rounded-xl bg-white border border-[#D9A441] text-xs font-extrabold text-center tabular-nums"
+                    className="w-20 px-2.5 py-1 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-bold text-center tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                   />
                 </div>
               ))}
@@ -1374,7 +1388,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 onUpdateInventory(invDraft);
                 setShowInvModal(false);
               }}
-              className="w-full min-h-[44px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs cursor-pointer"
+              className="w-full min-h-[44px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-xs hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
             >
               Guardar inventario
             </button>

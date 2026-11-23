@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  CheckCircle2,
   Heart,
   MapPin,
   Minus,
@@ -58,7 +57,6 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
   orderMode,
   selectedTable,
   takeawayCustomerName,
-  isLiveSynced,
   onBack,
   onSelectItem,
   onAddToCart,
@@ -114,25 +112,25 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
 
   const headerTitle =
     mode === 'search'
-      ? 'Buscar Platillos'
+      ? 'Buscar platillos'
       : mode === 'favorites'
-      ? 'Mis Favoritos'
-      : 'Carta Digital & Pedidos';
+      ? 'Mis favoritos'
+      : 'Carta digital';
 
   return (
-    <div className="flex-1 flex min-h-0 bg-[#FFF8E8]">
-      {/* Desktop Secondary Category Column (matching reference layout) */}
+    <div className="flex-1 flex min-h-0 bg-[var(--bg-canvas)]">
+      {/* Desktop Secondary Category Column */}
       <aside
         aria-label="Categorías de la carta"
-        className="hidden lg:flex w-52 xl:w-56 shrink-0 flex-col justify-between bg-[#FFFDF8] border-r border-[#D9A441]/30 select-none"
+        className="hidden lg:flex w-52 xl:w-56 shrink-0 flex-col justify-between bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] select-none"
       >
         <div className="flex-1 overflow-y-auto phone-scroll p-3.5 space-y-4">
           <div>
             <div className="flex items-center justify-between px-2 mb-2.5">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#7A5A3A]">
-                Categorías Carta
+              <span className="text-xs font-bold text-[var(--ink-muted)]">
+                Categorías
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#FDF2D6] text-[10px] font-extrabold text-[#B84A27] tabular-nums">
+              <span className="px-2 py-0.5 rounded-md bg-[var(--bg-inset)] text-[11px] font-bold text-[var(--accent-primary)] tabular-nums">
                 {availableItems.length}
               </span>
             </div>
@@ -148,16 +146,18 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                       setActiveCategory(cat);
                       if (mode !== 'menu') onNavigateMode('menu');
                     }}
-                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between gap-2 transition-colors duration-150 cursor-pointer ${
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                       isActive
-                        ? 'bg-[#B84A27] text-[#FFF8E8] font-extrabold shadow-xs'
-                        : 'text-[#2B1A0E] hover:bg-[#FDF2D6]'
+                        ? 'bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold shadow-xs'
+                        : 'text-[var(--ink-primary)] hover:bg-[var(--bg-inset)]'
                     }`}
                   >
                     <span className="truncate">{cat}</span>
                     <span
-                      className={`text-[11px] font-extrabold tabular-nums ${
-                        isActive ? 'text-[#FFF8E8]/90' : 'text-[#7A5A3A]'
+                      className={`text-[11px] font-bold tabular-nums ${
+                        isActive
+                          ? 'text-white/90'
+                          : 'text-[var(--ink-muted)]'
                       }`}
                     >
                       {categoryCounts[cat]}
@@ -168,27 +168,27 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
             </div>
           </div>
 
-          <div className="pt-3 border-t border-[#D9A441]/25 space-y-1">
+          <div className="pt-3 border-t border-[var(--border-subtle)] space-y-1">
             <button
               type="button"
               onClick={() => onNavigateMode('favorites')}
-              className={`w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+              className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                 mode === 'favorites'
-                  ? 'bg-[#3B1F0E] text-[#FFF8E8] font-extrabold'
-                  : 'text-[#2B1A0E] hover:bg-[#FDF2D6]'
+                  ? 'bg-[var(--ink-primary)] text-[var(--bg-surface)] font-bold'
+                  : 'text-[var(--ink-primary)] hover:bg-[var(--bg-inset)]'
               }`}
             >
               <span className="inline-flex items-center gap-2 truncate">
                 <Heart
                   className={`w-3.5 h-3.5 shrink-0 ${
                     mode === 'favorites'
-                      ? 'fill-[#D9A441] text-[#D9A441]'
-                      : 'text-[#B84A27]'
+                      ? 'fill-[var(--accent-gold)] text-[var(--accent-gold)]'
+                      : 'text-[var(--accent-primary)]'
                   }`}
                 />
                 <span>Favoritos</span>
               </span>
-              <span className="text-[11px] font-extrabold tabular-nums opacity-85">
+              <span className="text-[11px] font-bold tabular-nums opacity-85">
                 {favoriteIds.length}
               </span>
             </button>
@@ -196,25 +196,21 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
             <button
               type="button"
               onClick={onOpenCustomize}
-              className="w-full px-3 py-2 rounded-xl text-xs font-bold text-[#2B1A0E] hover:bg-[#FDF2D6] flex items-center gap-2 transition-colors cursor-pointer"
+              className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] flex items-center gap-2 transition-[transform,background-color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#B84A27] shrink-0" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
               <span className="truncate">Personalizar plato</span>
             </button>
           </div>
         </div>
 
         {/* Bottom Venue Metadata */}
-        <div className="p-3.5 border-t border-[#D9A441]/25 bg-[#FFF8E8]/60 space-y-1 text-[11px] text-[#7A5A3A]">
-          <p className="font-bold text-[#3B1F0E] inline-flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-[#B84A27] shrink-0" />
-            <span>Tupiza, Potosí · Bolivia</span>
+        <div className="p-3.5 border-t border-[var(--border-subtle)] bg-[var(--bg-canvas)]/70 space-y-1 text-xs text-[var(--ink-muted)]">
+          <p className="font-semibold text-[var(--ink-primary)] inline-flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+            <span>Tupiza, Potosí</span>
           </p>
-          <p className="font-semibold">Todos los días · Precios en Bs</p>
-          <p className="font-bold text-[#2E6F32] inline-flex items-center gap-1 pt-0.5">
-            <CheckCircle2 className="w-3 h-3 shrink-0" />
-            <span>{isLiveSynced ? 'Sync en vivo · Cloud' : 'Carta en vivo'}</span>
-          </p>
+          <p>Todos los días — Precios en Bs.</p>
         </div>
       </aside>
 
@@ -238,61 +234,61 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
         </div>
 
         {/* Desktop Top Utility Bar */}
-        <header className="hidden lg:flex flex-wrap items-center justify-between gap-2.5 px-4 xl:px-6 py-2.5 bg-[#FFFDF8] border-b border-[#D9A441]/30 shrink-0">
+        <header className="hidden lg:flex flex-wrap items-center justify-between gap-2.5 px-4 xl:px-6 py-2.5 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] shrink-0">
           <div className="min-w-0">
-            <h1 className="font-serif-display text-base xl:text-lg font-bold text-[#2B1A0E] truncate">
+            <h1 className="font-serif-display text-base xl:text-lg font-bold text-[var(--ink-primary)] truncate">
               {headerTitle}
             </h1>
-            <p className="text-[11px] font-semibold text-[#7A5A3A] truncate">
+            <p className="text-xs font-medium text-[var(--ink-muted)] truncate">
               {orderMode === 'dine-in'
-                ? `Comer en el local · Mesa ${selectedTable}`
+                ? `Comer en el local — Mesa ${selectedTable}`
                 : orderMode === 'takeaway'
-                ? `Para Llevar · ${
+                ? `Para Llevar — ${
                     takeawayCustomerName?.trim() || 'Retiro en local'
                   }`
-                : 'Modo Delivery · Envío a domicilio'}
+                : 'Delivery — Envío a domicilio'}
             </p>
           </div>
 
           <div className="flex items-center gap-1.5 xl:gap-2 shrink-0 flex-wrap">
             <div className="relative w-40 xl:w-60">
-              <Search className="w-4 h-4 text-[#7A5A3A] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar plato..."
                 aria-label="Buscar platillos"
-                className="w-full h-9 pl-9 pr-3 rounded-xl bg-[#FFF8E8] border border-[#D9A441]/55 text-xs font-semibold text-[#2B1A0E] placeholder:text-[#7A5A3A]/75 focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
+                className="w-full h-9 pl-9 pr-3 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-subtle)] text-xs font-medium text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
             </div>
 
             <button
               type="button"
               onClick={onOpenTables}
-              className="h-9 px-2.5 xl:px-3 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5 hover:bg-[#E8C87A]/35 transition-colors cursor-pointer whitespace-nowrap"
+              className="h-9 px-2.5 xl:px-3 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] inline-flex items-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             >
-              <UtensilsCrossed className="w-3.5 h-3.5 text-[#B84A27]" />
+              <UtensilsCrossed className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
               <span>Mesa {selectedTable}</span>
             </button>
 
             <button
               type="button"
               onClick={onOpenTableQr}
-              className="h-9 px-2.5 xl:px-3 rounded-xl bg-[#FFFDF8] border border-[#D9A441]/70 text-xs font-extrabold text-[#3B1F0E] inline-flex items-center gap-1.5 hover:bg-[#FDF2D6] transition-colors cursor-pointer whitespace-nowrap"
+              className="h-9 px-2.5 xl:px-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] inline-flex items-center gap-1.5 hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             >
-              <QrCode className="w-3.5 h-3.5 text-[#3B1F0E]" />
+              <QrCode className="w-3.5 h-3.5 text-[var(--ink-primary)]" />
               <span>Ver QR</span>
             </button>
 
             <button
               type="button"
               onClick={onOpenCart}
-              className="xl:hidden h-9 px-3 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-xs font-extrabold inline-flex items-center gap-1.5 hover:bg-[#C95B34] transition-colors cursor-pointer whitespace-nowrap"
+              className="xl:hidden h-9 px-3 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
             >
               <ShoppingBag className="w-3.5 h-3.5" />
               <span>Comanda</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-[#3B1F0E] text-[#D9A441] text-[10px] tabular-nums leading-none">
+              <span className="px-1.5 py-0.5 rounded-md bg-[var(--ink-primary)] text-[var(--accent-gold)] text-[10px] tabular-nums leading-none">
                 {cartCount}
               </span>
             </button>
@@ -301,72 +297,92 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto phone-scroll">
-          <div className="max-w-6xl mx-auto w-full px-4 lg:px-6 pt-3.5 lg:pt-5 pb-8 space-y-4 lg:space-y-5">
-            {/* Mobile Context & Search Controls */}
+          <div className="max-w-6xl mx-auto w-full px-4 lg:px-6 pt-3.5 lg:pt-5 pb-24 xl:pb-8 space-y-4 lg:space-y-5">
+            {/* Mobile & Tablet Context & Search Controls */}
             <div className="lg:hidden space-y-3">
-              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/55 text-xs">
-                <span className="font-bold text-[#2B1A0E] truncate">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs">
+                <span className="font-semibold text-[var(--ink-primary)] min-w-0 truncate">
                   {orderMode === 'dine-in'
-                    ? `Comer en el local · Mesa ${selectedTable}`
+                    ? `Comer en el local — Mesa ${selectedTable}`
                     : orderMode === 'takeaway'
-                    ? `Para Llevar · ${
+                    ? `Para Llevar — ${
                         takeawayCustomerName?.trim() || 'Retiro en local'
                       }`
-                    : 'Modo Delivery · Envío a domicilio'}
+                    : 'Delivery — Envío a domicilio'}
                 </span>
-                {orderMode === 'dine-in' ? (
+                <div className="flex items-center gap-2.5 shrink-0">
                   <button
                     type="button"
-                    onClick={onOpenTables}
-                    className="font-extrabold text-[#B84A27] underline decoration-[#B84A27]/60 cursor-pointer whitespace-nowrap"
+                    onClick={() =>
+                      onNavigateMode(mode === 'favorites' ? 'menu' : 'favorites')
+                    }
+                    className={`inline-flex items-center gap-1 font-bold cursor-pointer whitespace-nowrap ${
+                      mode === 'favorites'
+                        ? 'text-[var(--accent-primary)] underline'
+                        : 'text-[var(--ink-primary)] hover:text-[var(--accent-primary)]'
+                    }`}
                   >
-                    Cambiar mesa
+                    <Heart
+                      className={`w-3.5 h-3.5 ${
+                        mode === 'favorites'
+                          ? 'fill-[var(--accent-primary)] text-[var(--accent-primary)]'
+                          : 'text-[var(--accent-primary)]'
+                      }`}
+                    />
+                    <span>Favoritos ({favoriteIds.length})</span>
                   </button>
-                ) : orderMode === 'takeaway' ? (
-                  <button
-                    type="button"
-                    onClick={onOpenCart}
-                    className="font-extrabold text-[#B84A27] underline decoration-[#B84A27]/60 cursor-pointer whitespace-nowrap"
-                  >
-                    Ver comanda
-                  </button>
-                ) : null}
+
+                  {orderMode === 'dine-in' ? (
+                    <button
+                      type="button"
+                      onClick={onOpenTables}
+                      className="font-bold text-[var(--accent-primary)] underline decoration-[var(--accent-primary)]/60 cursor-pointer whitespace-nowrap"
+                    >
+                      Cambiar mesa
+                    </button>
+                  ) : orderMode === 'takeaway' ? (
+                    <button
+                      type="button"
+                      onClick={onOpenCart}
+                      className="font-bold text-[var(--accent-primary)] underline decoration-[var(--accent-primary)]/60 cursor-pointer whitespace-nowrap"
+                    >
+                      Ver comanda
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               <div className="relative">
-                <Search className="w-4 h-4 text-[#7A5A3A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-[var(--ink-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar platillos..."
                   aria-label="Buscar platillos"
-                  className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/60 text-sm text-[#2B1A0E] placeholder:text-[#7A5A3A]/75 focus:outline-none focus:ring-2 focus:ring-[#B84A27]"
+                  className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-sm text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                 />
               </div>
             </div>
 
-            {/* Warm Editorial Hero Banner (in Menu mode) */}
+            {/* Clean Single-Line Editorial Header (in Menu mode) */}
             {mode === 'menu' && !query.trim() && (
-              <section className="rounded-2xl bg-gradient-to-br from-[#3B1F0E] via-[#4A2C1A] to-[#6E2E16] border border-[#D9A441]/35 p-5 lg:p-6 text-[#FFF8E8] shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="space-y-1.5 max-w-xl">
-                  <p className="text-[11px] font-bold text-[#E8C87A] tracking-wide">
-                    Tupiza · Potosí · Cocina Tradicional
-                  </p>
-                  <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[#FFF8E8] leading-tight">
-                    Como en Casa
+              <section className="pb-3.5 border-b border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-serif-display text-2xl lg:text-3xl font-bold text-[var(--ink-primary)] leading-tight">
+                    Carta del día
                   </h2>
-                  <p className="text-xs lg:text-sm text-[#FFF8E8]/85 leading-relaxed">
-                    Sabores auténticos preparados al día: platos fuertes al horno, guisos caseros, sopas tradicionales y jugos naturales.
+                  <p className="text-xs sm:text-sm text-[var(--ink-muted)] mt-0.5">
+                    Platos fuertes al horno, guisos caseros, sopas tradicionales y jugos naturales.
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={onOpenCustomize}
-                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs inline-flex items-center justify-center gap-2 hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer shrink-0 whitespace-nowrap shadow-xs"
+                  className="min-h-[42px] px-4 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs inline-flex items-center justify-center gap-2 hover:border-[var(--accent-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,border-color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                 >
-                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <Sparkles className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
                   <span>Personaliza tu platillo</span>
                 </button>
               </section>
@@ -375,14 +391,14 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
             {/* Explore Filter Strip */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#7A5A3A]">
+                <h2 className="text-sm font-bold text-[var(--ink-primary)]">
                   {mode === 'favorites'
                     ? 'Tus platos favoritos'
                     : query.trim()
                     ? 'Resultados de búsqueda'
-                    : 'Explorar la Carta'}
+                    : 'Explorar la carta'}
                 </h2>
-                <span className="text-xs font-bold text-[#7A5A3A] tabular-nums">
+                <span className="text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
                   {filteredItems.length}{' '}
                   {filteredItems.length === 1 ? 'plato' : 'platos'}
                 </span>
@@ -397,15 +413,15 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
               )}
             </div>
 
-            {/* Dish Grid */}
+            {/* Flat Editorial Dish Grid */}
             {filteredItems.length === 0 ? (
-              <div className="py-12 px-4 text-center rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/55 space-y-2">
-                <p className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+              <div className="py-12 px-4 text-center rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2">
+                <p className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                   {mode === 'favorites'
                     ? 'Aún no tienes platillos favoritos'
                     : 'No encontramos platillos'}
                 </p>
-                <p className="text-xs text-[#7A5A3A]">
+                <p className="text-xs text-[var(--ink-muted)]">
                   {mode === 'favorites'
                     ? 'Toca el corazón en cualquier plato del menú para guardarlo aquí.'
                     : 'Prueba con otro nombre o selecciona "Todas" en las categorías.'}
@@ -417,14 +433,14 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                       setQuery('');
                       setActiveCategory('Todas');
                     }}
-                    className="mt-2 px-4 py-2 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] text-xs font-extrabold cursor-pointer"
+                    className="mt-2 px-4 py-2 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-surface)] text-xs font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                   >
                     Ver toda la carta
                   </button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredItems.map((item) => {
                   const isFav = favoriteIds.includes(item.id);
                   const chosenSizeId =
@@ -443,22 +459,21 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                   return (
                     <article
                       key={item.id}
-                      className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/55 overflow-hidden flex flex-col shadow-xs hover:border-[#B84A27] hover:-translate-y-0.5 transition-all duration-150"
+                      className="dish-card-interactive rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden flex flex-col transition-[transform,border-color] duration-200 ease-[var(--ease-out)]"
                     >
-                      {/* Photo Header with Scrim & Price */}
-                      <div className="relative h-40 sm:h-44 bg-[#F4E5C8] overflow-hidden shrink-0">
+                      {/* Clean Photo Header */}
+                      <div className="relative h-44 bg-[var(--bg-inset)] overflow-hidden shrink-0">
                         <button
                           type="button"
                           onClick={() => onSelectItem(item)}
                           aria-label={`Ver detalle de ${item.name}`}
-                          className="w-full h-full block cursor-pointer focus:outline-none"
+                          className="w-full h-full block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-primary)]"
                         >
                           <DishIllustration
                             visualType={item.visualType}
                             dishId={item.id}
                             name={item.name}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                         </button>
 
                         <button
@@ -469,44 +484,43 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                               ? `Quitar ${item.name} de favoritos`
                               : `Guardar ${item.name} en favoritos`
                           }
-                          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-[#FFF8E8]/90 hover:bg-[#FFF8E8] flex items-center justify-center shadow-xs transition-transform active:scale-95 cursor-pointer"
+                          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-[var(--bg-surface)]/95 border border-[var(--border-subtle)] flex items-center justify-center shadow-xs active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                         >
                           <Heart
                             className={`w-4 h-4 ${
                               isFav
-                                ? 'fill-[#B83227] text-[#B83227]'
-                                : 'text-[#3B1F0E]'
+                                ? 'fill-[var(--status-danger)] text-[var(--status-danger)]'
+                                : 'text-[var(--ink-primary)]'
                             }`}
                           />
                         </button>
-
-                        <div className="absolute bottom-2.5 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none">
-                          <span className="text-[11px] font-bold text-[#FFF8E8]/90 truncate">
-                            {item.category}
-                          </span>
-                          <span className="px-2.5 py-0.5 rounded-lg bg-[#3B1F0E]/90 border border-[#D9A441]/50 text-[#FFF8E8] text-xs font-extrabold tabular-nums shrink-0">
-                            {formatBs(activeSize.price)}
-                          </span>
-                        </div>
                       </div>
 
-                      {/* Card Content */}
-                      <div className="p-3.5 flex-1 flex flex-col justify-between gap-3">
+                      {/* Card Content (Flat Editorial Info, No Card-in-Card) */}
+                      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
                         <button
                           type="button"
                           onClick={() => onSelectItem(item)}
-                          className="text-left w-full cursor-pointer group"
+                          className="text-left w-full cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-lg"
                         >
-                          <h3 className="font-bold text-[15px] text-[#2B1A0E] group-hover:text-[#B84A27] transition-colors truncate">
-                            {item.name}
-                          </h3>
-                          <p className="text-xs text-[#7A5A3A] line-clamp-2 mt-1 leading-relaxed">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <h3 className="font-serif-display font-bold text-base text-[var(--ink-primary)] group-hover:text-[var(--accent-primary)] transition-colors duration-150 min-w-0 [overflow-wrap:break-word]">
+                              {item.name}
+                            </h3>
+                            <span className="font-bold text-sm text-[var(--accent-primary)] tabular-nums shrink-0">
+                              {formatBs(activeSize.price)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-medium text-[var(--ink-muted)] mt-0.5">
+                            {item.category}
+                          </p>
+                          <p className="text-xs text-[var(--ink-muted)] line-clamp-2 mt-1.5 leading-relaxed">
                             {item.description}
                           </p>
                         </button>
 
-                        {/* Inline Size Selector */}
-                        <div className="space-y-2.5">
+                        {/* Inline Size Selector & Actions */}
+                        <div className="space-y-2.5 pt-2 border-t border-[var(--border-subtle)]/70">
                           {item.sizes.length > 1 && (
                             <div className="flex flex-wrap gap-1.5">
                               {item.sizes.map((sz) => {
@@ -521,10 +535,10 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                                         [item.id]: sz.id,
                                       }))
                                     }
-                                    className={`px-2 py-1 rounded-lg text-[11px] font-extrabold border transition-colors cursor-pointer tabular-nums ${
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                                       selected
-                                        ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#FFF8E8]'
-                                        : 'bg-[#FDF2D6] border-[#D9A441]/50 text-[#3B1F0E] hover:border-[#B84A27]'
+                                        ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--bg-surface)]'
+                                        : 'bg-[var(--bg-canvas)] border-[var(--border-subtle)] text-[var(--ink-primary)] hover:border-[var(--accent-primary)]'
                                     }`}
                                   >
                                     {sz.label} · Bs {sz.price}
@@ -534,20 +548,19 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                             </div>
                           )}
 
-                          {/* Action Row */}
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => onSelectItem(item)}
                               aria-label={`Personalizar o ver extras de ${item.name}`}
                               title="Ver detalle y extras"
-                              className="w-10 h-10 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 text-[#3B1F0E] flex items-center justify-center hover:bg-[#E8C87A]/40 transition-colors cursor-pointer shrink-0"
+                              className="w-11 h-11 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] flex items-center justify-center hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                             >
                               <SlidersHorizontal className="w-4 h-4" />
                             </button>
 
                             {matchingCartItem ? (
-                              <div className="flex-1 h-10 rounded-xl bg-[#B84A27] text-[#FFF8E8] px-1.5 flex items-center justify-between gap-1 shadow-xs">
+                              <div className="flex-1 h-11 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-surface)] px-1.5 flex items-center justify-between gap-1">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -557,11 +570,11 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                                     )
                                   }
                                   aria-label={`Quitar una unidad de ${item.name}`}
-                                  className="w-8 h-8 rounded-lg hover:bg-black/15 flex items-center justify-center cursor-pointer"
+                                  className="w-9 h-9 rounded-lg hover:bg-black/15 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                 >
                                   <Minus className="w-3.5 h-3.5" strokeWidth={2.5} />
                                 </button>
-                                <span className="text-xs font-extrabold tabular-nums">
+                                <span className="text-xs font-bold tabular-nums">
                                   {matchingCartItem.quantity} en comanda
                                 </span>
                                 <button
@@ -573,7 +586,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                                     )
                                   }
                                   aria-label={`Agregar otra unidad de ${item.name}`}
-                                  className="w-8 h-8 rounded-lg hover:bg-black/15 flex items-center justify-center cursor-pointer"
+                                  className="w-9 h-9 rounded-lg hover:bg-black/15 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                 >
                                   <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
                                 </button>
@@ -582,7 +595,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onAddToCart(item, activeSize)}
-                                className="flex-1 h-10 px-3 rounded-xl bg-[#B84A27] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#C95B34] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+                                className="flex-1 h-11 px-3 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
                               >
                                 <Plus className="w-4 h-4" strokeWidth={2.5} />
                                 <span>Añadir</span>

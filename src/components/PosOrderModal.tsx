@@ -143,17 +143,17 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-xl max-h-[92dvh] bg-[#FFF8E8] rounded-2xl border border-[#D9A441] p-4 flex flex-col gap-3 shadow-xl overflow-hidden"
+        className="modal-surface w-full max-w-xl max-h-[92dvh] bg-[var(--bg-surface)] text-[var(--ink-primary)] rounded-2xl border border-[var(--border-subtle)] p-4 flex flex-col gap-3 shadow-xl overflow-hidden"
       >
         <div className="flex items-center justify-between shrink-0">
-          <h3 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+          <h3 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] hover:bg-[#FDF2D6] cursor-pointer"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           >
             <X className="w-4 h-4" />
           </button>
@@ -164,21 +164,21 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
             <button
               type="button"
               onClick={() => setMode('dine-in')}
-              className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
+              className={`min-h-[38px] rounded-xl text-xs font-bold active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                 mode === 'dine-in'
-                  ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                  : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
+                  ? 'bg-[var(--ink-primary)] text-[var(--bg-surface)]'
+                  : 'bg-[var(--bg-inset)] text-[var(--ink-primary)] border border-[var(--border-subtle)]'
               }`}
             >
-              Mesa (Local)
+              Mesa (local)
             </button>
             <button
               type="button"
               onClick={() => setMode('takeaway')}
-              className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
+              className={`min-h-[38px] rounded-xl text-xs font-bold active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                 mode === 'takeaway'
-                  ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                  : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
+                  ? 'bg-[var(--ink-primary)] text-[var(--bg-surface)]'
+                  : 'bg-[var(--bg-inset)] text-[var(--ink-primary)] border border-[var(--border-subtle)]'
               }`}
             >
               Para Llevar
@@ -186,10 +186,10 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
             <button
               type="button"
               onClick={() => setMode('delivery')}
-              className={`min-h-[38px] rounded-xl text-xs font-extrabold cursor-pointer ${
+              className={`min-h-[38px] rounded-xl text-xs font-bold active:scale-[0.97] transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                 mode === 'delivery'
-                  ? 'bg-[#3B1F0E] text-[#FFF8E8]'
-                  : 'bg-[#FDF2D6] text-[#3B1F0E] border border-[#D9A441]/55'
+                  ? 'bg-[var(--ink-primary)] text-[var(--bg-surface)]'
+                  : 'bg-[var(--bg-inset)] text-[var(--ink-primary)] border border-[var(--border-subtle)]'
               }`}
             >
               Delivery
@@ -198,13 +198,13 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
 
           {mode === 'dine-in' ? (
             <div>
-              <label className="block text-xs font-bold text-[#3B1F0E] mb-1">
-                Seleccionar Mesa
+              <label className="block text-xs font-bold text-[var(--ink-primary)] mb-1">
+                Seleccionar mesa
               </label>
               <select
                 value={tableNumber}
                 onChange={(e) => setTableNumber(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-bold text-[#2B1A0E]"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 {tables.map((t) => (
                   <option key={t.number} value={t.number}>
@@ -222,7 +222,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Nombre del cliente (Ej. Carlos) *"
-                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                className="px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
               <input
                 type="text"
@@ -230,7 +230,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                 value={pickupNote}
                 onChange={(e) => setPickupNote(e.target.value)}
                 placeholder="Teléfono / Hora retiro (opcional)"
-                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                className="px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
             </div>
           ) : (
@@ -241,7 +241,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Dirección de entrega"
-                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                className="px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
               <input
                 type="tel"
@@ -249,7 +249,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Teléfono / WhatsApp"
-                className="px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-xs font-semibold text-[#2B1A0E]"
+                className="px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               />
             </div>
           )}
@@ -264,9 +264,9 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
             {availableByCategory.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/45 p-2 space-y-1.5"
+                className="rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] p-2.5 space-y-1.5"
               >
-                <p className="text-xs font-extrabold text-[#2B1A0E]">
+                <p className="text-xs font-bold text-[var(--ink-primary)]">
                   {item.name}
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -275,7 +275,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                       key={sz.id}
                       type="button"
                       onClick={() => addLineItem(item, sz)}
-                      className="px-2 py-1 rounded-lg bg-[#D9A441] text-[#2B1A0E] text-[10px] font-extrabold hover:bg-[#E8C87A] cursor-pointer tabular-nums"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--accent-gold)] text-[var(--ink-primary)] text-[11px] font-bold hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
                     >
                       + {sz.label} Bs {sz.price}
                     </button>
@@ -286,14 +286,14 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
           </div>
 
           {items.length > 0 && (
-            <div className="rounded-xl bg-[#FFFDF8] border border-[#B84A27]/40 p-2.5 space-y-1.5">
-              <p className="text-xs font-extrabold text-[#B84A27]">
+            <div className="rounded-xl bg-[var(--bg-canvas)] border border-[var(--accent-primary)]/40 p-2.5 space-y-1.5">
+              <p className="text-xs font-bold text-[var(--accent-primary)]">
                 Ítems en esta comanda:
               </p>
               {items.map((it, idx) => (
                 <div
                   key={`${it.name}-${it.sizeLabel}-${idx}`}
-                  className="flex items-center justify-between text-xs font-bold"
+                  className="flex items-center justify-between text-xs font-semibold"
                 >
                   <span className="truncate pr-2">
                     {it.name} ({it.sizeLabel})
@@ -303,7 +303,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                       type="button"
                       onClick={() => updateLineQty(idx, -1)}
                       aria-label={`Disminuir ${it.name}`}
-                      className="w-6 h-6 rounded-lg bg-[#FDF2D6] border border-[#D9A441] flex items-center justify-center cursor-pointer"
+                      className="w-6 h-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center active:scale-[0.97] cursor-pointer"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -312,7 +312,7 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                       type="button"
                       onClick={() => updateLineQty(idx, 1)}
                       aria-label={`Aumentar ${it.name}`}
-                      className="w-6 h-6 rounded-lg bg-[#D9A441] flex items-center justify-center cursor-pointer"
+                      className="w-6 h-6 rounded-lg bg-[var(--accent-gold)] flex items-center justify-center active:scale-[0.97] cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -327,20 +327,20 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notas para cocina (opcional)"
-            className="w-full px-3 py-2 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 text-xs font-semibold text-[#2B1A0E]"
+            className="w-full px-3 py-2 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-semibold text-[var(--ink-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           />
 
           <div className="space-y-2 pt-1">
             <button
               type="button"
               onClick={() => setPayNow((p) => !p)}
-              className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer"
+              className="flex items-center gap-2 text-xs font-bold text-[var(--ink-primary)] cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             >
               <span
                 className={`w-4 h-4 rounded border flex items-center justify-center ${
                   payNow
-                    ? 'bg-[#2E6F32] border-[#2E6F32] text-white'
-                    : 'border-[#7A5A3A]'
+                    ? 'bg-[var(--status-ok)] border-[var(--status-ok)] text-white'
+                    : 'border-[var(--ink-muted)]'
                 }`}
               >
                 {payNow && <Check className="w-3 h-3" strokeWidth={3} />}
@@ -355,10 +355,10 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
                     key={m}
                     type="button"
                     onClick={() => setPayMethod(m)}
-                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-extrabold cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-lg border text-xs font-bold active:scale-[0.97] transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
                       payMethod === m
-                        ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                        : 'bg-[#FDF2D6] border-[#D9A441]/55'
+                        ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
+                        : 'bg-[var(--bg-inset)] border-[var(--border-subtle)]'
                     }`}
                   >
                     {m}
@@ -371,29 +371,29 @@ export const PosOrderModal: React.FC<PosOrderModalProps> = ({
           <button
             type="button"
             onClick={() => setOpenTicketOnSave((p) => !p)}
-            className="flex items-center gap-2 text-xs font-extrabold text-[#3B1F0E] cursor-pointer pt-1"
+            className="flex items-center gap-2 text-xs font-bold text-[var(--ink-primary)] cursor-pointer pt-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           >
             <span
               className={`w-4 h-4 rounded border flex items-center justify-center ${
                 openTicketOnSave
-                  ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#D9A441]'
-                  : 'border-[#7A5A3A]'
+                  ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--accent-gold)]'
+                  : 'border-[var(--ink-muted)]'
               }`}
             >
               {openTicketOnSave && <Check className="w-3 h-3" strokeWidth={3} />}
             </span>
-            <span>Abrir Ticket (Imprimir / WhatsApp) al guardar</span>
+            <span>Abrir ticket (Imprimir / WhatsApp) al guardar</span>
           </button>
         </div>
 
         <button
           type="submit"
           disabled={items.length === 0}
-          className="w-full min-h-[44px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-xs disabled:opacity-45 cursor-pointer shrink-0 tabular-nums"
+          className="w-full min-h-[44px] rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-surface)] font-bold text-xs disabled:opacity-45 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
         >
           {payNow
-            ? `Registrar y Cobrar • ${formatBs(total)}`
-            : `Enviar Comanda a Cocina • ${formatBs(total)}`}
+            ? `Registrar y cobrar — ${formatBs(total)}`
+            : `Enviar comanda a cocina — ${formatBs(total)}`}
         </button>
       </form>
     </div>

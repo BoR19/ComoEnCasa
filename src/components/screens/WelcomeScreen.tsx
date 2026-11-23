@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { User } from 'firebase/auth';
 import {
+  ArrowRight,
   Bike,
   CheckCircle2,
   Clock,
@@ -8,12 +9,13 @@ import {
   KeyRound,
   LogIn,
   LogOut,
+  MapPin,
   ShoppingBag,
   UtensilsCrossed,
   X,
 } from 'lucide-react';
 import { TakeawayInfo } from '../../types/app';
-import { OfficialLogo, VintageCorners } from '../BrandAssets';
+import { OfficialLogo } from '../BrandAssets';
 
 interface WelcomeScreenProps {
   mozoPin: string;
@@ -188,99 +190,169 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   };
 
   return (
-    <div className="relative flex-1 flex flex-col justify-between bg-[#3B1F0E] text-[#FFF8E8] px-5 sm:px-6 py-6 sm:py-8 lg:py-10 overflow-y-auto phone-scroll min-h-0">
-      <VintageCorners color="#D9A441" opacity={0.55} />
+    <div className="relative flex-1 min-h-0 overflow-y-auto phone-scroll bg-[var(--bg-canvas)] text-[var(--ink-primary)]">
+      <div className="min-h-[100dvh] md:min-h-full flex flex-col justify-between px-5 py-8">
+        {/* Centered 3-Block Minimalist Welcome Container */}
+        <div className="my-auto w-full max-w-xl lg:max-w-3xl mx-auto flex flex-col gap-6 sm:gap-8">
+          {/* Bloque 1: Cabecera de identidad */}
+          <header className="flex flex-col items-start min-w-0">
+            <div className="w-full flex flex-col items-center text-center gap-2">
+              <button
+                type="button"
+                onClick={handleLogoTap}
+                aria-label="Como en Casa"
+                className="rounded-2xl active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+              >
+                <OfficialLogo size="sm" />
+              </button>
 
-      {/* Top Logo & Welcome Copy (stacked on mobile, balanced 2-column stage on PC) */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center pt-2 lg:max-w-4xl lg:w-full lg:mx-auto lg:grid lg:grid-cols-2 lg:gap-12 lg:text-left">
-        <div className="flex flex-col items-center lg:items-center">
-          <button
-            type="button"
-            onClick={handleLogoTap}
-            aria-label="Como en Casa"
-            className="rounded-3xl focus:outline-none active:scale-[0.97] transition-transform cursor-pointer select-none"
+              <span className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)]">
+                <MapPin className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                <span>Tupiza, Potosí</span>
+              </span>
+
+              {logoTapCount >= 2 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[11px] font-semibold text-[var(--ink-primary)] tabular-nums">
+                  Acceso personal: {logoTapCount}/5
+                </span>
+              )}
+
+              {isMozoLoggedIn && (
+                <button
+                  type="button"
+                  onClick={onGoMozoComandas}
+                  className="min-h-[36px] px-3 py-1 rounded-xl bg-[var(--status-ok)]/12 border border-[var(--status-ok)]/30 text-[var(--status-ok)] text-xs font-bold hover:bg-[var(--status-ok)]/20 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                >
+                  Sesión Mozo activa — Ir a Comandas
+                </button>
+              )}
+            </div>
+
+            <h1 className="mt-5 font-serif-display text-[1.75rem] sm:text-4xl lg:text-[2.65rem] font-bold text-[var(--ink-primary)] leading-[1.12] tracking-tight min-w-0 [overflow-wrap:break-word]">
+              Cocina tradicional de Tupiza, hecha al día
+            </h1>
+
+            <p className="mt-2.5 text-sm sm:text-base text-[var(--ink-muted)] leading-relaxed max-w-xl">
+              Elige cómo prefieres disfrutar nuestros platos caseros y sopas del día con precios claros en Bs.
+            </p>
+          </header>
+
+          {/* Bloque 2: Selector Bento de 3 vías */}
+          <section
+            aria-label="Modalidad de pedido"
+            className="w-full grid grid-cols-1 lg:grid-cols-12 gap-3"
           >
-            <OfficialLogo size="lg" />
-          </button>
-
-          {logoTapCount >= 2 && (
-            <span className="mt-2 px-2.5 py-0.5 rounded-full bg-[#4A2C1A] border border-[#D9A441]/50 text-[10px] font-extrabold text-[#E8C87A] tabular-nums">
-              Acceso personal: {logoTapCount}/5
-            </span>
-          )}
-
-          {isMozoLoggedIn && (
-            <button
-              type="button"
-              onClick={onGoMozoComandas}
-              className="mt-3 px-3.5 py-1.5 rounded-xl bg-[#D9A441]/20 border border-[#D9A441] text-[#E8C87A] text-xs font-extrabold hover:bg-[#D9A441]/30 cursor-pointer"
-            >
-              Sesión Mozo activa • Ir a Comandas
-            </button>
-          )}
-        </div>
-
-        <div className="w-full flex flex-col items-center lg:items-start">
-          <h1 className="font-serif-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#FFF8E8] mt-4 sm:mt-6 lg:mt-0 tracking-tight">
-            ¡Bienvenido!
-          </h1>
-          <p className="mt-2 sm:mt-3 text-sm sm:text-[15px] lg:text-base leading-relaxed text-[#FFF8E8]/90 max-w-[270px] lg:max-w-md font-medium">
-            Disfruta de la auténtica comida tradicional, hecha como en casa.
-          </p>
-
-          {/* Primary Action Buttons */}
-          <div className="w-full max-w-sm mt-6 sm:mt-8 space-y-3">
+            {/* Botón protagonista: Comer en el local */}
             <button
               type="button"
               onClick={onSelectDineIn}
-              className="w-full min-h-[52px] px-5 py-3.5 rounded-2xl bg-[#FFF8E8] text-[#2B1A0E] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#FFF6E0] active:scale-[0.98] transition-all cursor-pointer"
+              className="lg:col-span-7 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-surface)] p-5 text-left flex flex-col justify-between gap-4 min-h-[124px] lg:min-h-[172px] hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
             >
-              <UtensilsCrossed className="w-5 h-5 text-[#3B1F0E]" strokeWidth={2.2} />
-              <span>Comer en el local</span>
+              <div className="flex items-center justify-between w-full">
+                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                  <UtensilsCrossed className="w-5 h-5" strokeWidth={2.2} />
+                </div>
+                <ArrowRight className="w-5 h-5 opacity-90 shrink-0" />
+              </div>
+
+              <div className="min-w-0">
+                <span className="block font-serif-display text-xl sm:text-2xl font-bold leading-snug">
+                  Comer en el local
+                </span>
+                <span className="block text-xs sm:text-sm text-white/90 mt-1 font-medium leading-relaxed">
+                  Selecciona tu mesa y envía tu pedido directo a cocina
+                </span>
+              </div>
             </button>
 
-            <button
-              type="button"
-              onClick={openTakeawayModal}
-              className="w-full min-h-[52px] px-5 py-3.5 rounded-2xl bg-[#E64833] text-[#FFF8E8] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#D43D29] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <ShoppingBag className="w-5 h-5 text-[#FFF8E8]" strokeWidth={2.2} />
-              <span>Para Llevar</span>
-            </button>
+            {/* Accesos secundarios: 2 columnas compactas en móvil, apilados a la derecha en escritorio */}
+            <div className="lg:col-span-5 grid grid-cols-2 lg:grid-cols-1 gap-3">
+              <button
+                type="button"
+                onClick={openTakeawayModal}
+                className="min-h-[104px] lg:min-h-0 flex-1 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] p-3.5 sm:p-4 text-left flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 lg:gap-3 hover:border-[var(--accent-primary)] hover:bg-[var(--bg-inset)]/40 active:scale-[0.97] transition-[transform,border-color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+              >
+                <div className="flex items-center justify-between lg:justify-start lg:gap-3 w-full lg:w-auto min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--bg-inset)] text-[var(--accent-primary)] flex items-center justify-center shrink-0">
+                    <ShoppingBag className="w-4 h-4" strokeWidth={2.2} />
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[var(--ink-muted)] shrink-0 lg:hidden" />
+                  <div className="hidden lg:block min-w-0">
+                    <span className="block text-sm font-bold leading-tight">
+                      Para Llevar
+                    </span>
+                    <span className="block text-xs text-[var(--ink-muted)] mt-0.5 leading-snug">
+                      Retiro rápido en local
+                    </span>
+                  </div>
+                </div>
 
-            <button
-              type="button"
-              onClick={onSelectDelivery}
-              className="w-full min-h-[52px] px-5 py-3.5 rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-base flex items-center justify-center gap-3 shadow-md hover:bg-[#E8C87A] active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <Bike className="w-5 h-5 text-[#2B1A0E]" strokeWidth={2.3} />
-              <span>Delivery</span>
-            </button>
-          </div>
+                <div className="lg:hidden min-w-0">
+                  <span className="block text-sm font-bold leading-tight">
+                    Para Llevar
+                  </span>
+                  <span className="block text-xs text-[var(--ink-muted)] mt-0.5 leading-snug [overflow-wrap:break-word]">
+                    Retiro rápido en local
+                  </span>
+                </div>
+
+                <ArrowRight className="hidden lg:block w-4 h-4 text-[var(--ink-muted)] shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={onSelectDelivery}
+                className="min-h-[104px] lg:min-h-0 flex-1 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] p-3.5 sm:p-4 text-left flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 lg:gap-3 hover:border-[var(--accent-primary)] hover:bg-[var(--bg-inset)]/40 active:scale-[0.97] transition-[transform,border-color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+              >
+                <div className="flex items-center justify-between lg:justify-start lg:gap-3 w-full lg:w-auto min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--bg-inset)] text-[var(--accent-gold)] flex items-center justify-center shrink-0">
+                    <Bike className="w-4 h-4" strokeWidth={2.3} />
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[var(--ink-muted)] shrink-0 lg:hidden" />
+                  <div className="hidden lg:block min-w-0">
+                    <span className="block text-sm font-bold leading-tight">
+                      Delivery
+                    </span>
+                    <span className="block text-xs text-[var(--ink-muted)] mt-0.5 leading-snug">
+                      Envío a tu dirección
+                    </span>
+                  </div>
+                </div>
+
+                <div className="lg:hidden min-w-0">
+                  <span className="block text-sm font-bold leading-tight">
+                    Delivery
+                  </span>
+                  <span className="block text-xs text-[var(--ink-muted)] mt-0.5 leading-snug [overflow-wrap:break-word]">
+                    Envío a tu dirección
+                  </span>
+                </div>
+
+                <ArrowRight className="hidden lg:block w-4 h-4 text-[var(--ink-muted)] shrink-0" />
+              </button>
+            </div>
+          </section>
         </div>
-      </div>
 
-      {/* Footer */}
-      <footer className="relative z-10 pt-6 flex flex-col items-center gap-2 text-center">
-        <div className="flex items-center gap-2 text-xs text-[#FFF8E8]/75">
-          <span>Versión 1.0</span>
-          <span aria-hidden="true">•</span>
+        {/* Bloque 3: Pie de página discreto en flujo normal (sin position fixed/absolute ni puntos medios) */}
+        <footer className="w-full max-w-xl lg:max-w-3xl mx-auto mt-6 border-t border-[var(--border-subtle)]/70 flex flex-wrap items-center justify-center gap-6 pt-6 pb-4 text-center text-xs text-[var(--ink-muted)]">
           <button
             type="button"
             onClick={() => setShowLegalModal(true)}
-            className="underline decoration-[#D9A441]/60 hover:text-[#E8C87A] cursor-pointer"
+            className="underline decoration-[var(--border-subtle)] underline-offset-4 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-sm py-1"
           >
-            Términos y Privacidad
+            Términos y privacidad
           </button>
-        </div>
-        <button
-          type="button"
-          onClick={onGoAdminLogin}
-          className="text-[11px] text-[#E8C87A]/80 hover:text-[#E8C87A] underline underline-offset-2 cursor-pointer"
-        >
-          Acceso Administrador
-        </button>
-      </footer>
+
+          <button
+            type="button"
+            onClick={onGoAdminLogin}
+            className="underline decoration-[var(--border-subtle)] underline-offset-4 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] rounded-sm py-1"
+          >
+            Acceso administrador
+          </button>
+        </footer>
+      </div>
 
       {/* Modal: Pedido Para Llevar (Retiro en local) */}
       {showTakeawayModal && (
@@ -294,18 +366,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <form
             onSubmit={handleConfirmTakeaway}
             onClick={(e) => e.stopPropagation()}
-            className="my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[#1E1E1E] text-[#FFF8E8] rounded-3xl border border-[#D9A441]/50 p-5 shadow-2xl space-y-4"
+            className="modal-surface my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[var(--ops-surface)] text-[var(--bg-canvas)] rounded-3xl border border-[var(--accent-gold)]/45 p-5 shadow-2xl space-y-4"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-[#E64833] text-[#FFF8E8] flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[var(--ops-accent)] text-[var(--bg-surface)] flex items-center justify-center shrink-0">
                   <ShoppingBag className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="font-serif-display text-lg font-bold text-[#FFF8E8] leading-tight">
-                    Pedido Para Llevar
+                  <h2 className="font-serif-display text-lg font-bold text-[var(--bg-surface)] leading-tight">
+                    Pedido para llevar
                   </h2>
-                  <p className="text-[11px] font-semibold text-[#E8C87A]/80">
+                  <p className="text-xs font-medium text-[var(--accent-gold)]">
                     Retiro directo en el restaurante
                   </p>
                 </div>
@@ -315,7 +387,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 type="button"
                 onClick={() => setShowTakeawayModal(false)}
                 aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl bg-[#2A2A2A] flex items-center justify-center text-[#FFF8E8]/80 hover:text-[#FFF8E8] cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-xl bg-[var(--ops-elevated)] flex items-center justify-center text-[var(--bg-canvas)]/80 hover:text-[var(--bg-surface)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -325,9 +397,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <div>
                 <label
                   htmlFor="welcome-takeaway-name"
-                  className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-[#E8C87A] mb-1.5"
+                  className="block text-xs font-semibold text-[var(--accent-gold)] mb-1.5"
                 >
-                  <span>¿A qué nombre va el pedido? *</span>
+                  ¿A qué nombre va el pedido? *
                 </label>
                 <input
                   id="welcome-takeaway-name"
@@ -340,12 +412,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                     setTakeawayNameDraft(e.target.value);
                   }}
                   placeholder="Ej. Carlos"
-                  className={`w-full h-11 px-3.5 rounded-xl bg-[#141414] border text-sm font-bold text-[#FFF8E8] placeholder:text-[#FFF8E8]/35 focus:outline-none focus:ring-2 focus:ring-[#E64833] ${
-                    takeawayError ? 'border-[#E64833]' : 'border-[#2E2E2E]'
+                  className={`w-full h-11 px-3.5 rounded-xl bg-[var(--ops-canvas)] border text-sm font-semibold text-[var(--bg-surface)] placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)] ${
+                    takeawayError
+                      ? 'border-[var(--ops-accent)]'
+                      : 'border-[var(--ops-border)]'
                   }`}
                 />
                 {takeawayError && (
-                  <p className="text-[11px] font-bold text-[#E64833] mt-1">
+                  <p className="text-xs font-semibold text-[var(--ops-accent)] mt-1">
                     {takeawayError}
                   </p>
                 )}
@@ -354,9 +428,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <div>
                 <label
                   htmlFor="welcome-takeaway-pickup"
-                  className="block text-[11px] font-extrabold uppercase tracking-wider text-[#FFF8E8]/70 mb-1.5"
+                  className="block text-xs font-semibold text-white/75 mb-1.5"
                 >
-                  Teléfono / Hora de retiro (opcional)
+                  Teléfono o hora de retiro (opcional)
                 </label>
                 <input
                   id="welcome-takeaway-pickup"
@@ -365,11 +439,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   value={takeawayPickupDraft}
                   onChange={(e) => setTakeawayPickupDraft(e.target.value)}
                   placeholder="Ej. Retira en 15 min · 71234567"
-                  className="w-full h-10 px-3.5 rounded-xl bg-[#141414] border border-[#2E2E2E] text-xs font-semibold text-[#FFF8E8] placeholder:text-[#FFF8E8]/35 focus:outline-none focus:ring-2 focus:ring-[#D9A441]"
+                  className="w-full h-10 px-3.5 rounded-xl bg-[var(--ops-canvas)] border border-[var(--ops-border)] text-xs font-medium text-[var(--bg-surface)] placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                 />
 
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#E8C87A]/75 mr-0.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--accent-gold)]/85 mr-0.5">
                     <Clock className="w-3 h-3" />
                     Rápido:
                   </span>
@@ -378,7 +452,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                       key={chip}
                       type="button"
                       onClick={() => applyPickupChip(chip)}
-                      className="px-2.5 py-1 rounded-lg bg-[#2A2A2A] border border-[#3A3A3A] text-[10px] font-extrabold text-[#E8C87A] hover:border-[#D9A441] cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--ops-elevated)] border border-[var(--ops-border)] text-[11px] font-semibold text-[var(--accent-gold)] hover:border-[var(--accent-gold)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                     >
                       {chip}
                     </button>
@@ -390,18 +464,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <div className="space-y-2 pt-1">
               <button
                 type="submit"
-                className="w-full min-h-[46px] rounded-2xl bg-[#E64833] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-[#D43D29] active:scale-[0.98] transition-all cursor-pointer shadow-md"
+                className="w-full min-h-[46px] rounded-2xl bg-[var(--ops-accent)] text-[var(--bg-surface)] font-bold text-sm flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Ir a la Carta · Para Llevar</span>
+                <span>Ir a la Carta — Para Llevar</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleBrowseTakeawayMenu}
-                className="w-full min-h-[40px] rounded-2xl bg-[#2A2A2A] text-[#FFF8E8]/85 font-bold text-xs hover:text-[#FFF8E8] hover:bg-[#333333] cursor-pointer transition-colors"
+                className="w-full min-h-[40px] rounded-2xl bg-[var(--ops-elevated)] text-white/85 font-semibold text-xs hover:text-[var(--bg-surface)] hover:bg-white/10 active:scale-[0.97] cursor-pointer transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
               >
-                Explorar Carta primero
+                Explorar carta primero
               </button>
             </div>
           </form>
@@ -410,29 +484,35 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
       {/* Modal: Términos y Privacidad */}
       {showLegalModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="my-auto w-full max-w-md bg-[#FFF8E8] text-[#2B1A0E] rounded-2xl border border-[#D9A441] p-5 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowLegalModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="modal-surface my-auto w-full max-w-md bg-[var(--bg-surface)] text-[var(--ink-primary)] rounded-2xl border border-[var(--border-subtle)] p-5 shadow-xl"
+          >
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
-                Términos y Privacidad
+              <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
+                Términos y privacidad
               </h2>
               <button
                 type="button"
                 onClick={() => setShowLegalModal(false)}
                 aria-label="Cerrar"
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3B1F0E] hover:bg-[#FFF6E0] cursor-pointer"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-[#7A5A3A] leading-relaxed">
+            <p className="text-sm text-[var(--ink-muted)] leading-relaxed">
               Como en Casa - Comida Tradicional utiliza tus datos de mesa o entrega únicamente para
               gestionar tu pedido del día. Todos los precios están expresados en Bolivianos (Bs).
             </p>
             <button
               type="button"
               onClick={() => setShowLegalModal(false)}
-              className="mt-4 w-full min-h-[44px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-bold text-sm cursor-pointer"
+              className="mt-4 w-full min-h-[44px] rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-surface)] font-bold text-sm active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             >
               Entendido
             </button>
@@ -448,17 +528,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           aria-modal="true"
           aria-label="Acceso Mozo"
         >
-          <div className="my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[#FFF8E8] text-[#2B1A0E] rounded-3xl border-2 border-[#D9A441] p-4 sm:p-5 shadow-2xl space-y-3.5">
+          <div className="modal-surface my-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll bg-[var(--bg-surface)] text-[var(--ink-primary)] rounded-3xl border border-[var(--border-subtle)] p-4 sm:p-5 shadow-2xl space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-[#3B1F0E] text-[#D9A441] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[var(--ink-primary)] text-[var(--accent-gold)] flex items-center justify-center">
                   <KeyRound className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E] leading-tight">
-                    {isMozoLoggedIn ? 'Sesión Mozo Activa' : 'Acceso Mozo'}
+                  <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)] leading-tight">
+                    {isMozoLoggedIn ? 'Sesión Mozo activa' : 'Acceso Mozo'}
                   </h2>
-                  <p className="text-[11px] font-bold text-[#7A5A3A]">
+                  <p className="text-xs font-medium text-[var(--ink-muted)]">
                     {isMozoLoggedIn
                       ? 'Ingresa 4 números para cerrar sesión'
                       : 'Introduce tu PIN de 4 números'}
@@ -470,7 +550,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 type="button"
                 onClick={() => setShowMozoModal(false)}
                 aria-label="Cerrar"
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] hover:bg-[#FDF2D6] cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -483,7 +563,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   setShowMozoModal(false);
                   onGoMozoComandas();
                 }}
-                className="w-full min-h-[42px] rounded-2xl bg-[#D9A441] text-[#2B1A0E] font-extrabold text-xs flex items-center justify-center gap-1.5 hover:bg-[#E8C87A] cursor-pointer"
+                className="w-full min-h-[42px] rounded-2xl bg-[var(--accent-gold)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 <UtensilsCrossed className="w-4 h-4" />
                 <span>Entrar a Comandas</span>
@@ -492,15 +572,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
             {/* Google Staff Sync Status inside PIN Modal */}
             {firebaseUser && isStaff ? (
-              <div className="rounded-xl bg-[#2E6F32]/12 border border-[#2E6F32]/30 px-3 py-2 flex items-center gap-2 text-[11px] font-extrabold text-[#2E6F32]">
+              <div className="rounded-xl bg-[var(--status-ok)]/10 border border-[var(--status-ok)]/30 px-3 py-2 flex items-center gap-2 text-xs font-semibold text-[var(--status-ok)]">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span className="truncate">
                   Sincronizado en vivo: {firebaseUser.email}
                 </span>
               </div>
             ) : (
-              <div className="rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 px-3 py-2 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold text-[#7A5A3A] leading-tight">
+              <div className="rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] px-3 py-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-[var(--ink-muted)] leading-tight">
                   {firebaseUser
                     ? `Cuenta (${firebaseUser.email}) sin rol de personal`
                     : 'Conecta Google autorizado para sincronizar en vivo'}
@@ -508,9 +588,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 <button
                   type="button"
                   onClick={onGoogleSignIn}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#3B1F0E] text-[#FFF8E8] text-[10px] font-extrabold inline-flex items-center gap-1 hover:bg-[#4A2C1A] cursor-pointer shrink-0"
+                  className="px-2.5 py-1.5 rounded-lg bg-[var(--ink-primary)] text-[var(--bg-surface)] text-xs font-semibold inline-flex items-center gap-1 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                 >
-                  <LogIn className="w-3 h-3 text-[#D9A441]" />
+                  <LogIn className="w-3 h-3 text-[var(--accent-gold)]" />
                   <span>{firebaseUser ? 'Cambiar' : 'Conectar'}</span>
                 </button>
               </div>
@@ -523,10 +603,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 return (
                   <div
                     key={idx}
-                    className={`h-13 rounded-2xl border-2 flex items-center justify-center text-xl font-extrabold tabular-nums transition-colors ${
+                    className={`h-13 rounded-2xl border-2 flex items-center justify-center text-xl font-bold tabular-nums transition-colors duration-150 ease-[var(--ease-out)] ${
                       filled
-                        ? 'bg-[#3B1F0E] border-[#3B1F0E] text-[#D9A441]'
-                        : 'bg-[#FDF2D6] border-[#D9A441]/70 text-[#7A5A3A]'
+                        ? 'bg-[var(--ink-primary)] border-[var(--ink-primary)] text-[var(--accent-gold)]'
+                        : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-muted)]'
                     }`}
                   >
                     {filled ? '●' : ''}
@@ -536,7 +616,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             </div>
 
             {pinError && (
-              <p className="text-xs font-extrabold text-[#B83227] bg-[#B83227]/10 border border-[#B83227]/35 rounded-xl px-3 py-2 text-center">
+              <p className="text-xs font-semibold text-[var(--status-danger)] bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/35 rounded-xl px-3 py-2 text-center">
                 {pinError}
               </p>
             )}
@@ -548,7 +628,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   key={digit}
                   type="button"
                   onClick={() => handleDigitPress(digit)}
-                  className="h-12 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 text-base font-extrabold text-[#2B1A0E] hover:bg-[#E8C87A]/40 active:scale-95 transition-all cursor-pointer tabular-nums"
+                  className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-base font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
                 >
                   {digit}
                 </button>
@@ -560,7 +640,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   setPinInput('');
                   setPinError('');
                 }}
-                className="h-12 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 text-xs font-extrabold text-[#7A5A3A] hover:bg-[#E8C87A]/30 cursor-pointer"
+                className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--ink-primary)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 Limpiar
               </button>
@@ -568,7 +648,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => handleDigitPress('0')}
-                className="h-12 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 text-base font-extrabold text-[#2B1A0E] hover:bg-[#E8C87A]/40 active:scale-95 transition-all cursor-pointer tabular-nums"
+                className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-base font-bold text-[var(--ink-primary)] hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 0
               </button>
@@ -577,18 +657,20 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 type="button"
                 onClick={handleBackspace}
                 aria-label="Borrar último dígito"
-                className="h-12 rounded-2xl bg-[#FDF2D6] border border-[#D9A441]/60 text-[#3B1F0E] flex items-center justify-center hover:bg-[#E8C87A]/30 active:scale-95 cursor-pointer"
+                className="h-12 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] flex items-center justify-center hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
               >
                 <Delete className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex items-center justify-between text-[10px] font-bold text-[#7A5A3A] pt-1">
-              <span>PIN por defecto: {mozoPin === '1234' ? '1234' : '4 dígitos'}</span>
+            <div className="flex items-center justify-between text-xs font-medium text-[var(--ink-muted)] pt-1">
+              <span>
+                PIN por defecto: {mozoPin === '1234' ? '1234' : '4 dígitos'}
+              </span>
               {isMozoLoggedIn && (
-                <span className="inline-flex items-center gap-1 text-[#B84A27] font-extrabold">
+                <span className="inline-flex items-center gap-1 text-[var(--accent-primary)] font-bold">
                   <LogOut className="w-3 h-3" />
-                  Modo Logout
+                  Modo logout
                 </span>
               )}
             </div>

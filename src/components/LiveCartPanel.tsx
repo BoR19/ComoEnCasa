@@ -207,24 +207,24 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
       : 'Delivery';
 
   return (
-    <div className="flex flex-col h-full bg-[#FFFDF8] text-[#2B1A0E]">
+    <div className="flex flex-col h-full bg-[var(--bg-surface)] text-[var(--ink-primary)]">
       {/* Top Header */}
-      <div className="px-4 py-3 border-b border-[#D9A441]/30 flex items-center justify-between gap-2 shrink-0 bg-[#FFFDF8]">
+      <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2 shrink-0 bg-[var(--bg-surface)]">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#3B1F0E]">
-              Comanda en Vivo
+            <h2 className="text-xs font-bold text-[var(--ink-primary)]">
+              Comanda en vivo
             </h2>
-            <span className="px-2 py-0.5 rounded-md bg-[#FDF2D6] border border-[#D9A441]/55 text-[10px] font-extrabold text-[#B84A27] tabular-nums">
+            <span className="px-2 py-0.5 rounded-md bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[10px] font-bold text-[var(--accent-primary)] tabular-nums">
               {headerContextBadge}
             </span>
             {roleBadgeLabel && (
-              <span className="px-2 py-0.5 rounded-md bg-[#3B1F0E] text-[#D9A441] text-[10px] font-extrabold">
+              <span className="px-2 py-0.5 rounded-md bg-[var(--ops-surface)] text-[var(--accent-gold)] text-[10px] font-bold">
                 {roleBadgeLabel}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-[#7A5A3A] mt-0.5 truncate">
+          <p className="text-[11px] text-[var(--ink-muted)] mt-0.5 truncate">
             Como en Casa · Tupiza
           </p>
         </div>
@@ -234,7 +234,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Cerrar comanda"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#3B1F0E] hover:bg-[#FDF2D6] cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -242,41 +242,41 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
       </div>
 
       {/* Mode Switch & Table / Takeaway / Delivery Selector */}
-      <div className="px-4 py-3 border-b border-[#D9A441]/25 space-y-2.5 bg-[#FFF8E8]/60 shrink-0">
-        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/45">
+      <div className="px-4 py-3 border-b border-[var(--border-subtle)] space-y-2.5 bg-[var(--bg-canvas)] shrink-0">
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={() => onChangeOrderMode('dine-in')}
-            className={`min-h-[34px] px-1.5 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`min-h-[38px] px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer whitespace-nowrap ${
               orderMode === 'dine-in'
-                ? 'bg-[#3B1F0E] text-[#FFF8E8] shadow-xs'
-                : 'text-[#7A5A3A] hover:text-[#2B1A0E]'
+                ? 'bg-[var(--ink-primary)] text-[var(--bg-canvas)]'
+                : 'text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
             }`}
           >
             <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
-            <span>Comer Aquí</span>
+            <span>Comer aquí</span>
           </button>
 
           <button
             type="button"
             onClick={() => onChangeOrderMode('takeaway')}
-            className={`min-h-[34px] px-1.5 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`min-h-[38px] px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer whitespace-nowrap ${
               orderMode === 'takeaway'
-                ? 'bg-[#3B1F0E] text-[#FFF8E8] shadow-xs'
-                : 'text-[#7A5A3A] hover:text-[#2B1A0E]'
+                ? 'bg-[var(--ink-primary)] text-[var(--bg-canvas)]'
+                : 'text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
             }`}
           >
             <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
-            <span>Para Llevar</span>
+            <span>Para llevar</span>
           </button>
 
           <button
             type="button"
             onClick={() => onChangeOrderMode('delivery')}
-            className={`min-h-[34px] px-1.5 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
+            className={`min-h-[38px] px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer whitespace-nowrap ${
               orderMode === 'delivery'
-                ? 'bg-[#3B1F0E] text-[#FFF8E8] shadow-xs'
-                : 'text-[#7A5A3A] hover:text-[#2B1A0E]'
+                ? 'bg-[var(--ink-primary)] text-[var(--bg-canvas)]'
+                : 'text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
             }`}
           >
             <Bike className="w-3.5 h-3.5 shrink-0" />
@@ -289,7 +289,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             <div className="flex-1 min-w-0">
               <label
                 htmlFor="live-cart-table-select"
-                className="block text-[10px] font-extrabold uppercase tracking-wider text-[#7A5A3A] mb-1"
+                className="block text-[11px] font-semibold text-[var(--ink-muted)] mb-1"
               >
                 Mesa seleccionada
               </label>
@@ -297,7 +297,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 id="live-cart-table-select"
                 value={selectedTable}
                 onChange={(e) => onSelectTable(Number(e.target.value))}
-                className="w-full h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441]/70 text-xs font-extrabold text-[#2B1A0E] focus:outline-none focus:ring-2 focus:ring-[#B84A27] cursor-pointer"
+                className="w-full h-9 px-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
               >
                 {tables.map((t) => {
                   const tblOrder = isStaffRole
@@ -317,14 +317,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               </select>
             </div>
 
-            <div className="pt-4 shrink-0">
+            <div className="pt-5 shrink-0">
               <button
                 type="button"
                 onClick={onOpenTableQr}
                 title={`Ver QR de Mesa ${selectedTable}`}
-                className="h-9 px-2.5 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 text-[#3B1F0E] text-xs font-extrabold inline-flex items-center gap-1 hover:bg-[#E8C87A]/35 cursor-pointer"
+                className="h-9 px-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold inline-flex items-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
               >
-                <QrCode className="w-3.5 h-3.5 text-[#B84A27]" />
+                <QrCode className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                 <span>QR</span>
               </button>
             </div>
@@ -335,9 +335,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               <div>
                 <label
                   htmlFor="live-cart-takeaway-select"
-                  className="block text-[10px] font-extrabold uppercase tracking-wider text-[#7A5A3A] mb-1"
+                  className="block text-[11px] font-semibold text-[var(--ink-muted)] mb-1"
                 >
-                  Pedido Para Llevar activo
+                  Pedido Para llevar activo
                 </label>
                 <select
                   id="live-cart-takeaway-select"
@@ -345,12 +345,12 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                   onChange={(e) =>
                     onSelectTakeawayOrder(e.target.value || null)
                   }
-                  className="w-full h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441]/70 text-xs font-extrabold text-[#2B1A0E] focus:outline-none focus:ring-2 focus:ring-[#B84A27] cursor-pointer"
+                  className="w-full h-9 px-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
                 >
                   <option value="">
                     {activeTakeawayOrders.length === 0
-                      ? 'Nuevo pedido Para Llevar'
-                      : 'Nuevo pedido Para Llevar (sin vincular)'}
+                      ? 'Nuevo pedido Para llevar'
+                      : 'Nuevo pedido Para llevar (sin vincular)'}
                   </option>
                   {activeTakeawayOrders.map((tkOrd) => (
                     <option key={tkOrd.id} value={tkOrd.id}>
@@ -363,38 +363,38 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             )}
 
             {linkedTakeawayOrder ? (
-              <div className="rounded-xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#E64833]/50 p-2.5 space-y-1.5 shadow-xs">
+              <div className="rounded-xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--ops-accent)]/50 p-2.5 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <ShoppingBag className="w-3 h-3 text-[#E64833] shrink-0" />
-                      <span className="font-mono text-[10px] font-extrabold text-[#D9A441]">
+                      <ShoppingBag className="w-3 h-3 text-[var(--ops-accent)] shrink-0" />
+                      <span className="font-mono text-[10px] font-bold text-[var(--accent-gold)]">
                         {linkedTakeawayOrder.code}
                       </span>
-                      <span className="text-[10px] text-[#FFF8E8]/65 tabular-nums">
+                      <span className="text-[10px] text-[var(--bg-canvas)]/65 tabular-nums">
                         · {linkedTakeawayOrder.createdAt}
                       </span>
                     </div>
-                    <p className="text-xs font-extrabold text-[#FFF8E8] truncate mt-0.5">
-                      Para Llevar • {getTakeawayCustomerName(linkedTakeawayOrder)}
+                    <p className="text-xs font-bold text-[var(--bg-canvas)] truncate mt-0.5">
+                      Para llevar · {getTakeawayCustomerName(linkedTakeawayOrder)}
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => onSelectTakeawayOrder(null)}
-                    aria-label="Desvincular pedido Para Llevar"
-                    title="Desvincular pedido Para Llevar"
-                    className="w-7 h-7 rounded-lg bg-[#2A2A2A] text-[#E8C87A] hover:bg-[#E64833] hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    aria-label="Desvincular pedido Para llevar"
+                    title="Desvincular pedido Para llevar"
+                    className="w-7 h-7 rounded-lg bg-[var(--ops-elevated)] text-[var(--accent-gold)] hover:bg-[var(--ops-accent)] hover:text-white flex items-center justify-center transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)] cursor-pointer shrink-0"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 {linkedTakeawayOrder.pickupNote && (
-                  <div className="text-[11px] text-[#FFF8E8]/80 pt-1 border-t border-[#2E2E2E]">
+                  <div className="text-[11px] text-[var(--bg-canvas)]/80 pt-1 border-t border-[var(--ops-border)]">
                     <p className="flex items-center gap-1.5 truncate">
-                      <Clock className="w-3 h-3 text-[#D9A441] shrink-0" />
+                      <Clock className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
                       <span className="truncate">
                         {linkedTakeawayOrder.pickupNote}
                       </span>
@@ -403,14 +403,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 )}
               </div>
             ) : (
-              <div className="rounded-xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#2A2A2A] p-2.5 space-y-2">
+              <div className="rounded-xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--ops-border)] p-2.5 space-y-2">
                 <div>
                   <label
                     htmlFor="live-cart-takeaway-name"
-                    className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-[#E8C87A] mb-1"
+                    className="flex items-center justify-between text-[11px] font-semibold text-[var(--accent-gold)] mb-1"
                   >
                     <span>Nombre del cliente *</span>
-                    <span className="text-[9px] text-[#E64833] normal-case font-bold">
+                    <span className="text-[10px] text-[var(--ops-accent)] font-bold">
                       Obligatorio
                     </span>
                   </label>
@@ -428,10 +428,10 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       });
                     }}
                     placeholder="Ej. Carlos"
-                    className={`w-full h-9 px-2.5 rounded-xl bg-[#141414] border text-xs font-bold text-[#FFF8E8] placeholder:text-[#FFF8E8]/40 focus:outline-none focus:ring-2 focus:ring-[#E64833] ${
+                    className={`w-full h-9 px-2.5 rounded-xl bg-[var(--ops-canvas)] border text-xs font-semibold text-[var(--bg-canvas)] placeholder:text-[var(--bg-canvas)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ops-accent)] ${
                       takeawayNameAttempted && !takeawayInfo.customerName.trim()
-                        ? 'border-[#E64833]'
-                        : 'border-[#2E2E2E]'
+                        ? 'border-[var(--ops-accent)]'
+                        : 'border-[var(--ops-border)]'
                     }`}
                   />
                 </div>
@@ -439,7 +439,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 <div>
                   <label
                     htmlFor="live-cart-takeaway-pickup"
-                    className="block text-[10px] font-extrabold uppercase tracking-wider text-[#FFF8E8]/65 mb-1"
+                    className="block text-[11px] font-semibold text-[var(--bg-canvas)]/70 mb-1"
                   >
                     Teléfono / Hora de retiro (opcional)
                   </label>
@@ -455,7 +455,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       })
                     }
                     placeholder="Ej. Retira en 15 min · 71234567"
-                    className="w-full h-9 px-2.5 rounded-xl bg-[#141414] border border-[#2E2E2E] text-xs font-semibold text-[#FFF8E8] placeholder:text-[#FFF8E8]/40 focus:outline-none focus:ring-2 focus:ring-[#D9A441]"
+                    className="w-full h-9 px-2.5 rounded-xl bg-[var(--ops-canvas)] border border-[var(--ops-border)] text-xs font-medium text-[var(--bg-canvas)] placeholder:text-[var(--bg-canvas)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
                   />
                 </div>
               </div>
@@ -467,7 +467,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               <div>
                 <label
                   htmlFor="live-cart-delivery-select"
-                  className="block text-[10px] font-extrabold uppercase tracking-wider text-[#7A5A3A] mb-1"
+                  className="block text-[11px] font-semibold text-[var(--ink-muted)] mb-1"
                 >
                   Pedido Delivery activo
                 </label>
@@ -477,7 +477,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                   onChange={(e) =>
                     onSelectDeliveryOrder(e.target.value || null)
                   }
-                  className="w-full h-9 px-2.5 rounded-xl bg-[#FFFDF8] border border-[#D9A441]/70 text-xs font-extrabold text-[#2B1A0E] focus:outline-none focus:ring-2 focus:ring-[#B84A27] cursor-pointer"
+                  className="w-full h-9 px-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
                 >
                   <option value="">
                     {activeDeliveryOrders.length === 0
@@ -495,18 +495,18 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             )}
 
             {linkedDeliveryOrder ? (
-              <div className="rounded-xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441]/55 p-2.5 space-y-1.5 shadow-xs">
+              <div className="rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] border border-[var(--border-subtle)] p-2.5 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-mono text-[10px] font-extrabold text-[#D9A441]">
+                      <span className="font-mono text-[10px] font-bold text-[var(--accent-gold)]">
                         {linkedDeliveryOrder.code}
                       </span>
-                      <span className="text-[10px] text-[#FFF8E8]/65 tabular-nums">
+                      <span className="text-[10px] text-[var(--bg-canvas)]/65 tabular-nums">
                         · {linkedDeliveryOrder.createdAt}
                       </span>
                     </div>
-                    <p className="text-xs font-extrabold text-[#FFF8E8] truncate">
+                    <p className="text-xs font-bold text-[var(--bg-canvas)] truncate">
                       {linkedDeliveryOrder.customerLabel}
                     </p>
                   </div>
@@ -516,7 +516,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     onClick={() => onSelectDeliveryOrder(null)}
                     aria-label="Desvincular pedido Delivery"
                     title="Desvincular pedido Delivery"
-                    className="w-7 h-7 rounded-lg bg-[#4A2C1A] text-[#E8C87A] hover:bg-[#E64833] hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    className="w-7 h-7 rounded-lg bg-white/10 text-[var(--accent-gold)] hover:bg-[var(--ops-accent)] hover:text-white flex items-center justify-center transition-[transform,background-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] cursor-pointer shrink-0"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -525,10 +525,10 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 {(linkedDeliveryOrder.deliveryPhone ||
                   linkedDeliveryOrder.deliveryAddress ||
                   linkedDeliveryOrder.notes) && (
-                  <div className="space-y-0.5 text-[11px] text-[#FFF8E8]/80 pt-1 border-t border-[#D9A441]/20">
+                  <div className="space-y-0.5 text-[11px] text-[var(--bg-canvas)]/80 pt-1 border-t border-white/15">
                     {linkedDeliveryOrder.deliveryPhone && (
                       <p className="flex items-center gap-1.5 truncate">
-                        <Phone className="w-3 h-3 text-[#D9A441] shrink-0" />
+                        <Phone className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
                         <span className="tabular-nums">
                           {linkedDeliveryOrder.deliveryPhone}
                         </span>
@@ -536,14 +536,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     )}
                     {linkedDeliveryOrder.deliveryAddress && (
                       <p className="flex items-start gap-1.5 leading-snug">
-                        <MapPin className="w-3 h-3 text-[#D9A441] shrink-0 mt-0.5" />
+                        <MapPin className="w-3 h-3 text-[var(--accent-gold)] shrink-0 mt-0.5" />
                         <span className="line-clamp-2">
                           {linkedDeliveryOrder.deliveryAddress}
                         </span>
                       </p>
                     )}
                     {linkedDeliveryOrder.notes && (
-                      <p className="text-[10px] text-[#E8C87A]/85 truncate">
+                      <p className="text-[10px] text-[var(--accent-gold)]/90 truncate">
                         Ref: {linkedDeliveryOrder.notes}
                       </p>
                     )}
@@ -551,12 +551,12 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 )}
               </div>
             ) : (
-              <div className="rounded-xl bg-[#FFFDF8] border border-[#D9A441]/55 p-2.5 flex items-center justify-between gap-2">
+              <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7A5A3A]">
+                  <p className="text-[11px] font-semibold text-[var(--ink-muted)]">
                     Entrega a domicilio
                   </p>
-                  <p className="text-xs font-bold text-[#2B1A0E] truncate">
+                  <p className="text-xs font-bold text-[var(--ink-primary)] truncate">
                     {deliveryInfo.address.trim()
                       ? deliveryInfo.address
                       : 'Completa dirección al continuar'}
@@ -565,7 +565,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 <button
                   type="button"
                   onClick={onOpenDeliveryInfo}
-                  className="px-2.5 py-1 rounded-lg bg-[#FDF2D6] border border-[#D9A441]/60 text-[11px] font-extrabold text-[#B84A27] hover:bg-[#E8C87A]/30 cursor-pointer shrink-0"
+                  className="px-2.5 py-1 rounded-lg bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[11px] font-bold text-[var(--accent-primary)] hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer shrink-0"
                 >
                   Datos
                 </button>
@@ -576,14 +576,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
       </div>
 
       {/* Scrollable Body: Full Selected Order (Mesa, Para Llevar or Delivery) + Draft Cart */}
-      <div className="flex-1 overflow-y-auto phone-scroll p-3.5 space-y-3 bg-[#FFF8E8]/50">
+      <div className="flex-1 overflow-y-auto phone-scroll p-3.5 space-y-3 bg-[var(--bg-canvas)]">
         {(orderMode === 'dine-in' ||
           linkedTakeawayOrder ||
           linkedDeliveryOrder) && (
-          <section className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/65 p-3 space-y-2.5 shadow-xs">
+          <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-serif-display text-sm font-bold text-[#3B1F0E] truncate">
+                <span className="font-serif-display text-sm font-bold text-[var(--ink-primary)] truncate">
                   {orderMode === 'dine-in'
                     ? `Mesa ${selectedTable}`
                     : orderMode === 'takeaway' && linkedTakeawayOrder
@@ -591,7 +591,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     : linkedDeliveryOrder?.customerLabel}
                 </span>
                 {orderMode === 'dine-in' && (
-                  <span className="text-[10px] font-bold text-[#7A5A3A] tabular-nums shrink-0">
+                  <span className="text-[10px] font-semibold text-[var(--ink-muted)] tabular-nums shrink-0">
                     · Cap. {selectedTableObj?.capacity ?? 4}
                   </span>
                 )}
@@ -599,10 +599,10 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
 
               {orderMode === 'dine-in' ? (
                 <span
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold shrink-0 ${
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
                     isSelectedTableOccupied || activeTableOrder
-                      ? 'bg-[#B84A27]/15 text-[#B84A27]'
-                      : 'bg-[#2E6F32]/15 text-[#2E6F32]'
+                      ? 'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]'
+                      : 'bg-[var(--status-ok)]/12 text-[var(--status-ok)]'
                   }`}
                 >
                   {isSelectedTableOccupied || activeTableOrder
@@ -610,12 +610,12 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     : 'Libre'}
                 </span>
               ) : orderMode === 'takeaway' ? (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#E64833]/15 text-[#B84A27] inline-flex items-center gap-1 shrink-0">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--accent-primary)]/12 text-[var(--accent-primary)] inline-flex items-center gap-1 shrink-0">
                   <ShoppingBag className="w-3 h-3" />
-                  <span>Para Llevar</span>
+                  <span>Para llevar</span>
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#D9A441]/25 text-[#3B1F0E] shrink-0">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--bg-inset)] text-[var(--ink-primary)] shrink-0">
                   Delivery
                 </span>
               )}
@@ -624,21 +624,21 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             {inspectedOrder ? (
               <div className="space-y-2.5">
                 {/* Order Meta Row */}
-                <div className="flex items-center justify-between gap-2 text-[11px] bg-[#FDF2D6]/70 border border-[#D9A441]/35 rounded-xl px-2.5 py-1.5">
+                <div className="flex items-center justify-between gap-2 text-[11px] bg-[var(--bg-inset)] border border-[var(--border-subtle)] rounded-xl px-2.5 py-1.5">
                   <div className="min-w-0">
-                    <span className="font-extrabold text-[#3B1F0E] tabular-nums">
+                    <span className="font-bold text-[var(--ink-primary)] tabular-nums">
                       {inspectedOrder.code}
                     </span>
-                    <span className="text-[#7A5A3A] font-semibold">
+                    <span className="text-[var(--ink-muted)] font-medium">
                       {' '}
                       · {inspectedOrder.createdAt}
                     </span>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold shrink-0 ${
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
                       inspectedOrder.paid
-                        ? 'bg-[#2E6F32]/15 text-[#2E6F32]'
-                        : 'bg-[#B84A27]/15 text-[#B84A27]'
+                        ? 'bg-[var(--status-ok)]/12 text-[var(--status-ok)]'
+                        : 'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]'
                     }`}
                   >
                     {inspectedOrder.paid
@@ -649,9 +649,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
 
                 {/* Waiter Call Alert */}
                 {inspectedOrder.waiterRequested && (
-                  <div className="rounded-xl bg-[#B84A27] text-[#FFF8E8] px-2.5 py-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-extrabold inline-flex items-center gap-1.5">
-                      <BellRing className="w-3.5 h-3.5 text-[#D9A441] shrink-0" />
+                  <div className="rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] px-2.5 py-2 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold inline-flex items-center gap-1.5">
+                      <BellRing className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
                       <span>
                         {isStaffRole
                           ? '¡Mesa solicita al mesero!'
@@ -662,7 +662,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => onDismissWaiterCall(inspectedOrder.id)}
-                        className="px-2 py-0.5 rounded-lg bg-[#FFF8E8] text-[#2B1A0E] text-[10px] font-extrabold cursor-pointer shrink-0"
+                        className="px-2 py-0.5 rounded-lg bg-[var(--bg-surface)] text-[var(--ink-primary)] text-[10px] font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                       >
                         Atendido
                       </button>
@@ -671,21 +671,21 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 )}
 
                 {/* Complete Itemized Order List */}
-                <div className="rounded-xl bg-[#FFF8E8] border border-[#D9A441]/40 divide-y divide-[#D9A441]/25">
+                <div className="border-y border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)]">
                   {inspectedOrder.items.map((it, idx) => (
                     <div
                       key={`${inspectedOrder.id}-${it.name}-${it.sizeLabel}-${idx}`}
-                      className="px-2.5 py-2 flex items-start justify-between gap-2 text-xs"
+                      className="py-2 flex items-start justify-between gap-2 text-xs"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-[#2B1A0E] leading-snug">
+                        <p className="font-semibold text-[var(--ink-primary)] leading-snug">
                           {it.quantity}x {it.name}{' '}
-                          <span className="text-[#7A5A3A] font-semibold">
+                          <span className="text-[var(--ink-muted)] font-medium">
                             ({it.sizeLabel})
                           </span>
                         </p>
                         {it.extrasSummary && (
-                          <p className="text-[10px] text-[#7A5A3A] leading-snug">
+                          <p className="text-[10px] text-[var(--ink-muted)] leading-snug">
                             {it.extrasSummary}
                           </p>
                         )}
@@ -693,7 +693,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isStaffRole && !inspectedOrder.paid && (
-                          <div className="inline-flex items-center gap-0.5 rounded-lg bg-[#FDF2D6] border border-[#D9A441]/50 p-0.5">
+                          <div className="inline-flex items-center gap-0.5 rounded-lg bg-[var(--bg-inset)] border border-[var(--border-subtle)] p-0.5">
                             <button
                               type="button"
                               disabled={
@@ -704,7 +704,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                                 onUpdateOrderItemQty(inspectedOrder.id, idx, -1)
                               }
                               aria-label={`Restar ${it.name}`}
-                              className="w-5 h-5 rounded flex items-center justify-center text-[#3B1F0E] hover:bg-[#FFFDF8] disabled:opacity-35 cursor-pointer disabled:cursor-not-allowed"
+                              className="w-5 h-5 rounded flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-surface)] disabled:opacity-35 active:scale-[0.95] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer disabled:cursor-not-allowed"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
@@ -714,13 +714,13 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                                 onUpdateOrderItemQty(inspectedOrder.id, idx, 1)
                               }
                               aria-label={`Sumar ${it.name}`}
-                              className="w-5 h-5 rounded flex items-center justify-center bg-[#D9A441] text-[#2B1A0E] hover:bg-[#E8C87A] cursor-pointer"
+                              className="w-5 h-5 rounded flex items-center justify-center bg-[var(--accent-gold)] text-[var(--ink-primary)] hover:opacity-90 active:scale-[0.95] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         )}
-                        <span className="font-extrabold text-[#B84A27] tabular-nums">
+                        <span className="font-bold text-[var(--accent-primary)] tabular-nums">
                           {formatBs(it.price * it.quantity)}
                         </span>
                       </div>
@@ -729,17 +729,17 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 </div>
 
                 {inspectedOrder.notes && (
-                  <p className="text-[11px] text-[#7A5A3A] bg-[#FDF2D6]/55 px-2.5 py-1.5 rounded-xl border border-[#D9A441]/30">
-                    <span className="font-extrabold text-[#3B1F0E]">Notas: </span>
+                  <p className="text-[11px] text-[var(--ink-muted)] bg-[var(--bg-inset)] px-2.5 py-1.5 rounded-xl border border-[var(--border-subtle)]">
+                    <span className="font-bold text-[var(--ink-primary)]">Notas: </span>
                     {inspectedOrder.notes}
                   </p>
                 )}
 
                 <div className="flex items-center justify-between px-1 pt-0.5">
-                  <span className="text-xs font-extrabold text-[#3B1F0E]">
+                  <span className="text-xs font-bold text-[var(--ink-primary)]">
                     Total pedido
                   </span>
-                  <span className="text-sm font-extrabold text-[#B84A27] tabular-nums">
+                  <span className="text-sm font-bold text-[var(--accent-primary)] tabular-nums">
                     {formatBs(inspectedOrder.total)}
                   </span>
                 </div>
@@ -748,20 +748,20 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                   (inspectedOrder.mode === 'takeaway' ||
                     inspectedOrder.mode === 'delivery') &&
                   inspectedOrder.confirmationCode && (
-                    <div className="rounded-xl bg-[#1E1E1E] text-[#FFF8E8] border border-[#D9A441]/55 px-3 py-2 flex items-center justify-between gap-2">
+                    <div className="rounded-xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--ops-border)] px-3 py-2 flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#E8C87A] flex items-center gap-1">
-                          <KeyRound className="w-3 h-3 text-[#D9A441] shrink-0" />
+                        <p className="text-[11px] font-bold text-[var(--accent-gold)] flex items-center gap-1">
+                          <KeyRound className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
                           <span>Código de entrega</span>
                         </p>
-                        <p className="text-[10px] text-[#FFF8E8]/75 truncate">
+                        <p className="text-[10px] text-[var(--bg-canvas)]/75 truncate">
                           {inspectedOrder.status === 'Entregado' ||
                           inspectedOrder.paid
                             ? 'Entrega confirmada'
                             : 'Muéstralo al recibir tu pedido'}
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-lg bg-[#141414] border border-[#D9A441]/60 font-mono text-sm font-extrabold tracking-widest text-[#D9A441] tabular-nums shrink-0">
+                      <span className="px-2.5 py-1 rounded-lg bg-[var(--ops-canvas)] border border-[var(--accent-gold)]/55 font-mono text-sm font-bold tracking-widest text-[var(--accent-gold)] tabular-nums shrink-0">
                         {inspectedOrder.confirmationCode}
                       </span>
                     </div>
@@ -769,9 +769,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
 
                 {/* Role-Based Operations */}
                 {isStaffRole ? (
-                  <div className="space-y-2 pt-1.5 border-t border-[#D9A441]/25">
+                  <div className="space-y-2 pt-1.5 border-t border-[var(--border-subtle)]">
                     {requiresDeliveryPin(inspectedOrder) && (
-                      <p className="text-[10px] font-bold text-[#B84A27] bg-[#FDF2D6] border border-[#D9A441]/50 rounded-lg px-2 py-1 flex items-center gap-1.5">
+                      <p className="text-[10px] font-semibold text-[var(--accent-primary)] bg-[var(--bg-inset)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 flex items-center gap-1.5">
                         <KeyRound className="w-3 h-3 shrink-0" />
                         <span>
                           Requiere código de 4 dígitos del cliente para marcar Entregado
@@ -780,7 +780,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     )}
 
                     {/* Status Switcher */}
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {activeOrderStatuses.map((st) => {
                         const active = inspectedOrder.status === st;
                         const needsPin =
@@ -803,14 +803,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                                 onUpdateOrderStatus(inspectedOrder.id, st);
                               }
                             }}
-                            className={`min-h-[30px] px-1.5 py-1 rounded-lg text-[10px] font-extrabold border transition-colors cursor-pointer inline-flex items-center justify-center gap-1 ${
+                            className={`min-h-[40px] px-1.5 py-1.5 rounded-xl text-[11px] font-bold border transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer inline-flex items-center justify-center gap-1 ${
                               active
-                                ? 'bg-[#D9A441] border-[#B84A27] text-[#2B1A0E]'
-                                : 'bg-[#FFF8E8] border-[#D9A441]/45 text-[#7A5A3A] hover:text-[#2B1A0E]'
+                                ? 'bg-[var(--accent-gold)] border-[var(--accent-primary)] text-[var(--ink-primary)]'
+                                : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
                             }`}
                           >
                             {needsPin && (
-                              <KeyRound className="w-2.5 h-2.5 text-[#E64833] shrink-0" />
+                              <KeyRound className="w-3 h-3 text-[var(--ops-accent)] shrink-0" />
                             )}
                             <span>{label}</span>
                           </button>
@@ -824,9 +824,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <button
                           type="button"
                           onClick={() => setCollectingOrder(inspectedOrder)}
-                          className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[#2E6F32] text-[#FFF8E8] text-xs font-extrabold flex items-center justify-center gap-1.5 hover:opacity-95 cursor-pointer tabular-nums"
+                          className="col-span-2 min-h-[44px] px-3 py-2 rounded-xl bg-[var(--status-ok)] text-[var(--bg-canvas)] text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer tabular-nums"
                         >
-                          <Banknote className="w-3.5 h-3.5" />
+                          <Banknote className="w-4 h-4" />
                           <span>Cobrar {formatBs(inspectedOrder.total)}</span>
                         </button>
                       )}
@@ -834,7 +834,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       <button
                         type="button"
                         onClick={() => setTicketOrder(inspectedOrder)}
-                        className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-[11px] font-extrabold flex items-center justify-center gap-1 hover:bg-[#E8C87A] cursor-pointer"
+                        className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--accent-gold)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
                       >
                         <Printer className="w-3.5 h-3.5" />
                         <span>Ticket / WA</span>
@@ -843,9 +843,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       <button
                         type="button"
                         onClick={onGoMenu}
-                        className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 text-[#3B1F0E] text-[11px] font-extrabold flex items-center justify-center gap-1 hover:bg-[#E8C87A]/30 cursor-pointer"
+                        className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
                       >
-                        <Plus className="w-3.5 h-3.5 text-[#B84A27]" />
+                        <Plus className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                         <span>Carta</span>
                       </button>
 
@@ -853,7 +853,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <button
                           type="button"
                           onClick={() => onFreeTable(selectedTable)}
-                          className="col-span-2 min-h-[34px] px-2.5 py-1 rounded-xl bg-[#FFF8E8] border border-[#3B1F0E] text-[#3B1F0E] text-[11px] font-extrabold flex items-center justify-center gap-1 hover:bg-[#E8C87A]/25 cursor-pointer"
+                          className="col-span-2 min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1 hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer"
                         >
                           <Unlock className="w-3.5 h-3.5" />
                           <span>Liberar Mesa {selectedTable}</span>
@@ -865,8 +865,8 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     {userRole === 'admin' && (
                       <div className="pt-1">
                         {confirmDeleteId === inspectedOrder.id ? (
-                          <div className="rounded-xl bg-[#B83227]/10 border border-[#B83227]/40 p-2 flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-extrabold text-[#B83227]">
+                          <div className="rounded-xl bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/40 p-2 flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-bold text-[var(--status-danger)]">
                               ¿Anular {inspectedOrder.code}?
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
@@ -876,14 +876,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                                   onDeleteOrder(inspectedOrder);
                                   setConfirmDeleteId(null);
                                 }}
-                                className="px-2 py-1 rounded-lg bg-[#B83227] text-white text-[10px] font-extrabold cursor-pointer"
+                                className="px-2 py-1 rounded-lg bg-[var(--status-danger)] text-white text-[10px] font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
                               >
                                 Anular
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-1 rounded-lg bg-[#FFFDF8] border border-[#D9A441]/60 text-[#3B1F0E] text-[10px] font-bold cursor-pointer"
+                                className="px-2 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[10px] font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer"
                               >
                                 No
                               </button>
@@ -893,7 +893,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteId(inspectedOrder.id)}
-                            className="w-full py-1 text-[11px] font-bold text-[#B83227] hover:underline flex items-center justify-center gap-1 cursor-pointer"
+                            className="w-full py-1 text-[11px] font-bold text-[var(--status-danger)] hover:underline flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Ban className="w-3 h-3" />
                             <span>Anular pedido (Admin)</span>
@@ -904,16 +904,16 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                   </div>
                 ) : (
                   /* Customer Operations on own Table Order */
-                  <div className="space-y-1.5 pt-1.5 border-t border-[#D9A441]/25">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-[#3B1F0E]">
+                  <div className="space-y-1.5 pt-1.5 border-t border-[var(--border-subtle)]">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-[var(--ink-primary)]">
                       <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-[#B84A27]" />
+                        <Clock className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                         Estado: {inspectedOrder.status}
                       </span>
                       <button
                         type="button"
                         onClick={onOpenTableOrder}
-                        className="text-[#B84A27] underline font-extrabold cursor-pointer"
+                        className="text-[var(--accent-primary)] underline font-bold cursor-pointer"
                       >
                         Ver detalle
                       </button>
@@ -924,9 +924,9 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <button
                           type="button"
                           onClick={() => onCallWaiter(inspectedOrder.id)}
-                          className="min-h-[34px] px-2 py-1 rounded-xl bg-[#FDF2D6] border border-[#D9A441] text-[#3B1F0E] text-[11px] font-extrabold flex items-center justify-center gap-1 hover:bg-[#E8C87A]/30 cursor-pointer"
+                          className="min-h-[34px] px-2 py-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold flex items-center justify-center gap-1 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                         >
-                          <Bell className="w-3.5 h-3.5 text-[#B84A27]" />
+                          <Bell className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
                           <span>
                             {inspectedOrder.waiterRequested
                               ? 'En camino'
@@ -940,7 +940,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         onClick={() => setTicketOrder(inspectedOrder)}
                         className={`${
                           orderMode !== 'dine-in' ? 'col-span-2' : ''
-                        } min-h-[34px] px-2 py-1 rounded-xl bg-[#D9A441] text-[#2B1A0E] text-[11px] font-extrabold flex items-center justify-center gap-1 hover:bg-[#E8C87A] cursor-pointer`}
+                        } min-h-[34px] px-2 py-1 rounded-xl bg-[var(--accent-gold)] text-[var(--ink-primary)] text-[11px] font-bold flex items-center justify-center gap-1 hover:opacity-90 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer`}
                       >
                         <Printer className="w-3.5 h-3.5" />
                         <span>Ticket / WA</span>
@@ -950,7 +950,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <button
                           type="button"
                           onClick={onPayAtTable}
-                          className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-xs font-extrabold flex items-center justify-center gap-1.5 hover:bg-[#C95B34] cursor-pointer tabular-nums"
+                          className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>
@@ -963,7 +963,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <button
                           type="button"
                           onClick={onPayTakeawayOrder}
-                          className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[#B84A27] text-[#FFF8E8] text-xs font-extrabold flex items-center justify-center gap-1.5 hover:bg-[#C95B34] cursor-pointer tabular-nums"
+                          className="col-span-2 min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>
@@ -976,17 +976,17 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 )}
               </div>
             ) : isSelectedTableOccupied && !isStaffRole ? (
-              <p className="text-[11px] text-[#7A5A3A] leading-relaxed">
+              <p className="text-[11px] text-[var(--ink-muted)] leading-relaxed">
                 Mesa {selectedTable} está ocupada actualmente. Elige una mesa libre en el selector superior o escanea el QR de tu mesa.
               </p>
             ) : (
-              <div className="flex items-center justify-between gap-2 text-[11px] text-[#7A5A3A]">
+              <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--ink-muted)]">
                 <span>Sin pedido activo en Mesa {selectedTable}.</span>
                 {isStaffRole && isSelectedTableOccupied && (
                   <button
                     type="button"
                     onClick={() => onFreeTable(selectedTable)}
-                    className="px-2 py-1 rounded-lg bg-[#FFF8E8] border border-[#3B1F0E] text-[#3B1F0E] text-[10px] font-extrabold inline-flex items-center gap-1 cursor-pointer shrink-0"
+                    className="px-2 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--ink-primary)] text-[var(--ink-primary)] text-[10px] font-bold inline-flex items-center gap-1 active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                   >
                     <Unlock className="w-3 h-3" />
                     <span>Liberar</span>
@@ -1000,7 +1000,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
         {/* Draft Cart Items (New / Additional dishes to add to Table, Takeaway or Delivery) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#7A5A3A]">
+            <h3 className="text-[11px] font-bold text-[var(--ink-muted)]">
               {inspectedOrder && !inspectedOrder.paid
                 ? orderMode === 'dine-in'
                   ? `Agregar platos a Mesa ${selectedTable}`
@@ -1008,30 +1008,30 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                 : 'Borrador de pedido'}
             </h3>
             {cartCount > 0 && (
-              <span className="text-[11px] font-extrabold text-[#B84A27] tabular-nums">
+              <span className="text-[11px] font-bold text-[var(--accent-primary)] tabular-nums">
                 {cartCount} {cartCount === 1 ? 'ítem' : 'ítems'}
               </span>
             )}
           </div>
 
           {cart.length === 0 ? (
-            <div className="rounded-2xl bg-[#FFFDF8] border border-dashed border-[#D9A441]/60 p-4 flex flex-col items-center justify-center text-center space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/60 flex items-center justify-center text-[#B84A27]">
+            <div className="rounded-2xl bg-[var(--bg-surface)] border border-dashed border-[var(--border-subtle)] p-4 flex flex-col items-center justify-center text-center space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-primary)]">
                 <ShoppingBag className="w-5 h-5" />
               </div>
-              <p className="text-xs font-bold text-[#3B1F0E]">
+              <p className="text-xs font-bold text-[var(--ink-primary)]">
                 Sin platos en el borrador
               </p>
-              <p className="text-[11px] text-[#7A5A3A] leading-relaxed">
+              <p className="text-[11px] text-[var(--ink-muted)] leading-relaxed">
                 Toca{' '}
-                <span className="font-extrabold text-[#B84A27]">+ Añadir</span>{' '}
+                <span className="font-bold text-[var(--accent-primary)]">+ Añadir</span>{' '}
                 en la carta para armar o sumar platos a{' '}
                 {orderMode === 'dine-in'
                   ? 'esta mesa'
                   : orderMode === 'takeaway'
                   ? linkedTakeawayOrder
                     ? `este pedido (${linkedTakeawayOrder.code})`
-                    : 'este pedido Para Llevar'
+                    : 'este pedido Para llevar'
                   : linkedDeliveryOrder
                   ? `este Delivery (${linkedDeliveryOrder.code})`
                   : 'este pedido'}
@@ -1040,7 +1040,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               <button
                 type="button"
                 onClick={onGoMenu}
-                className="px-3 py-1.5 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/70 text-[#3B1F0E] text-[11px] font-extrabold hover:bg-[#E8C87A]/35 cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-[11px] font-bold hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
                 Ir a Carta Digital
               </button>
@@ -1055,29 +1055,29 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               return (
                 <article
                   key={item.cartItemId}
-                  className="rounded-2xl bg-[#FFFDF8] border border-[#D9A441]/55 p-3 space-y-2 shadow-xs"
+                  className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h4 className="font-bold text-xs text-[#2B1A0E] leading-snug">
+                      <h4 className="font-bold text-xs text-[var(--ink-primary)] leading-snug">
                         {item.name}
                       </h4>
-                      <p className="text-[11px] text-[#7A5A3A] tabular-nums">
+                      <p className="text-[11px] text-[var(--ink-muted)] tabular-nums">
                         {item.sizeLabel} · {formatBs(item.unitPrice)} c/u
                       </p>
                       {item.extras.length > 0 && (
-                        <p className="text-[10px] text-[#7A5A3A] mt-0.5">
+                        <p className="text-[10px] text-[var(--ink-muted)] mt-0.5">
                           +{item.extras.map((e) => e.label).join(', ')}
                         </p>
                       )}
                       {item.customSummary && (
-                        <p className="text-[10px] text-[#7A5A3A] mt-0.5">
+                        <p className="text-[10px] text-[var(--ink-muted)] mt-0.5">
                           {item.customSummary}
                         </p>
                       )}
                     </div>
 
-                    <span className="font-extrabold text-xs text-[#B84A27] tabular-nums shrink-0">
+                    <span className="font-bold text-xs text-[var(--accent-primary)] tabular-nums shrink-0">
                       {formatBsDecimal(lineTotal)}
                     </span>
                   </div>
@@ -1093,10 +1093,10 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                             onClick={() =>
                               onChangeItemSize(item.cartItemId, sz.id)
                             }
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition-colors cursor-pointer tabular-nums ${
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-[transform,background-color,border-color,color] duration-150 ease-[var(--ease-out)] active:scale-[0.97] cursor-pointer tabular-nums ${
                               active
-                                ? 'bg-[#B84A27] border-[#B84A27] text-[#FFF8E8]'
-                                : 'bg-[#FDF2D6] border-[#D9A441]/50 text-[#7A5A3A] hover:text-[#2B1A0E]'
+                                ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--bg-canvas)]'
+                                : 'bg-[var(--bg-inset)] border-[var(--border-subtle)] text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
                             }`}
                           >
                             {sz.label} Bs {sz.price}
@@ -1106,24 +1106,24 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between pt-1 border-t border-[#D9A441]/25">
-                    <div className="inline-flex items-center gap-1 rounded-xl bg-[#FDF2D6] border border-[#D9A441]/50 p-0.5">
+                  <div className="flex items-center justify-between pt-1.5 border-t border-[var(--border-subtle)]">
+                    <div className="inline-flex items-center gap-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] p-0.5">
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.cartItemId, -1)}
                         aria-label={`Disminuir ${item.name}`}
-                        className="w-7 h-7 rounded-lg bg-[#FFFDF8] text-[#3B1F0E] flex items-center justify-center hover:bg-[#E8C87A]/35 cursor-pointer"
+                        className="w-7 h-7 rounded-lg bg-[var(--bg-surface)] text-[var(--ink-primary)] flex items-center justify-center hover:bg-[var(--bg-canvas)] active:scale-[0.95] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                       >
                         <Minus className="w-3 h-3" strokeWidth={2.5} />
                       </button>
-                      <span className="w-6 text-center text-xs font-extrabold text-[#2B1A0E] tabular-nums">
+                      <span className="w-6 text-center text-xs font-bold text-[var(--ink-primary)] tabular-nums">
                         {item.quantity}
                       </span>
                       <button
                         type="button"
                         onClick={() => onUpdateQuantity(item.cartItemId, 1)}
                         aria-label={`Aumentar ${item.name}`}
-                        className="w-7 h-7 rounded-lg bg-[#D9A441] text-[#2B1A0E] flex items-center justify-center hover:bg-[#E8C87A] cursor-pointer"
+                        className="w-7 h-7 rounded-lg bg-[var(--accent-gold)] text-[var(--ink-primary)] flex items-center justify-center hover:opacity-90 active:scale-[0.95] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                       >
                         <Plus className="w-3 h-3" strokeWidth={2.5} />
                       </button>
@@ -1133,7 +1133,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                       type="button"
                       onClick={() => onRemoveItem(item.cartItemId)}
                       aria-label={`Quitar ${item.name}`}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[#7A5A3A] hover:text-[#B83227] hover:bg-[#B83227]/10 transition-colors cursor-pointer"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 active:scale-[0.95] transition-[transform,color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1146,27 +1146,27 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
       </div>
 
       {/* Totals & Checkout Actions Footer */}
-      <div className="p-4 border-t border-[#D9A441]/35 bg-[#FFFDF8] space-y-3 shrink-0">
+      <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3 shrink-0">
         <div className="space-y-1.5 text-xs">
-          <div className="flex items-center justify-between text-[#7A5A3A] font-bold">
+          <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
             <span>
               Borrador ({cartCount} {cartCount === 1 ? 'ítem' : 'ítems'})
             </span>
-            <span className="text-[#2B1A0E] tabular-nums">
+            <span className="text-[var(--ink-primary)] tabular-nums">
               {formatBsDecimal(total)}
             </span>
           </div>
-          <div className="flex items-center justify-between text-[#7A5A3A] font-bold">
+          <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
             <span>Envío / Servicio</span>
-            <span className="text-[#2E6F32] font-extrabold tabular-nums">
+            <span className="text-[var(--status-ok)] font-bold tabular-nums">
               Bs 0.00 (Gratis)
             </span>
           </div>
-          <div className="pt-2 border-t border-[#D9A441]/35 flex items-center justify-between">
-            <span className="text-sm font-extrabold text-[#2B1A0E]">
-              Total a Enviar
+          <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
+            <span className="text-sm font-bold text-[var(--ink-primary)]">
+              Total a enviar
             </span>
-            <span className="text-lg font-extrabold text-[#B84A27] tabular-nums">
+            <span className="text-lg font-bold text-[var(--accent-primary)] tabular-nums">
               {formatBsDecimal(total)}
             </span>
           </div>
@@ -1185,7 +1185,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             }
             onProceedOrder();
           }}
-          className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[#B84A27] text-[#FFF8E8] font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-[#C95B34] disabled:opacity-45 disabled:cursor-not-allowed active:scale-[0.98] transition-all cursor-pointer tabular-nums"
+          className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-45 disabled:cursor-not-allowed active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer tabular-nums"
         >
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>
@@ -1196,7 +1196,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
               : orderMode === 'takeaway'
               ? linkedTakeawayOrder && !linkedTakeawayOrder.paid
                 ? `Agregar a ${linkedTakeawayOrder.code} · ${formatBs(total)}`
-                : `Enviar Para Llevar · ${formatBs(total)}`
+                : `Enviar Para llevar · ${formatBs(total)}`
               : isStaffRole && linkedDeliveryOrder && !linkedDeliveryOrder.paid
               ? `Guardar en ${linkedDeliveryOrder.code} · ${formatBs(total)}`
               : `Continuar a Delivery · ${formatBs(total)}`}
@@ -1207,7 +1207,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
           <button
             type="button"
             onClick={onClearCart}
-            className="w-full py-1 text-[11px] font-bold text-[#7A5A3A] hover:text-[#B83227] transition-colors cursor-pointer"
+            className="w-full py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:text-[var(--status-danger)] transition-colors duration-150 ease-[var(--ease-out)] cursor-pointer"
           >
             Vaciar borrador actual
           </button>

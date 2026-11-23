@@ -41,7 +41,7 @@ export const AppIcon: React.FC<{ size?: 'xs' | 'sm' | 'md' }> = ({
 
   return (
     <div
-      className={`inline-flex items-center justify-center overflow-hidden shrink-0 border border-[#D9A441]/50 shadow-xs select-none ${sizeClass}`}
+      className={`inline-flex items-center justify-center overflow-hidden shrink-0 border border-[var(--accent-gold)]/50 shadow-xs select-none ${sizeClass}`}
     >
       <img
         src="/assets/aistudio/image_6ca09ee1.png"
@@ -54,7 +54,7 @@ export const AppIcon: React.FC<{ size?: 'xs' | 'sm' | 'md' }> = ({
 };
 
 export const VintageCorners: React.FC<{ color?: string; opacity?: number }> = ({
-  color = '#D9A441',
+  color = 'var(--accent-gold)',
   opacity = 0.5,
 }) => {
   const CornerSvg = ({ className }: { className: string }) => (
@@ -190,9 +190,9 @@ export const DishIllustration: React.FC<{
   if (failed) {
     return (
       <div
-        className={`${className} bg-[#F4E5C8] flex flex-col items-center justify-center p-2 text-center border border-[#D9A441]/30`}
+        className={`${className} bg-[var(--bg-inset)] flex flex-col items-center justify-center p-2 text-center border border-[var(--border-subtle)]`}
       >
-        <span className="text-[10px] font-extrabold text-[#3B1F0E] line-clamp-2">
+        <span className="text-[11px] font-bold text-[var(--ink-primary)] line-clamp-2">
           {name || 'Como en Casa'}
         </span>
       </div>
@@ -206,7 +206,7 @@ export const DishIllustration: React.FC<{
       referrerPolicy="no-referrer"
       loading="lazy"
       onError={() => setFailed(true)}
-      className={`${className} object-cover bg-[#F4E5C8]`}
+      className={`${className} object-cover bg-[var(--bg-inset)]`}
     />
   );
 };
@@ -233,23 +233,40 @@ export const QrCodeSvg: React.FC<{ seed?: string; size?: number }> = ({
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
       if (isFinder(r, c)) continue;
-      // Timing patterns
       if ((r === 6 || c === 6) && (r + c) % 2 === 0) {
-        cells.push(<rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="#2B1A0E" />);
+        cells.push(
+          <rect
+            key={`${r}-${c}`}
+            x={c}
+            y={r}
+            width={1}
+            height={1}
+            fill="var(--ink-primary)"
+          />
+        );
         continue;
       }
       const val = ((r * 17 + c * 31 + hash) ^ (r * c + 7)) % 11;
       if (val < 5) {
-        cells.push(<rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="#2B1A0E" />);
+        cells.push(
+          <rect
+            key={`${r}-${c}`}
+            x={c}
+            y={r}
+            width={1}
+            height={1}
+            fill="var(--ink-primary)"
+          />
+        );
       }
     }
   }
 
   const renderFinder = (x: number, y: number) => (
     <g transform={`translate(${x}, ${y})`}>
-      <rect x="0" y="0" width="7" height="7" fill="#2B1A0E" />
-      <rect x="1" y="1" width="5" height="5" fill="#FFF8E8" />
-      <rect x="2" y="2" width="3" height="3" fill="#2B1A0E" />
+      <rect x="0" y="0" width="7" height="7" fill="var(--ink-primary)" />
+      <rect x="1" y="1" width="5" height="5" fill="var(--bg-surface)" />
+      <rect x="2" y="2" width="3" height="3" fill="var(--ink-primary)" />
     </g>
   );
 
@@ -258,10 +275,16 @@ export const QrCodeSvg: React.FC<{ seed?: string; size?: number }> = ({
       width={size}
       height={size}
       viewBox={`-1 -1 ${gridSize + 2} ${gridSize + 2}`}
-      className="bg-[#FFF8E8] rounded-xl p-2 border border-[#D9A441]/50"
+      className="bg-[var(--bg-surface)] rounded-xl p-2 border border-[var(--border-subtle)]"
       aria-label={`Código QR ${seed}`}
     >
-      <rect x="-1" y="-1" width={gridSize + 2} height={gridSize + 2} fill="#FFF8E8" />
+      <rect
+        x="-1"
+        y="-1"
+        width={gridSize + 2}
+        height={gridSize + 2}
+        fill="var(--bg-surface)"
+      />
       {renderFinder(0, 0)}
       {renderFinder(gridSize - 7, 0)}
       {renderFinder(0, gridSize - 7)}

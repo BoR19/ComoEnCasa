@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { LogIn, ShoppingBag, X } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
@@ -27,10 +27,29 @@ import {
 } from './components/screens/TablesQrScreen';
 import { WelcomeScreen } from './components/screens/WelcomeScreen';
 import { useRestaurant } from './context/RestaurantContext';
-import { getTakeawayCustomerName, isOrderSettled } from './utils/appHelpers';
+import {
+  formatBsDecimal,
+  getOrderLinesCount,
+  getTakeawayCustomerName,
+  isOrderSettled,
+} from './utils/appHelpers';
 
 export default function App() {
   const shouldReduceMotion = useReducedMotion();
+  const [isMobileViewport, setIsMobileViewport] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(max-width: 767px)').matches
+      : false
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobileViewport(e.matches);
+    setIsMobileViewport(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const {
     currentScreen,
     navDirection,
@@ -173,6 +192,52 @@ export default function App() {
     [kitchenOrders]
   );
 
+  const liveComandaSummary = useMemo(() => {
+    const activeOrder =
+      orderMode === 'dine-in'
+        ? activeTableOrder
+        : orderMode === 'takeaway'
+        ? linkedTakeawayOrder
+        : linkedDeliveryOrder;
+
+    const orderCount = activeOrder ? getOrderLinesCount(activeOrder.items) : 0;
+    const orderTotal = activeOrder ? activeOrder.total : 0;
+    const totalItems = cartCount + orderCount;
+    const totalAmount = cartTotal + orderTotal;
+
+    const label = activeOrder
+      ? `Comanda ${activeOrder.code}`
+      : orderMode === 'dine-in'
+      ? `Mesa ${selectedTable}`
+      : orderMode === 'takeaway'
+      ? 'Para Llevar'
+      : 'Delivery';
+
+    return {
+      label,
+      totalItems,
+      totalAmount,
+      hasActive: totalItems > 0 || Boolean(activeOrder),
+    };
+  }, [
+    orderMode,
+    activeTableOrder,
+    linkedTakeawayOrder,
+    linkedDeliveryOrder,
+    cartCount,
+    cartTotal,
+    selectedTable,
+  ]);
+
+  const screenHasBottomBar =
+    currentScreen === 'dish-detail' ||
+    currentScreen === 'customize' ||
+    currentScreen === 'tables-select' ||
+    currentScreen === 'tables-qr' ||
+    currentScreen === 'tables-order' ||
+    currentScreen === 'delivery-info' ||
+    currentScreen === 'delivery-tracking';
+
   const goMozoComandas = () => {
     setActiveRole('mozo');
     navigate('cart');
@@ -228,8 +293,8 @@ export default function App() {
   );
 
   return (
-    <div className="h-dvh w-full flex flex-col lg:flex-row overflow-hidden bg-[#FFF8E8]">
-      {/* Desktop Far-Left Compact Icon Rail */}
+    <div className="h-dvh w-full flex flex-col md:flex-row overflow-hidden bg-[var(--bg-canvas)]">
+      {/* Left Compact Icon Rail (Tablet md+ & Desktop) */}
       <DesktopSidebar
         currentScreen={currentScreen}
         onNavigate={navigate}
@@ -246,11 +311,17 @@ export default function App() {
       />
 
       {/* Main Responsive App Frame */}
-      <main className="relative flex-1 min-w-0 h-full bg-[#FFF8E8] overflow-hidden flex flex-col">
+      <main
+        className={`relative flex-1 min-w-0 h-full bg-[var(--bg-canvas)] overflow-hidden flex flex-col ${
+          showBottomNav
+            ? 'pb-[calc(4.125rem+env(safe-area-inset-bottom))] md:pb-0'
+            : ''
+        }`}
+      >
         {/* Global Feedback Toast */}
         {toastMsg && (
           <div className="absolute top-14 sm:top-16 left-3 right-3 z-50 pointer-events-none flex justify-center">
-            <div className="max-w-md px-3.5 py-2 rounded-xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] text-xs font-extrabold shadow-lg text-center">
+            <div className="max-w-md px-3.5 py-2 rounded-xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] border border-[var(--accent-gold)] text-xs font-bold shadow-lg text-center">
               {toastMsg}
             </div>
           </div>
@@ -281,7 +352,7 @@ export default function App() {
               exit="exit"
               transition={{
                 duration: shouldReduceMotion ? 0 : 0.2,
-                ease: [0.16, 1, 0.3, 1],
+                ease: [0.23, 1, 0.32, 1],
               }}
               className="absolute inset-0 flex flex-col min-h-0"
             >
@@ -609,13 +680,13 @@ export default function App() {
         {/* Customer Google Sign-In Modal for live order sync */}
         {showGooglePrompt && (
           <div className="fixed inset-0 z-50 bg-black/65 overflow-y-auto flex p-4">
-            <div className="my-auto mx-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll rounded-3xl bg-[#FFF8E8] border-2 border-[#D9A441] p-5 shadow-2xl space-y-4">
+            <div className="modal-surface my-auto mx-auto w-full max-w-sm max-h-[92dvh] overflow-y-auto phone-scroll rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-5 shadow-2xl space-y-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h2 className="font-serif-display text-lg font-bold text-[#3B1F0E]">
+                  <h2 className="font-serif-display text-lg font-bold text-[var(--ink-primary)]">
                     Conecta tu cuenta Google
                   </h2>
-                  <p className="text-xs text-[#7A5A3A] mt-1 leading-relaxed">
+                  <p className="text-xs text-[var(--ink-muted)] mt-1 leading-relaxed">
                     Para enviar tu pedido a Cocina y sincronizarlo en tiempo real con tu mesa o delivery, inicia sesión con Google en un toque.
                   </p>
                 </div>
@@ -627,14 +698,14 @@ export default function App() {
                     setShowGooglePrompt(false);
                   }}
                   aria-label="Cerrar"
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-[#3B1F0E] hover:bg-[#FDF2D6] cursor-pointer shrink-0"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {authError && (
-                <p className="text-xs font-bold text-[#B84A27] bg-[#FDF2D6] border border-[#D9A441] rounded-xl px-3 py-2">
+                <p className="text-xs font-bold text-[var(--accent-primary)] bg-[var(--bg-inset)] border border-[var(--border-subtle)] rounded-xl px-3 py-2">
                   {authError}
                 </p>
               )}
@@ -643,44 +714,60 @@ export default function App() {
                 type="button"
                 disabled={authLoading}
                 onClick={() => void handleGoogleSignIn()}
-                className="w-full min-h-[48px] rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-[#4A2C1A] disabled:opacity-50 cursor-pointer"
+                className="w-full min-h-[48px] rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] font-bold text-sm flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-50 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
               >
-                <LogIn className="w-4 h-4 text-[#D9A441]" />
+                <LogIn className="w-4 h-4 text-[var(--accent-gold)]" />
                 <span>{authLoading ? 'Conectando...' : 'Continuar con Google'}</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Quick <XL Comanda trigger on lg (1024px–1279px) screens without a dedicated header Comanda button */}
-        {showRightCartPanel &&
-          currentScreen !== 'menu' &&
-          currentScreen !== 'search' &&
-          currentScreen !== 'favorites' &&
-          currentScreen !== 'cart' &&
-          currentScreen !== 'admin-panel' && (
-            <button
-              type="button"
-              onClick={() => setShowCartDrawer(true)}
-              aria-label="Abrir Comanda en Vivo"
-              className="hidden lg:inline-flex xl:hidden fixed bottom-5 right-5 z-30 min-h-[42px] px-3.5 py-2 rounded-2xl bg-[#3B1F0E] text-[#FFF8E8] border border-[#D9A441] shadow-lg text-xs font-extrabold items-center gap-2 hover:bg-[#4A2C1A] active:scale-95 transition-transform cursor-pointer"
-            >
-              <ShoppingBag className="w-4 h-4 text-[#D9A441]" />
-              <span>Comanda</span>
-              {cartCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-[#B84A27] text-[#FFF8E8] text-[10px] font-extrabold tabular-nums leading-none">
-                  {cartCount}
+        {/* Floating Live Comanda Button (< XL: mobile bottom pill above BottomNav + tablet collapsible drawer trigger) */}
+        {showRightCartPanel && (
+          <button
+            type="button"
+            onClick={() => setShowCartDrawer(true)}
+            aria-label={`Abrir ${liveComandaSummary.label} — ${formatBsDecimal(liveComandaSummary.totalAmount)}`}
+            className={`xl:hidden fixed right-4 md:right-5 z-35 min-h-[46px] px-3.5 py-2 rounded-2xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--accent-gold)]/70 shadow-[0_8px_24px_rgba(0,0,0,0.28)] text-xs font-bold inline-flex items-center gap-2.5 hover:border-[var(--ops-accent)] active:scale-[0.97] transition-[transform,border-color,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
+              screenHasBottomBar
+                ? showBottomNav
+                  ? 'bottom-[calc(9.1rem+env(safe-area-inset-bottom))] md:bottom-20'
+                  : 'bottom-20'
+                : showBottomNav
+                ? 'bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-5'
+                : 'bottom-5'
+            }`}
+          >
+            <span className="relative inline-flex items-center justify-center w-7 h-7 rounded-xl bg-[var(--ops-accent)] text-[var(--bg-surface)] shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5" />
+              {liveComandaSummary.totalItems > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[var(--accent-gold)] text-[var(--ink-primary)] text-[9px] font-bold flex items-center justify-center tabular-nums leading-none border border-[var(--ops-surface)]">
+                  {liveComandaSummary.totalItems}
                 </span>
               )}
-            </button>
-          )}
+            </span>
+            <span className="flex flex-col items-start text-left leading-tight">
+              <span className="text-[11px] font-semibold text-white/85 whitespace-nowrap">
+                {liveComandaSummary.label}
+              </span>
+              <span className="text-xs font-bold text-[var(--accent-gold)] tabular-nums whitespace-nowrap">
+                {formatBsDecimal(liveComandaSummary.totalAmount)}
+              </span>
+            </span>
+          </button>
+        )}
 
-        {/* Shared Bottom Nav on interior client/panel screens */}
+        {/* Fixed Mobile Bottom Navigation (< 768px) */}
         {showBottomNav && (
           <BottomNav
             currentScreen={currentScreen}
             onNavigate={navigate}
-            favoritesCount={favoriteIds.length}
+            userRole={userRole}
+            orderMode={orderMode}
+            selectedTable={selectedTable}
+            isAdminAuthenticated={isAdminAuthenticated}
+            activeOrdersCount={activeOrdersCount}
             cartCount={cartCount}
           />
         )}
@@ -690,31 +777,49 @@ export default function App() {
       {showRightCartPanel && (
         <aside
           aria-label="Comanda en vivo"
-          className="hidden xl:flex w-[340px] 2xl:w-[370px] shrink-0 h-full border-l border-[#D9A441]/30 flex-col overflow-hidden"
+          className="hidden xl:flex w-[340px] 2xl:w-[370px] shrink-0 h-full border-l border-[var(--border-subtle)] flex-col overflow-hidden"
         >
           {renderLiveCartPanel()}
         </aside>
       )}
 
-      {/* Responsive Slide-Over Comanda Drawer (< XL: mobile, tablet & compact laptop) */}
+      {/* Responsive Slide-Over Comanda Sheet (Mobile < 768px) / Collapsible Drawer (Tablet & < XL) */}
       <AnimatePresence>
         {showCartDrawer && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
-            className="xl:hidden fixed inset-0 z-50 bg-black/55 flex justify-end"
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.18,
+              ease: [0.23, 1, 0.32, 1],
+            }}
+            className="xl:hidden fixed inset-0 z-50 bg-black/55 flex items-end md:items-stretch md:justify-end"
             onClick={() => setShowCartDrawer(false)}
           >
             <motion.aside
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              initial={
+                shouldReduceMotion
+                  ? { opacity: 0 }
+                  : isMobileViewport
+                  ? { y: '100%' }
+                  : { x: '100%' }
+              }
+              animate={{ x: 0, y: 0, opacity: 1 }}
+              exit={
+                shouldReduceMotion
+                  ? { opacity: 0 }
+                  : isMobileViewport
+                  ? { y: '100%' }
+                  : { x: '100%' }
+              }
+              transition={{
+                duration: shouldReduceMotion ? 0 : 0.28,
+                ease: [0.32, 0.72, 0, 1],
+              }}
               onClick={(e) => e.stopPropagation()}
-              aria-label="Comanda deslizable"
-              className="w-[min(100vw,24rem)] h-full max-h-dvh shadow-2xl border-l border-[#D9A441]/40 overflow-hidden"
+              aria-label="Comanda en vivo deslizable"
+              className="w-full h-[88dvh] max-h-[88dvh] rounded-t-3xl border-t md:rounded-none md:border-t-0 md:max-w-sm md:h-full md:max-h-dvh shadow-2xl border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-surface)]"
             >
               {renderLiveCartPanel(() => setShowCartDrawer(false))}
             </motion.aside>

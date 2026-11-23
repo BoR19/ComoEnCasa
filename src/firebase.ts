@@ -95,9 +95,7 @@ let authInstance: Auth;
 
 try {
   appInstance = initializeApp(resolvedFirebaseConfig);
-  dbInstance = resolvedFirebaseConfig.firestoreDatabaseId
-    ? getFirestore(appInstance, resolvedFirebaseConfig.firestoreDatabaseId)
-    : getFirestore(appInstance);
+  dbInstance = getFirestore(appInstance);
   authInstance = getAuth(appInstance);
 } catch (initError) {
   console.error('Firebase initialization failed:', initError);

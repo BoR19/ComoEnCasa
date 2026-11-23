@@ -14,7 +14,13 @@ import {
   INITIAL_MENU_ITEMS,
   INITIAL_TABLES,
 } from '../data/mockData';
-import { auth } from '../firebase';
+import {
+  auth,
+  firebaseConfigError,
+  formatFirebaseErrorForUser,
+  testConnection,
+  UserFriendlyFirebaseError,
+} from '../firebase';
 import {
   ALL_STAFF_PERMISSIONS,
   DEFAULT_ADMIN_PIN,
@@ -344,6 +350,12 @@ interface RestaurantContextValue {
   setShowCartDrawer: React.Dispatch<React.SetStateAction<boolean>>;
   toastMsg: string;
   showToast: (msg: string) => void;
+  firebaseSyncError: UserFriendlyFirebaseError | null;
+  isOnline: boolean;
+  isLiveSynced: boolean;
+  isCloudStaffReady: boolean;
+  dismissFirebaseError: () => void;
+  retryFirebaseSync: () => Promise<void>;
 
   // Anonymous Firebase Auth & PIN Staff Session
   firebaseUser: User | null;
@@ -511,6 +523,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   // Silent Anonymous Auth + Local Guest UID Fallback (zero Google popups)
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState<boolean>(false);
+  const [firebaseSyncError, setFirebaseSyncError] =
+    useState<UserFriendlyFirebaseError | null>(() => firebaseConfigError);
+  const [isOnline, setIsOnline] = useState<boolean>(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  const [cloudStaffSessionKey, setCloudStaffSessionKey] = useState<string | null>(
+    null
+  );
+  const [syncRetryNonce, setSyncRetryNonce] = useState<number>(0);
   const anonAttemptedRef = useRef<boolean>(false);
   const guestUidRef = useRef<string>(getOrCreateGuestUid());
   const effectiveUid = firebaseUser?.uid || guestUidRef.current;
@@ -634,8 +655,100 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     setToastMsg(msg);
     setTimeout(() => {
       setToastMsg((curr) => (curr === msg ? '' : curr));
-    }, 2600);
+    }, 3200);
   }, []);
+
+  const dismissFirebaseError = useCallback(() => {
+    setFirebaseSyncError(null);
+  }, []);
+
+  const reportCloudError = useCallback(
+    (
+      error: unknown,
+      contextLabel: string,
+      alsoToast = true
+    ): UserFriendlyFirebaseError => {
+      const friendly = formatFirebaseErrorForUser(error, contextLabel);
+      setFirebaseSyncError(friendly);
+      if (alsoToast) {
+        showToast(`${friendly.title}`);
+      }
+      return friendly;
+    },
+    [showToast]
+  );
+
+  const ensureFirebaseSignedIn = useCallback(async (): Promise<User | null> => {
+    if (firebaseConfigError) {
+      setFirebaseSyncError(firebaseConfigError);
+      return null;
+    }
+    if (auth.currentUser) {
+      setFirebaseUser(auth.currentUser);
+      return auth.currentUser;
+    }
+    try {
+      const cred = await signInAnonymously(auth);
+      setFirebaseUser(cred.user);
+      setFirebaseSyncError((curr) =>
+        curr && curr.code.startsWith('auth/') ? null : curr
+      );
+      return cred.user;
+    } catch (err) {
+      reportCloudError(err, 'Acceso anónimo a Firebase', false);
+      setFirebaseUser(null);
+      return null;
+    }
+  }, [reportCloudError]);
+
+  const retryFirebaseSync = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setIsOnline(false);
+      setFirebaseSyncError({
+        code: 'offline',
+        title: 'Sin conexión a internet',
+        message:
+          'Este dispositivo está sin internet. Los pedidos no llegarán a otros dispositivos hasta recuperar la conexión.',
+        actionHint: 'Conéctate a Wi-Fi o datos móviles y vuelve a intentar.',
+      });
+      showToast('Aún sin conexión a internet');
+      return;
+    }
+
+    setIsOnline(true);
+    const conn = await testConnection();
+    if (!conn.ok && conn.error) {
+      setFirebaseSyncError(conn.error);
+      showToast(conn.error.title);
+      return;
+    }
+
+    const signedUser = await ensureFirebaseSignedIn();
+    if (!signedUser) {
+      showToast('No se pudo conectar con Firebase');
+      return;
+    }
+
+    setFirebaseSyncError(null);
+    setSyncRetryNonce((n) => n + 1);
+    showToast('Conexión con la nube restablecida');
+  }, [ensureFirebaseSignedIn, showToast]);
+
+  const expectedStaffSessionKey = useMemo(() => {
+    if (!firebaseUser || !resolvedStaffSession) return null;
+    return `${firebaseUser.uid}:${resolvedStaffSession.staffId}:${resolvedStaffSession.pin}`;
+  }, [firebaseUser, resolvedStaffSession]);
+
+  const isCloudStaffReady = Boolean(
+    expectedStaffSessionKey && cloudStaffSessionKey === expectedStaffSessionKey
+  );
+
+  const isLiveSynced = Boolean(
+    firebaseUser &&
+      isOnline &&
+      !firebaseSyncError &&
+      (!isStaffSession || isCloudStaffReady)
+  );
 
   useEffect(() => {
     if (initialQrTableRef.current) {
@@ -643,6 +756,38 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       initialQrTableRef.current = null;
     }
   }, [showToast]);
+
+  // Network online/offline + startup Firestore health verification
+  useEffect(() => {
+    const handleOffline = () => {
+      setIsOnline(false);
+      setFirebaseSyncError({
+        code: 'offline',
+        title: 'Sin conexión a internet',
+        message:
+          'Se perdió la conexión a internet. Los cambios solo se guardarán localmente hasta reconectar.',
+        actionHint: 'Revisa tu Wi-Fi o datos móviles y pulsa "Reintentar".',
+      });
+    };
+    const handleOnline = () => {
+      setIsOnline(true);
+      void retryFirebaseSync();
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    void testConnection().then((res) => {
+      if (!res.ok && res.error) {
+        setFirebaseSyncError(res.error);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [retryFirebaseSync]);
 
   const closeActiveOverlays = useCallback(() => {
     setShowCartDrawer(false);
@@ -701,11 +846,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, [closeActiveOverlays]);
 
-  // Silent Anonymous Firebase Authentication (zero popups, offline/local fallback)
+  // Silent Anonymous Firebase Authentication (zero popups, surfaces real errors visibly)
   useEffect(() => {
+    if (firebaseConfigError) {
+      setFirebaseSyncError(firebaseConfigError);
+      setAuthReady(true);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setFirebaseUser(user);
+        setFirebaseSyncError((curr) =>
+          curr && curr.code.startsWith('auth/') ? null : curr
+        );
         setAuthReady(true);
         return;
       }
@@ -715,8 +869,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         try {
           const cred = await signInAnonymously(auth);
           setFirebaseUser(cred.user);
-        } catch {
-          // If Anonymous Auth is disabled or network is offline, run cleanly with local guest UID
+          setFirebaseSyncError((curr) =>
+            curr && curr.code.startsWith('auth/') ? null : curr
+          );
+        } catch (err) {
+          reportCloudError(err, 'Acceso anónimo a Firebase', false);
           setFirebaseUser(null);
         }
       } else {
@@ -726,11 +883,17 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [reportCloudError]);
 
-  // Re-sync PIN-verified staff_sessions doc whenever Firebase user & active shift exist
+  // Sync PIN-verified staff_sessions doc BEFORE attaching staff-wide onSnapshot queries
   useEffect(() => {
-    if (!authReady || !firebaseUser || !resolvedStaffSession) return;
+    if (!authReady || !firebaseUser || !resolvedStaffSession) {
+      setCloudStaffSessionKey(null);
+      return;
+    }
+    const targetKey = `${firebaseUser.uid}:${resolvedStaffSession.staffId}:${resolvedStaffSession.pin}`;
+    let cancelled = false;
+
     void activateStaffSessionInFirestore({
       uid: firebaseUser.uid,
       staffId: resolvedStaffSession.staffId,
@@ -739,16 +902,42 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       pin: resolvedStaffSession.pin,
       isAdmin: resolvedStaffSession.isAdmin,
     })
-      .then(() => {
+      .then(async () => {
+        if (cancelled) return;
+        setCloudStaffSessionKey(targetKey);
+        setFirebaseSyncError((curr) =>
+          curr && curr.code === 'permission-denied' ? null : curr
+        );
         if (resolvedStaffSession.isAdmin) {
-          return seedInitialCatalogIfEmpty();
+          try {
+            await seedInitialCatalogIfEmpty();
+          } catch (seedErr) {
+            if (!cancelled) {
+              reportCloudError(
+                seedErr,
+                'Inicialización del catálogo en Firestore',
+                false
+              );
+            }
+          }
         }
-        return undefined;
       })
-      .catch(() => {
-        // Non-blocking fallback when Firestore auth/rules are bootstrapping
+      .catch((err) => {
+        if (cancelled) return;
+        setCloudStaffSessionKey(null);
+        reportCloudError(err, 'Validación de turno en Firestore');
       });
-  }, [authReady, firebaseUser, resolvedStaffSession]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authReady,
+    firebaseUser,
+    reportCloudError,
+    resolvedStaffSession,
+    syncRetryNonce,
+  ]);
 
   // If Admin deactivates a logged-in employee remotely, close that shift cleanly
   useEffect(() => {
@@ -757,6 +946,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     if (match && !match.active) {
       writeStoredShiftSession(null);
       setActiveStaffSession(null);
+      setCloudStaffSessionKey(null);
       if (firebaseUser) {
         void clearStaffSessionInFirestore(firebaseUser.uid).catch(() => {});
       }
@@ -774,40 +964,52 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Public real-time listeners: Menu & Tables (shared across all roles)
   useEffect(() => {
-    const unsubMenu = subscribeMenuItems(setMenuItems);
-    const unsubTables = subscribeTables((cloudTables) => {
-      setOrders((currentOrders) => {
-        const localOccupiedTables = new Set(
-          currentOrders
-            .filter(
-              (o) =>
-                o.mode === 'dine-in' &&
-                o.tableNumber &&
-                o.status !== 'Cobrado' &&
-                !o.paid &&
-                o.customerUid === 'local-staff'
-            )
-            .map((o) => o.tableNumber as number)
-        );
-        setTables(
-          cloudTables.map((t) =>
-            localOccupiedTables.has(t.number)
-              ? { ...t, status: 'ocupada' }
-              : t
-          )
-        );
-        return currentOrders;
-      });
+    if (firebaseConfigError) return;
+    const unsubMenu = subscribeMenuItems(setMenuItems, (err) => {
+      reportCloudError(err, 'Carga del menú en vivo', false);
     });
+    const unsubTables = subscribeTables(
+      (cloudTables) => {
+        setOrders((currentOrders) => {
+          const localOccupiedTables = new Set(
+            currentOrders
+              .filter(
+                (o) =>
+                  o.mode === 'dine-in' &&
+                  o.tableNumber &&
+                  o.status !== 'Cobrado' &&
+                  !o.paid &&
+                  o.customerUid === 'local-staff'
+              )
+              .map((o) => o.tableNumber as number)
+          );
+          setTables(
+            cloudTables.map((t) =>
+              localOccupiedTables.has(t.number)
+                ? { ...t, status: 'ocupada' }
+                : t
+            )
+          );
+          return currentOrders;
+        });
+      },
+      (err) => {
+        reportCloudError(err, 'Carga de mesas en vivo', false);
+      }
+    );
     return () => {
       unsubMenu();
       unsubTables();
     };
-  }, []);
+  }, [reportCloudError, syncRetryNonce]);
 
-  // Real-time Orders listener (anonymous Firebase UID for customers, all orders for active staff)
+  // Real-time Orders listener:
+  // - Staff waits for confirmed cloud staff_sessions/{uid} write (eliminates permission-denied race)
+  // - Customer listens immediately to their own UID orders
   useEffect(() => {
     if (!authReady || !firebaseUser) return;
+    if (isStaffSession && !isCloudStaffReady) return;
+
     const unsubOrders = subscribeOrders(
       firebaseUser.uid,
       isStaffSession,
@@ -825,53 +1027,115 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           });
           return [...filteredCloud, ...preservedLocal];
         });
+      },
+      (err) => {
+        reportCloudError(err, 'Sincronización en vivo de Comandas');
       }
     );
     return () => unsubOrders();
-  }, [authReady, firebaseUser, isStaffSession]);
+  }, [
+    authReady,
+    firebaseUser,
+    isCloudStaffReady,
+    isStaffSession,
+    reportCloudError,
+    syncRetryNonce,
+  ]);
 
   // Staff Config (PINs) & Staff Directory listeners (signed-in terminal)
   useEffect(() => {
     if (!authReady || !firebaseUser) return;
-    const unsubConfig = subscribeStaffConfig((pins) => {
-      setStoredPins(pins);
-      writeStoredPins(pins);
-    });
-    const unsubStaff = subscribeStaffMembers(isAdmin, (cloudList) => {
-      if (cloudList.length > 0) {
-        setStaffMembers(cloudList);
-        writeStoredStaffMembers(cloudList);
+    const unsubConfig = subscribeStaffConfig(
+      (pins) => {
+        setStoredPins(pins);
+        writeStoredPins(pins);
+      },
+      (err) => {
+        reportCloudError(err, 'Lectura de configuración de PIN', false);
       }
-    });
+    );
+    const unsubStaff = subscribeStaffMembers(
+      isAdmin && isCloudStaffReady,
+      (cloudList) => {
+        if (cloudList.length > 0) {
+          setStaffMembers(cloudList);
+          writeStoredStaffMembers(cloudList);
+        }
+      },
+      (err) => {
+        reportCloudError(err, 'Lectura de equipo y permisos', false);
+      }
+    );
     return () => {
       unsubConfig();
       unsubStaff();
     };
-  }, [authReady, firebaseUser, isAdmin]);
+  }, [
+    authReady,
+    firebaseUser,
+    isAdmin,
+    isCloudStaffReady,
+    reportCloudError,
+    syncRetryNonce,
+  ]);
 
   // Staff-gated real-time Table Sessions & Customer Contacts listeners
   useEffect(() => {
-    if (!authReady || !firebaseUser || !isStaffSession) {
-      setCloudTableSessions({});
-      setCustomerContacts([]);
+    if (!authReady || !firebaseUser || !isStaffSession || !isCloudStaffReady) {
+      if (!isStaffSession) {
+        setCloudTableSessions({});
+        setCustomerContacts([]);
+      }
       return;
     }
-    const unsubSessions = subscribeTableSessions(setCloudTableSessions);
-    const unsubContacts = subscribeCustomerContacts(setCustomerContacts);
+    const unsubSessions = subscribeTableSessions(
+      setCloudTableSessions,
+      (err) => {
+        reportCloudError(err, 'Lectura de sesiones de mesa', false);
+      }
+    );
+    const unsubContacts = subscribeCustomerContacts(
+      setCustomerContacts,
+      (err) => {
+        reportCloudError(err, 'Lectura de contactos WhatsApp', false);
+      }
+    );
     return () => {
       unsubSessions();
       unsubContacts();
     };
-  }, [authReady, firebaseUser, isStaffSession]);
+  }, [
+    authReady,
+    firebaseUser,
+    isCloudStaffReady,
+    isStaffSession,
+    reportCloudError,
+    syncRetryNonce,
+  ]);
 
   // Inventory listener (Admin or Reports permission)
   useEffect(() => {
-    if (!authReady || !firebaseUser || (!isAdmin && !canViewReports)) {
+    if (
+      !authReady ||
+      !firebaseUser ||
+      !isCloudStaffReady ||
+      (!isAdmin && !canViewReports)
+    ) {
       return;
     }
-    const unsubInv = subscribeInventory(setInventory);
+    const unsubInv = subscribeInventory(setInventory, (err) => {
+      reportCloudError(err, 'Lectura de inventario', false);
+    });
     return () => unsubInv();
-  }, [authReady, firebaseUser, isAdmin, canViewReports]);
+  }, [
+    authReady,
+    canViewReports,
+    firebaseUser,
+    isAdmin,
+    isCloudStaffReady,
+    reportCloudError,
+    syncRetryNonce,
+  ]);
 
   // Sync locally captured QR table phone to Firestore once anonymous UID exists
   useEffect(() => {
@@ -882,8 +1146,10 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       tableNumber: selectedTable,
       customerUid: firebaseUser.uid,
       customerPhone: localPhone,
-    }).catch(() => {});
-  }, [firebaseUser, selectedTable, tablePhonesByNumber]);
+    }).catch((err) => {
+      reportCloudError(err, 'Registro de WhatsApp en mesa', false);
+    });
+  }, [firebaseUser, reportCloudError, selectedTable, tablePhonesByNumber]);
 
   const loginWithPin = useCallback(
     async (
@@ -949,26 +1215,47 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       closeActiveOverlays();
-      writeStoredShiftSession(nextSession);
-      setActiveStaffSession(nextSession);
+      const activeUser = firebaseUser || (await ensureFirebaseSignedIn());
 
-      if (firebaseUser) {
+      if (activeUser) {
         try {
           await activateStaffSessionInFirestore({
-            uid: firebaseUser.uid,
+            uid: activeUser.uid,
             staffId: nextSession.staffId,
             name: nextSession.name,
             role: nextSession.role,
             pin: nextSession.pin,
             isAdmin: nextSession.isAdmin,
           });
+          setCloudStaffSessionKey(
+            `${activeUser.uid}:${nextSession.staffId}:${nextSession.pin}`
+          );
           if (nextSession.isAdmin) {
-            void seedInitialCatalogIfEmpty().catch(() => {});
+            try {
+              await seedInitialCatalogIfEmpty();
+            } catch (seedErr) {
+              reportCloudError(
+                seedErr,
+                'Inicialización del catálogo en Firestore',
+                false
+              );
+            }
           }
-        } catch {
-          // Local shift remains active even if offline
+        } catch (err) {
+          const friendly = reportCloudError(
+            err,
+            'Inicio de turno en Firebase',
+            false
+          );
+          return {
+            ok: false,
+            error: `${friendly.title}: ${friendly.message} ${friendly.actionHint}`,
+          };
         }
       }
+
+      writeStoredShiftSession(nextSession);
+      setActiveStaffSession(nextSession);
 
       setNavDirection(1);
       let landingScreen: ScreenId = 'cart';
@@ -992,24 +1279,41 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         prev[prev.length - 1] === landingScreen ? prev : [...prev, landingScreen]
       );
 
-      showToast(`Turno: ${nextSession.name} (${nextSession.role})`);
+      if (activeUser) {
+        showToast(`Turno: ${nextSession.name} (${nextSession.role})`);
+      } else {
+        showToast(
+          `Turno local: ${nextSession.name} (sin conexión con Firebase)`
+        );
+      }
       return { ok: true, session: nextSession };
     },
-    [closeActiveOverlays, firebaseUser, showToast, staffMembers, storedPins]
+    [
+      closeActiveOverlays,
+      ensureFirebaseSignedIn,
+      firebaseUser,
+      reportCloudError,
+      showToast,
+      staffMembers,
+      storedPins,
+    ]
   );
 
   const logoutStaffSession = useCallback(() => {
     closeActiveOverlays();
     clearQrParamsFromUrl();
     writeStoredShiftSession(null);
+    setCloudStaffSessionKey(null);
     setActiveStaffSession(null);
     if (firebaseUser) {
-      void clearStaffSessionInFirestore(firebaseUser.uid).catch(() => {});
+      void clearStaffSessionInFirestore(firebaseUser.uid).catch((err) => {
+        reportCloudError(err, 'Cierre de turno en la nube', false);
+      });
     }
     setNavDirection(-1);
     setHistory(['welcome']);
     showToast('Turno cerrado correctamente');
-  }, [closeActiveOverlays, firebaseUser, showToast]);
+  }, [closeActiveOverlays, firebaseUser, reportCloudError, showToast]);
 
   const selectedDish = useMemo(
     () =>
@@ -1071,16 +1375,33 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     [orders, lastPaidOrderId]
   );
 
-  const enrichedTables = useMemo(
-    () =>
-      tables.map((t) => {
-        const cloudPhone = cloudTableSessions[t.number]?.customerPhone;
-        const localPhone = tablePhonesByNumber[t.number];
-        const phone = cloudPhone || localPhone;
-        return phone ? { ...t, customerPhone: phone } : t;
-      }),
-    [tables, cloudTableSessions, tablePhonesByNumber]
-  );
+  const enrichedTables = useMemo(() => {
+    const activeOccupiedTableNums = new Set(
+      orders
+        .filter(
+          (o) =>
+            o.mode === 'dine-in' &&
+            typeof o.tableNumber === 'number' &&
+            o.status !== 'Cobrado' &&
+            !o.paid
+        )
+        .map((o) => o.tableNumber as number)
+    );
+
+    return tables.map((t) => {
+      const cloudPhone = cloudTableSessions[t.number]?.customerPhone;
+      const localPhone = tablePhonesByNumber[t.number];
+      const phone = cloudPhone || localPhone;
+      const nextStatus = activeOccupiedTableNums.has(t.number)
+        ? ('ocupada' as const)
+        : t.status;
+      return phone
+        ? { ...t, status: nextStatus, customerPhone: phone }
+        : nextStatus !== t.status
+        ? { ...t, status: nextStatus }
+        : t;
+    });
+  }, [tables, orders, cloudTableSessions, tablePhonesByNumber]);
 
   const tableCustomerPhone = useMemo(
     () =>
@@ -1111,13 +1432,19 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
             writeStoredTablePhones(next);
             return next;
           });
-          if (firebaseUser) {
-            void upsertTableSessionInFirestore({
-              tableNumber: selectedTable,
-              customerUid: firebaseUser.uid,
-              customerPhone: parsed.whatsappDigits,
-            }).catch(() => {});
-          }
+          void (async () => {
+            const activeUser = firebaseUser || (await ensureFirebaseSignedIn());
+            if (!activeUser) return;
+            try {
+              await upsertTableSessionInFirestore({
+                tableNumber: selectedTable,
+                customerUid: activeUser.uid,
+                customerPhone: parsed.whatsappDigits,
+              });
+            } catch (err) {
+              reportCloudError(err, 'Registro de WhatsApp en mesa', false);
+            }
+          })();
           showToast(
             `WhatsApp ${parsed.display} guardado · Bienvenido a Mesa ${selectedTable}`
           );
@@ -1127,7 +1454,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       navigate('menu');
     },
-    [firebaseUser, navigate, selectedTable, showToast]
+    [
+      ensureFirebaseSignedIn,
+      firebaseUser,
+      navigate,
+      reportCloudError,
+      selectedTable,
+      showToast,
+    ]
   );
 
   const handleSelectTakeawayOrder = useCallback((orderId: string | null) => {
@@ -1290,8 +1624,6 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           (isStaffSession || o.customerUid === ownerUid)
       );
 
-      const canSyncCloud = Boolean(firebaseUser);
-
       if (existingUnpaid) {
         const updatedItems = [...existingUnpaid.items, ...lines];
         const updatedTotal = existingUnpaid.total + cartTotal;
@@ -1310,25 +1642,33 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           )
         );
         setActiveTableOrderId(existingUnpaid.id);
-        if (
-          canSyncCloud &&
-          (isStaffSession || existingUnpaid.customerUid === ownerUid)
-        ) {
-          void appendOrderItemsInFirestore({
-            orderId: existingUnpaid.id,
-            items: updatedItems,
-            total: updatedTotal,
-            status: 'Preparando',
-          }).catch(() => {});
-          if (resolvedPhone) {
-            void upsertTableSessionInFirestore({
-              tableNumber: selectedTable,
-              customerUid: ownerUid,
-              customerPhone: resolvedPhone,
-              activeOrderId: existingUnpaid.id,
-            }).catch(() => {});
+        void (async () => {
+          const activeUser = firebaseUser || (await ensureFirebaseSignedIn());
+          if (!activeUser) {
+            showToast('Guardado solo en este dispositivo (sin conexión a la nube)');
+            return;
           }
-        }
+          if (isStaffSession || existingUnpaid.customerUid === activeUser.uid) {
+            try {
+              await appendOrderItemsInFirestore({
+                orderId: existingUnpaid.id,
+                items: updatedItems,
+                total: updatedTotal,
+                status: 'Preparando',
+              });
+              if (resolvedPhone) {
+                await upsertTableSessionInFirestore({
+                  tableNumber: selectedTable,
+                  customerUid: activeUser.uid,
+                  customerPhone: resolvedPhone,
+                  activeOrderId: existingUnpaid.id,
+                });
+              }
+            } catch (err) {
+              reportCloudError(err, 'Actualización de pedido de mesa');
+            }
+          }
+        })();
       } else {
         const newOrderId = `ord-mesa-${Date.now()}`;
         const newOrder: KitchenOrder = {
@@ -1360,22 +1700,46 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           )
         );
 
-        if (canSyncCloud) {
-          void createOrderInFirestore({
-            order: newOrder,
-            customerUid: ownerUid,
-            occupyTableIfNeeded: {
-              tableNumber: selectedTable,
-              capacity: tableObj?.capacity || 4,
-              isCurrentlyFree: tableObj?.status === 'libre',
-              isStaff: isStaffSession,
-            },
-          }).catch(() => {});
-        }
+        void (async () => {
+          const activeUser = firebaseUser || (await ensureFirebaseSignedIn());
+          if (!activeUser) {
+            showToast('Guardado solo en este dispositivo (sin conexión a la nube)');
+            return;
+          }
+          const cloudOrder =
+            activeUser.uid === newOrder.customerUid
+              ? newOrder
+              : { ...newOrder, customerUid: activeUser.uid };
+          if (activeUser.uid !== newOrder.customerUid) {
+            setOrders((prev) =>
+              prev.map((o) =>
+                o.id === newOrderId ? { ...o, customerUid: activeUser.uid } : o
+              )
+            );
+          }
+          try {
+            await createOrderInFirestore({
+              order: cloudOrder,
+              customerUid: activeUser.uid,
+              occupyTableIfNeeded: {
+                tableNumber: selectedTable,
+                capacity: tableObj?.capacity || 4,
+                isCurrentlyFree: tableObj?.status === 'libre',
+                isStaff: isStaffSession,
+              },
+            });
+          } catch (err) {
+            reportCloudError(err, 'Envío de pedido de mesa a la nube');
+          }
+        })();
       }
 
       setCart([]);
-      showToast(`Pedido enviado a Cocina · Mesa ${selectedTable}`);
+      showToast(
+        firebaseUser
+          ? `Pedido enviado a Cocina · Mesa ${selectedTable}`
+          : `Pedido registrado en Mesa ${selectedTable} · Sincronizando...`
+      );
       if (!stayInWorkspace) {
         navigate('tables-order');
       }
@@ -1384,10 +1748,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       cart,
       cartTotal,
       cloudTableSessions,
+      ensureFirebaseSignedIn,
       firebaseUser,
       isStaffSession,
       navigate,
       orders,
+      reportCloudError,
       resolvedStaffSession?.name,
       selectedTable,
       showToast,
@@ -1424,18 +1790,37 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         waiterRequested: false,
       };
 
-      const canSyncCloud = Boolean(firebaseUser);
       setOrders((prev) => [takeawayOrder, ...prev]);
       setSelectedTakeawayOrderId(newOrderId);
       setCart([]);
       setTakeawayInfo({ customerName: '', pickupNote: '' });
 
-      if (canSyncCloud) {
-        void createOrderInFirestore({
-          order: takeawayOrder,
-          customerUid: ownerUid,
-        }).catch(() => {});
-      }
+      void (async () => {
+        const activeUser = firebaseUser || (await ensureFirebaseSignedIn());
+        if (!activeUser) {
+          showToast('Guardado solo en este dispositivo (sin conexión a la nube)');
+          return;
+        }
+        const cloudOrder =
+          activeUser.uid === takeawayOrder.customerUid
+            ? takeawayOrder
+            : { ...takeawayOrder, customerUid: activeUser.uid };
+        if (activeUser.uid !== takeawayOrder.customerUid) {
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === newOrderId ? { ...o, customerUid: activeUser.uid } : o
+            )
+          );
+        }
+        try {
+          await createOrderInFirestore({
+            order: cloudOrder,
+            customerUid: activeUser.uid,
+          });
+        } catch (err) {
+          reportCloudError(err, 'Envío de pedido Para Llevar a la nube');
+        }
+      })();
 
       showToast(
         `Pedido Para Llevar enviado · Código de retiro: ${confirmationCode}`
@@ -1448,10 +1833,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     [
       cart,
       cartTotal,
+      ensureFirebaseSignedIn,
       firebaseUser,
       isStaffSession,
       navigate,
       orders.length,
+      reportCloudError,
       resolvedStaffSession?.name,
       showToast,
       takeawayInfo,
@@ -1500,7 +1887,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
             items: updatedItems,
             total: updatedTotal,
             status: updatedStatus,
-          }).catch(() => {});
+          }).catch((err) => {
+            reportCloudError(err, 'Actualización de pedido Para Llevar');
+          });
         }
 
         setCart([]);
@@ -1552,7 +1941,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           items: updatedItems,
           total: updatedTotal,
           status: updatedStatus,
-        }).catch(() => {});
+        }).catch((err) => {
+          reportCloudError(err, 'Actualización de pedido Delivery');
+        });
       }
 
       setCart([]);
@@ -1572,6 +1963,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     linkedTakeawayOrder,
     navigate,
     orderMode,
+    reportCloudError,
     showToast,
     takeawayInfo.customerName,
   ]);
@@ -1607,17 +1999,46 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       setSelectedDeliveryOrderId(newDelId);
       setCart([]);
 
-      if (firebaseUser) {
-        void createOrderInFirestore({
-          order: deliveryOrder,
-          customerUid: ownerUid,
-          deliveryReference: deliveryInfo.reference.trim(),
-        }).catch(() => {});
-      }
+      void (async () => {
+        const activeUser = firebaseUser || (await ensureFirebaseSignedIn());
+        if (!activeUser) {
+          showToast('Guardado solo en este dispositivo (sin conexión a la nube)');
+          return;
+        }
+        const cloudOrder =
+          activeUser.uid === deliveryOrder.customerUid
+            ? deliveryOrder
+            : { ...deliveryOrder, customerUid: activeUser.uid };
+        if (activeUser.uid !== deliveryOrder.customerUid) {
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === newDelId ? { ...o, customerUid: activeUser.uid } : o
+            )
+          );
+        }
+        try {
+          await createOrderInFirestore({
+            order: cloudOrder,
+            customerUid: activeUser.uid,
+            deliveryReference: deliveryInfo.reference.trim(),
+          });
+        } catch (err) {
+          reportCloudError(err, 'Envío de pedido Delivery a la nube');
+        }
+      })();
 
       return deliveryOrder;
     },
-    [cart, cartTotal, deliveryInfo, firebaseUser, orders.length]
+    [
+      cart,
+      cartTotal,
+      deliveryInfo,
+      ensureFirebaseSignedIn,
+      firebaseUser,
+      orders.length,
+      reportCloudError,
+      showToast,
+    ]
   );
 
   const handleDeliveryInfoContinue = useCallback(() => {
@@ -1663,7 +2084,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         void customerPayOrderInFirestore(
           activeTableOrder.id,
           paymentMethod
-        ).catch(() => {});
+        ).catch((err) => {
+          reportCloudError(err, 'Registro de pago de mesa');
+        });
       }
       showToast(`Pago registrado para Mesa ${selectedTable}`);
       navigate('payment-confirm');
@@ -1685,7 +2108,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         void customerPayOrderInFirestore(
           linkedTakeawayOrder.id,
           paymentMethod
-        ).catch(() => {});
+        ).catch((err) => {
+          reportCloudError(err, 'Registro de pago Para Llevar');
+        });
       }
       showToast(
         `Pago registrado · Para Llevar (${getTakeawayCustomerName(linkedTakeawayOrder)})`
@@ -1717,6 +2142,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     navigate,
     paymentContext,
     paymentMethod,
+    reportCloudError,
     selectedTable,
     showToast,
   ]);
@@ -1757,7 +2183,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           orderId,
           status,
           deliveredAtLabel
-        ).catch(() => {});
+        ).catch((err) => {
+          reportCloudError(err, 'Cambio de estado de comanda');
+        });
       }
       if (
         status === 'Entregado' &&
@@ -1770,7 +2198,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         );
       }
     },
-    [firebaseUser, isStaffSession, orders, showToast]
+    [firebaseUser, isStaffSession, orders, reportCloudError, showToast]
   );
 
   const handleCallWaiter = useCallback(
@@ -1779,11 +2207,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         prev.map((o) => (o.id === orderId ? { ...o, waiterRequested: true } : o))
       );
       if (firebaseUser) {
-        void setWaiterCallInFirestore(orderId, true).catch(() => {});
+        void setWaiterCallInFirestore(orderId, true).catch((err) => {
+          reportCloudError(err, 'Llamado a mesero');
+        });
       }
       showToast(`Mesero notificado para Mesa ${selectedTable}`);
     },
-    [firebaseUser, selectedTable, showToast]
+    [firebaseUser, reportCloudError, selectedTable, showToast]
   );
 
   const handleRequestBill = useCallback(
@@ -1796,11 +2226,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         )
       );
       if (firebaseUser) {
-        void setWaiterCallInFirestore(orderId, true, true).catch(() => {});
+        void setWaiterCallInFirestore(orderId, true, true).catch((err) => {
+          reportCloudError(err, 'Solicitud de cuenta');
+        });
       }
       showToast(`Cuenta solicitada · Mesa ${selectedTable} marcada Por pagar`);
     },
-    [firebaseUser, selectedTable, showToast]
+    [firebaseUser, reportCloudError, selectedTable, showToast]
   );
 
   const handleDismissWaiterCall = useCallback(
@@ -1811,10 +2243,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         )
       );
       if (firebaseUser && isStaffSession) {
-        void setWaiterCallInFirestore(orderId, false).catch(() => {});
+        void setWaiterCallInFirestore(orderId, false).catch((err) => {
+          reportCloudError(err, 'Confirmación de atención en mesa');
+        });
       }
     },
-    [firebaseUser, isStaffSession]
+    [firebaseUser, isStaffSession, reportCloudError]
   );
 
   const clearTablePhoneSession = useCallback((tableNum: number) => {
@@ -1910,7 +2344,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           orderId,
           method,
           tableNumberToFree,
-        }).catch(() => {});
+        }).catch((err) => {
+          reportCloudError(err, 'Cobro de comanda en la nube');
+        });
       }
 
       if (tableNumberToFree) {
@@ -1929,6 +2365,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       isStaffSession,
       orderMode,
       orders,
+      reportCloudError,
       selectedDeliveryOrderId,
       selectedTable,
       selectedTakeawayOrderId,
@@ -2034,7 +2471,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
                   isStaff: true,
                 }
               : undefined,
-        }).catch(() => {});
+        }).catch((err) => {
+          reportCloudError(err, 'Creación de comanda en la nube');
+        });
+      } else if (isStaffSession) {
+        showToast('Comanda guardada solo localmente (sin conexión a la nube)');
       }
 
       const codeHint = newOrder.confirmationCode
@@ -2053,6 +2494,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       firebaseUser,
       isStaffSession,
       orders.length,
+      reportCloudError,
       showToast,
       tables,
     ]
@@ -2081,7 +2523,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         setCart([]);
       }
       if (firebaseUser && isStaffSession) {
-        void freeTableInFirestore(tableNumber).catch(() => {});
+        void freeTableInFirestore(tableNumber).catch((err) => {
+          reportCloudError(err, 'Liberación de mesa en la nube');
+        });
       }
       showToast(`Mesa ${tableNumber} liberada`);
     },
@@ -2093,6 +2537,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       firebaseUser,
       isStaffSession,
       orderMode,
+      reportCloudError,
       selectedTable,
       showToast,
     ]
@@ -2140,7 +2585,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       );
 
       if (firebaseUser && isStaffSession) {
-        void createTableInFirestore(newTable).catch(() => {});
+        void createTableInFirestore(newTable).catch((err) => {
+          reportCloudError(err, 'Creación de mesa en la nube');
+        });
       }
 
       showToast(`${cleanName} agregada (${cleanZone})`);
@@ -2151,6 +2598,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       canTakeOrdersAndTables,
       firebaseUser,
       isStaffSession,
+      reportCloudError,
       showToast,
       tables,
     ]
@@ -2184,7 +2632,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (firebaseUser && isStaffSession) {
-        void deleteTableInFirestore(tableNumber).catch(() => {});
+        void deleteTableInFirestore(tableNumber).catch((err) => {
+          reportCloudError(err, 'Eliminación de mesa en la nube');
+        });
       }
 
       showToast(`${target.name || `Mesa ${tableNumber}`} eliminada`);
@@ -2196,6 +2646,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       firebaseUser,
       isStaffSession,
       orders,
+      reportCloudError,
       selectedTable,
       showToast,
       tables,
@@ -2277,7 +2728,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           fromTableNumber,
           toTableNumber,
           toCustomerLabel: newLabel,
-        }).catch(() => {});
+        }).catch((err) => {
+          reportCloudError(err, 'Traslado de mesa en la nube');
+        });
       }
 
       showToast(
@@ -2291,6 +2744,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       firebaseUser,
       isStaffSession,
       orders,
+      reportCloudError,
       selectedTable,
       showToast,
       tables,
@@ -2385,10 +2839,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           orderId,
           items: updatedItems,
           total: updatedTotal,
-        }).catch(() => {});
+        }).catch((err) => {
+          reportCloudError(err, 'Edición de ítems en comanda');
+        });
       }
     },
-    [firebaseUser, isStaffSession, orders, showToast]
+    [firebaseUser, isStaffSession, orders, reportCloudError, showToast]
   );
 
   const handleDeleteOrder = useCallback(
@@ -2430,7 +2886,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
           orderId: order.id,
           isDelivery: order.mode === 'delivery',
           tableNumberToFree,
-        }).catch(() => {});
+        }).catch((err) => {
+          reportCloudError(err, 'Anulación de comanda en la nube');
+        });
       }
 
       showToast(
@@ -2446,6 +2904,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       isAdmin,
       lastPaidOrderId,
       orders,
+      reportCloudError,
       selectedDeliveryOrderId,
       selectedTakeawayOrderId,
       showToast,
@@ -2458,11 +2917,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         prev.map((o) => (o.id === orderId ? { ...o, ratingStars: stars } : o))
       );
       if (firebaseUser) {
-        void rateOrderInFirestore(orderId, stars).catch(() => {});
+        void rateOrderInFirestore(orderId, stars).catch((err) => {
+          reportCloudError(err, 'Envío de calificación', false);
+        });
       }
       showToast(`¡Gracias por calificar con ${stars} estrellas!`);
     },
-    [firebaseUser, showToast]
+    [firebaseUser, reportCloudError, showToast]
   );
 
   const handlePayTableOrder = useCallback(
@@ -2498,10 +2959,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       setMenuItems((prev) => prev.map((m) => (m.id === id ? updated : m)));
       if (firebaseUser) {
-        void upsertMenuItemInFirestore(updated, idx).catch(() => {});
+        void upsertMenuItemInFirestore(updated, idx).catch((err) => {
+          reportCloudError(err, 'Actualización de disponibilidad en menú');
+        });
       }
     },
-    [canEditMenu, firebaseUser, menuItems]
+    [canEditMenu, firebaseUser, menuItems, reportCloudError]
   );
 
   const handleSaveDishEdit = useCallback(
@@ -2515,11 +2978,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         void upsertMenuItemInFirestore(
           updated,
           idx >= 0 ? idx : menuItems.length
-        ).catch(() => {});
+        ).catch((err) => {
+          reportCloudError(err, 'Guardado de plato en la nube');
+        });
       }
       showToast(`${updated.name} actualizado`);
     },
-    [canEditMenu, firebaseUser, menuItems, showToast]
+    [canEditMenu, firebaseUser, menuItems, reportCloudError, showToast]
   );
 
   const handleAddNewDish = useCallback(
@@ -2528,11 +2993,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       const nextOrder = menuItems.length;
       setMenuItems((prev) => [...prev, newItem]);
       if (firebaseUser) {
-        void upsertMenuItemInFirestore(newItem, nextOrder).catch(() => {});
+        void upsertMenuItemInFirestore(newItem, nextOrder).catch((err) => {
+          reportCloudError(err, 'Creación de plato en la nube');
+        });
       }
       showToast(`${newItem.name} agregado al menú`);
     },
-    [canEditMenu, firebaseUser, menuItems.length, showToast]
+    [canEditMenu, firebaseUser, menuItems.length, reportCloudError, showToast]
   );
 
   const handleUpdateInventory = useCallback(
@@ -2540,11 +3007,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!isAdmin) return;
       setInventory(updated);
       if (firebaseUser) {
-        void saveInventoryInFirestore(updated).catch(() => {});
+        void saveInventoryInFirestore(updated).catch((err) => {
+          reportCloudError(err, 'Guardado de inventario en la nube');
+        });
       }
       showToast('Inventario actualizado');
     },
-    [firebaseUser, isAdmin, showToast]
+    [firebaseUser, isAdmin, reportCloudError, showToast]
   );
 
   const handleUpdateAdminPin = useCallback(
@@ -2585,8 +3054,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
             pin: cleanPin,
             isAdmin: true,
           });
-        } catch {
-          // Persisted locally if cloud write is unavailable
+          setCloudStaffSessionKey(`${firebaseUser.uid}:admin:${cleanPin}`);
+        } catch (err) {
+          reportCloudError(err, 'Actualización de PIN de Administrador');
         }
       }
 
@@ -2596,6 +3066,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     [
       firebaseUser,
       isAdmin,
+      reportCloudError,
       resolvedStaffSession,
       showToast,
       staffMembers,
@@ -2668,7 +3139,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       if (firebaseUser) {
-        void upsertStaffMemberInFirestore(nextMember).catch(() => {});
+        try {
+          await upsertStaffMemberInFirestore(nextMember);
+        } catch (err) {
+          const friendly = reportCloudError(
+            err,
+            'Guardado de trabajador en Firestore'
+          );
+          return { ok: false, error: `${friendly.title}: ${friendly.message}` };
+        }
       }
 
       showToast(
@@ -2678,7 +3157,14 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       return { ok: true };
     },
-    [firebaseUser, isAdmin, showToast, staffMembers, storedPins.adminPin]
+    [
+      firebaseUser,
+      isAdmin,
+      reportCloudError,
+      showToast,
+      staffMembers,
+      storedPins.adminPin,
+    ]
   );
 
   const handleToggleStaffActive = useCallback(
@@ -2692,11 +3178,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         return next;
       });
       if (firebaseUser) {
-        void toggleStaffActiveInFirestore(staffId, active).catch(() => {});
+        void toggleStaffActiveInFirestore(staffId, active).catch((err) => {
+          reportCloudError(err, 'Cambio de estado de trabajador');
+        });
       }
       showToast(active ? 'Personal activado' : 'Personal desactivado');
     },
-    [firebaseUser, isAdmin, showToast]
+    [firebaseUser, isAdmin, reportCloudError, showToast]
   );
 
   const handleDeleteStaffMember = useCallback(
@@ -2709,13 +3197,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         return next;
       });
       if (firebaseUser) {
-        void deleteStaffMemberInFirestore(staffId).catch(() => {});
+        void deleteStaffMemberInFirestore(staffId).catch((err) => {
+          reportCloudError(err, 'Eliminación de trabajador');
+        });
       }
       showToast(
         target ? `${target.name} eliminado del equipo` : 'Personal eliminado'
       );
     },
-    [firebaseUser, isAdmin, showToast, staffMembers]
+    [firebaseUser, isAdmin, reportCloudError, showToast, staffMembers]
   );
 
   const value: RestaurantContextValue = {
@@ -2728,6 +3218,12 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     setShowCartDrawer,
     toastMsg,
     showToast,
+    firebaseSyncError,
+    isOnline,
+    isLiveSynced,
+    isCloudStaffReady,
+    dismissFirebaseError,
+    retryFirebaseSync,
     firebaseUser,
     authReady,
     isAdmin,

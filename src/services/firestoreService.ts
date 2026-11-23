@@ -228,8 +228,24 @@ export async function seedInitialCatalogIfEmpty(): Promise<void> {
   }
 }
 
+function notifyListenerError(
+  error: unknown,
+  operationType: OperationType,
+  path: string,
+  onError?: (err: unknown) => void
+): void {
+  try {
+    handleFirestoreError(error, operationType, path);
+  } catch (structuredError) {
+    if (onError) {
+      onError(structuredError);
+    }
+  }
+}
+
 export function subscribeMenuItems(
-  onData: (items: MenuItem[]) => void
+  onData: (items: MenuItem[]) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   const q = query(collection(db, 'menuItems'), orderBy('sortOrder', 'asc'));
   return onSnapshot(
@@ -258,13 +274,14 @@ export function subscribeMenuItems(
       onData(items);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'menuItems');
+      notifyListenerError(error, OperationType.LIST, 'menuItems', onError);
     }
   );
 }
 
 export function subscribeTables(
-  onData: (tables: TableItem[]) => void
+  onData: (tables: TableItem[]) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   const q = query(collection(db, 'tables'), orderBy('number', 'asc'));
   return onSnapshot(
@@ -297,7 +314,7 @@ export function subscribeTables(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'tables');
+      notifyListenerError(error, OperationType.LIST, 'tables', onError);
     }
   );
 }
@@ -305,18 +322,25 @@ export function subscribeTables(
 export function subscribeOrders(
   userUid: string,
   isStaff: boolean,
-  onData: (orders: KitchenOrder[]) => void
+  onData: (orders: KitchenOrder[]) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   const q = isStaff
     ? query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
     : query(collection(db, 'orders'), where('customerUid', '==', userUid));
 
+  let latestSeq = 0;
+
   return onSnapshot(
     q,
     async (snapshot) => {
+      const seq = ++latestSeq;
       const rawDocs = snapshot.docs.map((d) => {
         const data = d.data();
-        const ts = data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : 0;
+        const ts =
+          data.createdAt instanceof Timestamp
+            ? data.createdAt.toMillis()
+            : Date.now();
         const order: KitchenOrder & { _createdAtMs: number } = {
           id: data.id || d.id,
           code: data.code,
@@ -385,16 +409,18 @@ export function subscribeOrders(
         })
       );
 
+      if (seq !== latestSeq) return;
       onData(enriched);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'orders');
+      notifyListenerError(error, OperationType.LIST, 'orders', onError);
     }
   );
 }
 
 export function subscribeTableSessions(
-  onData: (sessions: Record<number, { customerPhone: string; activeOrderId?: string }>) => void
+  onData: (sessions: Record<number, { customerPhone: string; activeOrderId?: string }>) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   return onSnapshot(
     collection(db, 'table_sessions'),
@@ -415,13 +441,14 @@ export function subscribeTableSessions(
       onData(next);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'table_sessions');
+      notifyListenerError(error, OperationType.LIST, 'table_sessions', onError);
     }
   );
 }
 
 export function subscribeCustomerContacts(
-  onData: (contacts: CustomerContactItem[]) => void
+  onData: (contacts: CustomerContactItem[]) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   return onSnapshot(
     collection(db, 'customer_contacts'),
@@ -454,13 +481,14 @@ export function subscribeCustomerContacts(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'customer_contacts');
+      notifyListenerError(error, OperationType.LIST, 'customer_contacts', onError);
     }
   );
 }
 
 export function subscribeInventory(
-  onData: (items: InventoryItem[]) => void
+  onData: (items: InventoryItem[]) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   return onSnapshot(
     collection(db, 'inventory'),
@@ -482,13 +510,14 @@ export function subscribeInventory(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'inventory');
+      notifyListenerError(error, OperationType.LIST, 'inventory', onError);
     }
   );
 }
 
 export function subscribeStaffConfig(
-  onPins: (pins: { adminPin: string; mozoPin: string }) => void
+  onPins: (pins: { adminPin: string; mozoPin: string }) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   return onSnapshot(
     doc(db, 'config', 'staff'),
@@ -507,14 +536,15 @@ export function subscribeStaffConfig(
       }
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, 'config/staff');
+      notifyListenerError(error, OperationType.GET, 'config/staff', onError);
     }
   );
 }
 
 export function subscribeStaffMembers(
   isAdmin: boolean,
-  onData: (list: StaffMember[]) => void
+  onData: (list: StaffMember[]) => void,
+  onError?: (error: unknown) => void
 ): () => void {
   const q = isAdmin
     ? collection(db, 'staff')
@@ -546,7 +576,7 @@ export function subscribeStaffMembers(
       onData(list);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'staff');
+      notifyListenerError(error, OperationType.LIST, 'staff', onError);
     }
   );
 }
@@ -742,29 +772,54 @@ export async function createOrderInFirestore(params: {
         contactDoc.tableNumber = order.tableNumber;
       }
       batch.set(doc(db, 'orders', order.id, 'private', 'contact'), contactDoc);
-
-      if (order.mode === 'dine-in' && typeof order.tableNumber === 'number' && !order.paid) {
-        batch.set(doc(db, 'table_sessions', `mesa-${order.tableNumber}`), {
-          tableNumber: order.tableNumber,
-          customerUid,
-          customerPhone: normalizedContactPhone,
-          activeOrderId: order.id,
-          updatedAt: serverTimestamp(),
-        });
-      }
     }
+
+    await batch.commit();
 
     if (
       occupyTableIfNeeded &&
       (occupyTableIfNeeded.isStaff || occupyTableIfNeeded.isCurrentlyFree)
     ) {
-      batch.update(doc(db, 'tables', `mesa-${occupyTableIfNeeded.tableNumber}`), {
-        status: 'ocupada',
-        updatedAt: serverTimestamp(),
-      });
+      void (async () => {
+        try {
+          const tableRef = doc(db, 'tables', `mesa-${occupyTableIfNeeded.tableNumber}`);
+          const tableSnap = await getDoc(tableRef);
+          if (tableSnap.exists()) {
+            const currentStatus = tableSnap.data()?.status;
+            if (occupyTableIfNeeded.isStaff || currentStatus === 'libre') {
+              await updateDoc(tableRef, {
+                status: 'ocupada',
+                updatedAt: serverTimestamp(),
+              });
+            }
+          } else if (occupyTableIfNeeded.isStaff) {
+            await setDoc(tableRef, {
+              number: occupyTableIfNeeded.tableNumber,
+              status: 'ocupada',
+              capacity: occupyTableIfNeeded.capacity || 4,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        } catch {
+          // Non-blocking table status sync; order itself is already saved in Firestore
+        }
+      })();
     }
 
-    await batch.commit();
+    if (
+      /^[0-9]{8,15}$/.test(normalizedContactPhone) &&
+      order.mode === 'dine-in' &&
+      typeof order.tableNumber === 'number' &&
+      !order.paid
+    ) {
+      void setDoc(doc(db, 'table_sessions', `mesa-${order.tableNumber}`), {
+        tableNumber: order.tableNumber,
+        customerUid,
+        customerPhone: normalizedContactPhone,
+        activeOrderId: order.id,
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    }
 
     if (/^[0-9]{8,15}$/.test(normalizedContactPhone)) {
       void upsertCustomerContactInFirestore({
@@ -872,10 +927,14 @@ export async function deleteOrderInFirestore(params: {
     batch.delete(doc(db, 'orders', params.orderId, 'private', 'contact'));
     batch.delete(doc(db, 'orders', params.orderId));
     if (typeof params.tableNumberToFree === 'number') {
-      batch.update(doc(db, 'tables', `mesa-${params.tableNumberToFree}`), {
-        status: 'libre',
-        updatedAt: serverTimestamp(),
-      });
+      const tableRef = doc(db, 'tables', `mesa-${params.tableNumberToFree}`);
+      const tableSnap = await getDoc(tableRef);
+      if (tableSnap.exists()) {
+        batch.update(tableRef, {
+          status: 'libre',
+          updatedAt: serverTimestamp(),
+        });
+      }
       batch.delete(doc(db, 'table_sessions', `mesa-${params.tableNumberToFree}`));
     }
     await batch.commit();
@@ -901,10 +960,14 @@ export async function collectOrderPaymentInFirestore(params: {
     });
 
     if (typeof params.tableNumberToFree === 'number') {
-      batch.update(doc(db, 'tables', `mesa-${params.tableNumberToFree}`), {
-        status: 'libre',
-        updatedAt: serverTimestamp(),
-      });
+      const tableRef = doc(db, 'tables', `mesa-${params.tableNumberToFree}`);
+      const tableSnap = await getDoc(tableRef);
+      if (tableSnap.exists()) {
+        batch.update(tableRef, {
+          status: 'libre',
+          updatedAt: serverTimestamp(),
+        });
+      }
       batch.delete(doc(db, 'table_sessions', `mesa-${params.tableNumberToFree}`));
     }
 
@@ -932,10 +995,14 @@ export async function customerPayOrderInFirestore(
 export async function freeTableInFirestore(tableNumber: number): Promise<void> {
   try {
     const batch = writeBatch(db);
-    batch.update(doc(db, 'tables', `mesa-${tableNumber}`), {
-      status: 'libre',
-      updatedAt: serverTimestamp(),
-    });
+    const tableRef = doc(db, 'tables', `mesa-${tableNumber}`);
+    const tableSnap = await getDoc(tableRef);
+    if (tableSnap.exists()) {
+      batch.update(tableRef, {
+        status: 'libre',
+        updatedAt: serverTimestamp(),
+      });
+    }
     batch.delete(doc(db, 'table_sessions', `mesa-${tableNumber}`));
     await batch.commit();
   } catch (error) {

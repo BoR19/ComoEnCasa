@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ShoppingBag } from 'lucide-react';
+import { AlertTriangle, RefreshCw, ShoppingBag, X } from 'lucide-react';
 import { DesktopSidebar } from './components/DesktopSidebar';
 import { LiveCartPanel } from './components/LiveCartPanel';
 import { BottomNav } from './components/ShellComponents';
@@ -69,7 +69,10 @@ export default function App() {
     setShowCartDrawer,
     toastMsg,
     showToast,
-    firebaseUser,
+    firebaseSyncError,
+    isLiveSynced,
+    dismissFirebaseError,
+    retryFirebaseSync,
     isAdmin,
     isStaffSession,
     userRole,
@@ -370,6 +373,52 @@ export default function App() {
             : ''
         }`}
       >
+        {/* Firebase / Network Sync Alert Banner (only shown when an actual error occurs) */}
+        {firebaseSyncError && (
+          <div
+            role="alert"
+            className="shrink-0 z-40 bg-[var(--ops-surface)] text-[var(--bg-canvas)] border-b border-[var(--ops-accent)]/70 px-3 sm:px-5 py-2.5 shadow-md"
+          >
+            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[var(--ops-accent)]/20 text-[var(--ops-accent)] flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-xs font-bold text-white leading-snug">
+                    {firebaseSyncError.title}
+                  </p>
+                  <p className="text-[11px] text-white/85 leading-snug">
+                    {firebaseSyncError.message}
+                  </p>
+                  <p className="text-[11px] font-semibold text-[var(--accent-gold)] leading-snug break-words">
+                    {firebaseSyncError.actionHint}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => void retryFirebaseSync()}
+                  className="min-h-[36px] px-3 py-1.5 rounded-xl bg-[var(--ops-accent)] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-110 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Reintentar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={dismissFirebaseError}
+                  aria-label="Cerrar aviso de sincronización"
+                  className="min-w-[36px] min-h-[36px] rounded-xl bg-[var(--ops-elevated)] border border-[var(--ops-border)] text-white/75 hover:text-white flex items-center justify-center active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Global Feedback Toast */}
         {toastMsg && (
           <div className="absolute top-14 sm:top-16 left-3 right-3 z-50 pointer-events-none flex justify-center">
@@ -462,7 +511,7 @@ export default function App() {
                   orderMode={orderMode}
                   selectedTable={selectedTable}
                   takeawayCustomerName={takeawayInfo.customerName}
-                  isLiveSynced={Boolean(firebaseUser)}
+                  isLiveSynced={isLiveSynced}
                   onBack={goBack}
                   onSelectItem={(item) => {
                     setSelectedDishId(item.id);

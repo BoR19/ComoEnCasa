@@ -457,7 +457,17 @@ service cloud.firestore {
       allow update: if isValidId(tableId) &&
         isSignedIn() &&
         isValidTableSession(incoming()) &&
-        (isStaff() || (existing().customerUid == request.auth.uid && incoming().customerUid == request.auth.uid));
+        (
+          isStaff() ||
+          (existing().customerUid == request.auth.uid && incoming().customerUid == request.auth.uid) ||
+          (
+            incoming().customerUid == request.auth.uid &&
+            (
+              !exists(/databases/$(database)/documents/tables/$(tableId)) ||
+              get(/databases/$(database)/documents/tables/$(tableId)).data.status == 'libre'
+            )
+          )
+        );
       allow delete: if isValidId(tableId) && isStaff();
     }
 

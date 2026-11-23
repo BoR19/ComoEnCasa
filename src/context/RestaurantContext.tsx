@@ -144,6 +144,7 @@ interface RestaurantContextValue {
   tableCustomerPhone: string;
   handleSelectTable: (tableNumber: number) => void;
   handleConfirmQrTableWelcome: (rawPhone?: string) => void;
+  exitQrTableMode: () => void;
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   cartCount: number;
@@ -249,6 +250,7 @@ function parseTableParamFromUrl(): number | null {
   if (typeof window === 'undefined') return null;
   try {
     const params = new URLSearchParams(window.location.search);
+    if (!params.has('mesa') && !params.has('tableId')) return null;
     const raw = params.get('mesa') || params.get('tableId') || '';
     if (!raw) return null;
     const cleaned = raw.replace(/^mesa-/i, '').trim();
@@ -262,7 +264,34 @@ function parseTableParamFromUrl(): number | null {
   return null;
 }
 
+function clearQrParamsFromUrl(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('mesa') && !url.searchParams.has('tableId')) {
+      return;
+    }
+    url.searchParams.delete('mesa');
+    url.searchParams.delete('tableId');
+    const nextSearch = url.searchParams.toString();
+    const cleanUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}${url.hash}`;
+    window.history.replaceState(window.history.state, '', cleanUrl);
+  } catch {
+    // Ignore history API errors
+  }
+}
+
 const QR_PHONES_STORAGE_KEY = 'comoencasa_qr_table_phones_v1';
+
+function clearStoredQrSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(QR_PHONES_STORAGE_KEY);
+    window.localStorage.removeItem(QR_PHONES_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 function readStoredTablePhones(): Record<number, string> {
   if (typeof window === 'undefined') return {};
@@ -286,6 +315,11 @@ function readStoredTablePhones(): Record<number, string> {
 function writeStoredTablePhones(map: Record<number, string>): void {
   if (typeof window === 'undefined') return;
   try {
+    if (Object.keys(map).length === 0) {
+      window.sessionStorage.removeItem(QR_PHONES_STORAGE_KEY);
+      window.localStorage.removeItem(QR_PHONES_STORAGE_KEY);
+      return;
+    }
     window.sessionStorage.setItem(QR_PHONES_STORAGE_KEY, JSON.stringify(map));
   } catch {
     // Ignore storage errors
@@ -417,6 +451,18 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     pendingAuthActionRef.current = null;
   }, []);
 
+  const exitQrTableMode = useCallback(() => {
+    closeActiveOverlays();
+    clearQrParamsFromUrl();
+    clearStoredQrSession();
+    setTablePhonesByNumber({});
+    setCloudTableSessions({});
+    setActiveTableOrderId(null);
+    setSelectedTable(1);
+    setNavDirection(-1);
+    setHistory(['welcome']);
+  }, [closeActiveOverlays]);
+
   const navigate = useCallback(
     (screen: ScreenId) => {
       closeActiveOverlays();
@@ -427,6 +473,15 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
         } else {
           setActiveRole('admin');
         }
+      }
+
+      if (target === 'welcome') {
+        clearQrParamsFromUrl();
+        clearStoredQrSession();
+        setTablePhonesByNumber({});
+        setNavDirection(-1);
+        setHistory(['welcome']);
+        return;
       }
 
       setNavDirection(1);
@@ -441,7 +496,16 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   const goBack = useCallback(() => {
     closeActiveOverlays();
     setNavDirection(-1);
-    setHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : ['welcome']));
+    setHistory((prev) => {
+      const nextHistory: ScreenId[] =
+        prev.length > 1 ? prev.slice(0, -1) : ['welcome'];
+      const nextScreen = nextHistory[nextHistory.length - 1];
+      if (nextScreen === 'welcome') {
+        clearQrParamsFromUrl();
+        clearStoredQrSession();
+      }
+      return nextHistory;
+    });
   }, [closeActiveOverlays]);
 
   // Monitor Firebase Authentication & Role Resolution (never clears shared orders/tables)
@@ -1501,6 +1565,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const clearTablePhoneSession = useCallback((tableNum: number) => {
+    clearQrParamsFromUrl();
     setTablePhonesByNumber((prev) => {
       if (!(tableNum in prev)) return prev;
       const next = { ...prev };
@@ -2087,6 +2152,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const handleAdminLogout = useCallback(async () => {
     closeActiveOverlays();
+    clearQrParamsFromUrl();
     await handleGoogleSignOut();
     setIsAdminAuthenticated(false);
     setActiveRole(isMozoAuthenticated ? 'mozo' : 'customer');
@@ -2108,6 +2174,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const handleMozoLogout = useCallback(() => {
     closeActiveOverlays();
+    clearQrParamsFromUrl();
     setIsMozoAuthenticated(false);
     setActiveRole(isAdminAuthenticated ? 'admin' : 'customer');
     setNavDirection(-1);
@@ -2297,6 +2364,7 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     tableCustomerPhone,
     handleSelectTable,
     handleConfirmQrTableWelcome,
+    exitQrTableMode,
     cart,
     setCart,
     cartCount,

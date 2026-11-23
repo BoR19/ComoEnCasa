@@ -158,6 +158,7 @@ export default function App() {
     handleToggleAuthorizedStaff,
     handleRemoveAuthorizedStaff,
     handleConfirmQrTableWelcome,
+    exitQrTableMode,
   } = useRestaurant();
 
   const showBottomNav =
@@ -424,7 +425,7 @@ export default function App() {
                     handleConfirmQrTableWelcome(phone)
                   }
                   onSkipToMenu={() => handleConfirmQrTableWelcome('')}
-                  onGoHome={() => navigate('welcome')}
+                  onGoHome={exitQrTableMode}
                 />
               )}
 

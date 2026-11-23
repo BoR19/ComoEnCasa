@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, MapPin, MessageCircle, QrCode, UtensilsCrossed } from 'lucide-react';
+import { ChevronLeft, MapPin, MessageCircle, QrCode, UtensilsCrossed } from 'lucide-react';
 import { TableItem } from '../../types/app';
 import { validateBoliviaPhone } from '../../utils/ticketHelpers';
 import { OfficialLogo } from '../BrandAssets';
@@ -51,8 +51,19 @@ export const TableQrWelcomeScreen: React.FC<TableQrWelcomeScreenProps> = ({
 
   return (
     <div className="relative flex-1 min-h-0 overflow-y-auto phone-scroll bg-[var(--bg-canvas)] text-[var(--ink-primary)]">
-      <div className="min-h-[100dvh] md:min-h-full flex flex-col justify-between px-5 py-7 sm:py-10">
-        <div className="my-auto w-full max-w-lg mx-auto flex flex-col items-center gap-6">
+      <div className="min-h-[100dvh] md:min-h-full flex flex-col justify-between px-5 py-4 sm:py-7">
+        <div className="w-full max-w-lg mx-auto flex items-center justify-start pb-2">
+          <button
+            type="button"
+            onClick={onGoHome}
+            className="min-h-[44px] px-2.5 -ml-2 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-inset)]/60 active:scale-[0.97] transition-[transform,color,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+          >
+            <ChevronLeft className="w-4 h-4 shrink-0" />
+            <span>Volver al inicio</span>
+          </button>
+        </div>
+
+        <div className="my-auto w-full max-w-lg mx-auto flex flex-col items-center gap-6 py-2">
           {/* Bloque 1: Identidad y mesa detectada */}
           <header className="w-full flex flex-col items-center text-center">
             <button
@@ -99,7 +110,7 @@ export const TableQrWelcomeScreen: React.FC<TableQrWelcomeScreenProps> = ({
                   <span>Número de WhatsApp (Bolivia)</span>
                 </span>
                 <span className="text-[11px] font-semibold text-[var(--ink-muted)] tabular-nums">
-                  8 dígitos · 6 o 7
+                  8 dígitos (6 o 7)
                 </span>
               </label>
 
@@ -145,7 +156,6 @@ export const TableQrWelcomeScreen: React.FC<TableQrWelcomeScreenProps> = ({
             >
               <UtensilsCrossed className="w-4 h-4 shrink-0" />
               <span>Ver la carta y pedir</span>
-              <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
 
             <div className="pt-1 text-center">
@@ -161,7 +171,7 @@ export const TableQrWelcomeScreen: React.FC<TableQrWelcomeScreenProps> = ({
         </div>
 
         <footer className="w-full max-w-lg mx-auto pt-4 text-center text-[11px] text-[var(--ink-muted)]">
-          Como en Casa · Tu pedido va directo a cocina para {tableLabel}
+          Como en Casa — Tu pedido va directo a cocina para {tableLabel}
         </footer>
       </div>
     </div>

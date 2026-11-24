@@ -5,6 +5,7 @@ import {
   Minus,
   Plus,
   QrCode,
+  ReceiptText,
   Search,
   ShoppingBag,
   SlidersHorizontal,
@@ -14,6 +15,7 @@ import {
 import {
   CartItem,
   DishSizeOption,
+  KitchenOrder,
   MenuItem,
   OrderMode,
 } from '../../types/app';
@@ -35,6 +37,7 @@ interface MenuScreenProps {
   orderMode: OrderMode;
   selectedTable: number;
   takeawayCustomerName?: string;
+  activeTableOrder?: KitchenOrder;
   isLiveSynced: boolean;
   onBack: () => void;
   onSelectItem: (item: MenuItem) => void;
@@ -45,6 +48,7 @@ interface MenuScreenProps {
   onOpenCart: () => void;
   onOpenTables: () => void;
   onOpenTableQr: () => void;
+  onOpenTableOrder?: () => void;
   onNavigateMode: (mode: 'menu' | 'favorites') => void;
 }
 
@@ -57,6 +61,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
   orderMode,
   selectedTable,
   takeawayCustomerName,
+  activeTableOrder,
   onBack,
   onSelectItem,
   onAddToCart,
@@ -66,6 +71,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
   onOpenCart,
   onOpenTables,
   onOpenTableQr,
+  onOpenTableOrder,
   onNavigateMode,
 }) => {
   const [activeCategory, setActiveCategory] =
@@ -364,6 +370,56 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
                 />
               </div>
             </div>
+
+            {/* Active Open Table Order Banner (Caja/Mozo sync & QR mode) */}
+            {orderMode === 'dine-in' &&
+              activeTableOrder &&
+              !activeTableOrder.paid && (
+                <div className="rounded-2xl bg-[var(--ops-surface)] text-[var(--bg-canvas)] border border-[var(--accent-gold)]/55 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-[var(--ops-elevated)] text-[var(--accent-gold)] flex items-center justify-center shrink-0">
+                      <ReceiptText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-[var(--bg-surface)]">
+                          Mesa {selectedTable} — Cuenta en curso
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-[var(--accent-gold)] text-[var(--ink-primary)] text-[10px] font-bold">
+                          {activeTableOrder.status}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-white/75 tabular-nums truncate mt-0.5">
+                        {activeTableOrder.code} — Total actual{' '}
+                        <span className="font-bold text-[var(--accent-gold)]">
+                          {formatBs(activeTableOrder.total)}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={onOpenCart}
+                      className="xl:hidden min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-surface)] text-xs font-bold inline-flex items-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>Ver comanda</span>
+                    </button>
+                    {onOpenTableOrder && (
+                      <button
+                        type="button"
+                        onClick={onOpenTableOrder}
+                        className="hidden xl:inline-flex min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--ops-elevated)] border border-[var(--accent-gold)]/50 text-[var(--accent-gold)] text-xs font-bold items-center gap-1.5 hover:bg-white/10 active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)]"
+                      >
+                        <ReceiptText className="w-3.5 h-3.5" />
+                        <span>Ver detalle de mesa</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
             {/* Clean Single-Line Editorial Header (in Menu mode) */}
             {mode === 'menu' && !query.trim() && (

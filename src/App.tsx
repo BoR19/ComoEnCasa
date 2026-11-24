@@ -155,8 +155,18 @@ export default function App() {
     handleToggleStaffActive,
     handleDeleteStaffMember,
     handleConfirmQrTableWelcome,
+    handleAttachPhoneToTableOrder,
     exitQrTableMode,
   } = useRestaurant();
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !showCartDrawer) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showCartDrawer]);
 
   const showBottomNav =
     currentScreen !== 'welcome' &&
@@ -343,6 +353,7 @@ export default function App() {
       onDismissWaiterCall={handleDismissWaiterCall}
       onFreeTable={handleFreeTable}
       onDeleteOrder={handleDeleteOrder}
+      onAttachPhone={!isStaffSession ? handleAttachPhoneToTableOrder : undefined}
       onClose={onCloseDrawer}
     />
   );
@@ -511,6 +522,7 @@ export default function App() {
                   orderMode={orderMode}
                   selectedTable={selectedTable}
                   takeawayCustomerName={takeawayInfo.customerName}
+                  activeTableOrder={activeTableOrder}
                   isLiveSynced={isLiveSynced}
                   onBack={goBack}
                   onSelectItem={(item) => {
@@ -524,6 +536,7 @@ export default function App() {
                   onOpenCart={() => setShowCartDrawer(true)}
                   onOpenTables={() => navigate('tables-select')}
                   onOpenTableQr={() => navigate('tables-qr')}
+                  onOpenTableOrder={() => navigate('tables-order')}
                   onNavigateMode={(m) => navigate(m)}
                 />
               )}
@@ -637,6 +650,7 @@ export default function App() {
                   onGoMenu={() => navigate('menu')}
                   onCallWaiter={handleCallWaiter}
                   onRequestBill={handleRequestBill}
+                  onAttachPhone={!isStaffSession ? handleAttachPhoneToTableOrder : undefined}
                   onPayAtTable={() => {
                     setOrderMode('dine-in');
                     setPaymentContext('table');
@@ -853,7 +867,7 @@ export default function App() {
         </aside>
       )}
 
-      {/* Responsive Slide-Over Comanda Sheet (Mobile < 768px) / Collapsible Drawer (Tablet & < XL) */}
+      {/* Responsive Full-Screen Comanda Sheet (Mobile < 768px) / Collapsible Drawer (Tablet & < XL) */}
       <AnimatePresence>
         {showCartDrawer && (
           <motion.div
@@ -861,10 +875,10 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{
-              duration: shouldReduceMotion ? 0 : 0.18,
-              ease: [0.23, 1, 0.32, 1],
+              duration: shouldReduceMotion ? 0 : 0.3,
+              ease: [0.32, 0.72, 0, 1],
             }}
-            className="xl:hidden fixed inset-0 z-50 bg-black/55 flex items-end md:items-stretch md:justify-end"
+            className="xl:hidden fixed inset-0 z-50 bg-black/55 flex items-stretch md:justify-end"
             onClick={() => setShowCartDrawer(false)}
           >
             <motion.aside
@@ -872,24 +886,30 @@ export default function App() {
                 shouldReduceMotion
                   ? { opacity: 0 }
                   : isMobileViewport
-                  ? { y: '100%' }
-                  : { x: '100%' }
+                  ? { transform: 'translateY(100%)', opacity: 0 }
+                  : { transform: 'translateX(100%)', opacity: 0 }
               }
-              animate={{ x: 0, y: 0, opacity: 1 }}
+              animate={
+                shouldReduceMotion
+                  ? { opacity: 1 }
+                  : isMobileViewport
+                  ? { transform: 'translateY(0%)', opacity: 1 }
+                  : { transform: 'translateX(0%)', opacity: 1 }
+              }
               exit={
                 shouldReduceMotion
                   ? { opacity: 0 }
                   : isMobileViewport
-                  ? { y: '100%' }
-                  : { x: '100%' }
+                  ? { transform: 'translateY(100%)', opacity: 0 }
+                  : { transform: 'translateX(100%)', opacity: 0 }
               }
               transition={{
-                duration: shouldReduceMotion ? 0 : 0.28,
+                duration: shouldReduceMotion ? 0.15 : 0.3,
                 ease: [0.32, 0.72, 0, 1],
               }}
               onClick={(e) => e.stopPropagation()}
               aria-label="Comanda en vivo deslizable"
-              className="w-full h-[88dvh] max-h-[88dvh] rounded-t-3xl border-t md:rounded-none md:border-t-0 md:max-w-sm md:h-full md:max-h-dvh shadow-2xl border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-surface)]"
+              className="w-full h-dvh max-h-dvh rounded-none border-0 md:max-w-sm md:h-full md:max-h-dvh md:border-l md:border-[var(--border-subtle)] shadow-2xl overflow-hidden bg-[var(--bg-surface)] flex flex-col"
             >
               {renderLiveCartPanel(() => setShowCartDrawer(false))}
             </motion.aside>

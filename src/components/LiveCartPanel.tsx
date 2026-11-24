@@ -252,20 +252,58 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
       ? linkedDeliveryOrder.code
       : 'Delivery';
 
+  const headerStatusInfo = inspectedOrder
+    ? inspectedOrder.paid
+      ? {
+          label: 'Pagado',
+          className: 'bg-[var(--status-ok)]/15 text-[var(--status-ok)]',
+        }
+      : inspectedOrder.billRequested
+      ? {
+          label: 'Por pagar',
+          className: 'bg-[var(--accent-gold)]/25 text-[var(--ink-primary)]',
+        }
+      : {
+          label: inspectedOrder.status,
+          className:
+            'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]',
+        }
+    : orderMode === 'dine-in'
+    ? isSelectedTableOccupied
+      ? {
+          label: 'Ocupada',
+          className:
+            'bg-[var(--accent-primary)]/12 text-[var(--accent-primary)]',
+        }
+      : {
+          label: 'Libre',
+          className: 'bg-[var(--status-ok)]/15 text-[var(--status-ok)]',
+        }
+    : cartCount > 0
+    ? {
+        label: 'Borrador',
+        className: 'bg-[var(--accent-gold)]/25 text-[var(--ink-primary)]',
+      }
+    : null;
+
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-surface)] text-[var(--ink-primary)]">
-      {/* Top Header */}
-      <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2 shrink-0 bg-[var(--bg-surface)]">
-        <div className="min-w-0">
+    <div className="flex flex-col h-full min-h-0 bg-[var(--bg-surface)] text-[var(--ink-primary)]">
+      {/* Sticky Top Header */}
+      <div className="sticky top-0 z-20 px-4 py-2.5 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2 shrink-0 bg-[var(--bg-surface)]">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h2 className="text-xs font-bold text-[var(--ink-primary)]">
-              Comanda en vivo
+            <h2 className="text-sm md:text-xs font-bold text-[var(--ink-primary)] truncate">
+              Comanda en vivo — {headerContextBadge}
             </h2>
-            <span className="px-2 py-0.5 rounded-md bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[10px] font-bold text-[var(--accent-primary)] tabular-nums">
-              {headerContextBadge}
-            </span>
+            {headerStatusInfo && (
+              <span
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${headerStatusInfo.className}`}
+              >
+                {headerStatusInfo.label}
+              </span>
+            )}
             {roleBadgeLabel && (
-              <span className="px-2 py-0.5 rounded-md bg-[var(--ops-surface)] text-[var(--accent-gold)] text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded-md bg-[var(--ops-surface)] text-[var(--accent-gold)] text-[10px] font-bold shrink-0">
                 {roleBadgeLabel}
               </span>
             )}
@@ -280,15 +318,18 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Cerrar comanda"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer shrink-0"
+            className="min-w-[44px] min-h-[44px] px-2.5 md:px-0 md:w-11 rounded-xl flex items-center justify-center gap-1 bg-[var(--bg-inset)] md:bg-transparent border border-[var(--border-subtle)] md:border-0 text-[var(--ink-primary)] hover:bg-[var(--bg-inset)] active:scale-[0.97] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 shrink-0" />
+            <span className="md:hidden text-xs font-bold">Cerrar</span>
           </button>
         )}
       </div>
 
-      {/* Mode Switch & Table / Takeaway / Delivery Selector */}
-      <div className="px-4 py-3 border-b border-[var(--border-subtle)] space-y-2.5 bg-[var(--bg-canvas)] shrink-0">
+      {/* Scrollable Body: Mode Switch, Selector, Full Active Order & Draft Cart */}
+      <div className="flex-1 overflow-y-auto phone-scroll bg-[var(--bg-canvas)]">
+        {/* Mode Switch & Table / Takeaway / Delivery Selector */}
+        <div className="px-4 py-3 border-b border-[var(--border-subtle)] space-y-2.5 bg-[var(--bg-canvas)]">
         <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)]">
           <button
             type="button"
@@ -619,13 +660,12 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             )}
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Scrollable Body: Full Selected Order (Mesa, Para Llevar or Delivery) + Draft Cart */}
-      <div className="flex-1 overflow-y-auto phone-scroll p-3.5 space-y-3 bg-[var(--bg-canvas)]">
-        {(orderMode === 'dine-in' ||
-          linkedTakeawayOrder ||
-          linkedDeliveryOrder) && (
+        <div className="p-3.5 space-y-3">
+          {(orderMode === 'dine-in' ||
+            linkedTakeawayOrder ||
+            linkedDeliveryOrder) && (
           <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -809,14 +849,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                   {inspectedOrder.items.map((it, idx) => (
                     <div
                       key={`${inspectedOrder.id}-${it.name}-${it.sizeLabel}-${idx}`}
-                      className="py-2 flex items-start justify-between gap-2 text-xs"
+                      className="py-2.5 flex items-start justify-between gap-2.5 text-xs"
                     >
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 space-y-0.5">
                         <p className="font-semibold text-[var(--ink-primary)] leading-snug">
-                          {it.quantity}x {it.name}{' '}
-                          <span className="text-[var(--ink-muted)] font-medium">
-                            ({it.sizeLabel})
-                          </span>
+                          {it.quantity}x {it.name}
+                        </p>
+                        <p className="text-[11px] text-[var(--ink-muted)] font-medium tabular-nums">
+                          {it.sizeLabel} ({formatBsDecimal(it.price)} c/u)
                         </p>
                         {it.extrasSummary && (
                           <p className="text-[10px] text-[var(--ink-muted)] leading-snug">
@@ -840,7 +880,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                                 onUpdateOrderItemQty(inspectedOrder.id, idx, -1)
                               }
                               aria-label={`Restar ${it.name}`}
-                              className="w-5 h-5 rounded flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-surface)] disabled:opacity-35 active:scale-[0.95] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer disabled:cursor-not-allowed"
+                              className="w-6 h-6 rounded flex items-center justify-center text-[var(--ink-primary)] hover:bg-[var(--bg-surface)] disabled:opacity-35 active:scale-[0.95] transition-[transform,background-color] duration-150 ease-[var(--ease-out)] cursor-pointer disabled:cursor-not-allowed"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
@@ -850,14 +890,14 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                                 onUpdateOrderItemQty(inspectedOrder.id, idx, 1)
                               }
                               aria-label={`Sumar ${it.name}`}
-                              className="w-5 h-5 rounded flex items-center justify-center bg-[var(--accent-gold)] text-[var(--ink-primary)] hover:opacity-90 active:scale-[0.95] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                              className="w-6 h-6 rounded flex items-center justify-center bg-[var(--accent-gold)] text-[var(--ink-primary)] hover:opacity-90 active:scale-[0.95] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         )}
                         <span className="font-bold text-[var(--accent-primary)] tabular-nums">
-                          {formatBs(it.price * it.quantity)}
+                          {formatBsDecimal(it.price * it.quantity)}
                         </span>
                       </div>
                     </div>
@@ -958,7 +998,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
 
                     {/* Staff Action Grid */}
                     <div className="grid grid-cols-2 gap-1.5">
-                      {canCollectBilling && !inspectedOrder.paid && (
+                      {cart.length > 0 && canCollectBilling && !inspectedOrder.paid && (
                         <button
                           type="button"
                           onClick={() => setCollectingOrder(inspectedOrder)}
@@ -969,18 +1009,20 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         </button>
                       )}
 
-                      <a
-                        href={buildWhatsAppShareUrl(
-                          inspectedOrder,
-                          effectivePhone
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="col-span-2 min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>Enviar recibo por WhatsApp</span>
-                      </a>
+                      {cart.length > 0 && (
+                        <a
+                          href={buildWhatsAppShareUrl(
+                            inspectedOrder,
+                            effectivePhone
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="col-span-2 min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[var(--status-ok)] text-[var(--bg-surface)] text-xs font-bold flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink-primary)]"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Enviar recibo por WhatsApp</span>
+                        </a>
+                      )}
 
                       <button
                         type="button"
@@ -1099,7 +1141,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         <span>Ticket / WA</span>
                       </button>
 
-                      {!inspectedOrder.paid && orderMode === 'dine-in' && (
+                      {cart.length > 0 && !inspectedOrder.paid && orderMode === 'dine-in' && (
                         <>
                           <button
                             type="button"
@@ -1130,7 +1172,7 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
                         </>
                       )}
 
-                      {!inspectedOrder.paid && orderMode === 'takeaway' && (
+                      {cart.length > 0 && !inspectedOrder.paid && orderMode === 'takeaway' && (
                         <button
                           type="button"
                           onClick={onPayTakeawayOrder}
@@ -1293,75 +1335,178 @@ export const LiveCartPanel: React.FC<LiveCartPanelProps> = ({
             })}
           </div>
         )}
+        </div>
       </div>
 
-      {/* Totals & Checkout Actions Footer */}
-      <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-3 shrink-0">
-        {cart.length > 0 && (
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
+      {/* Sticky Bottom Totals & Primary Actions Footer */}
+      <div className="sticky bottom-0 z-20 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] space-y-2.5 shrink-0">
+        {cart.length > 0 ? (
+          <>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
+                <span>
+                  Borrador ({cartCount} {cartCount === 1 ? 'ítem' : 'ítems'})
+                </span>
+                <span className="text-[var(--ink-primary)] tabular-nums">
+                  {formatBsDecimal(total)}
+                </span>
+              </div>
+              {inspectedOrder && !inspectedOrder.paid && (
+                <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
+                  <span>Cuenta actual</span>
+                  <span className="text-[var(--ink-primary)] tabular-nums">
+                    {formatBsDecimal(inspectedOrder.total)}
+                  </span>
+                </div>
+              )}
+              <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
+                <span className="text-sm font-bold text-[var(--ink-primary)]">
+                  {inspectedOrder && !inspectedOrder.paid
+                    ? 'Total acumulado'
+                    : 'Total a enviar'}
+                </span>
+                <span className="text-lg font-bold text-[var(--accent-primary)] tabular-nums">
+                  {formatBsDecimal(
+                    inspectedOrder && !inspectedOrder.paid
+                      ? inspectedOrder.total + total
+                      : total
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  orderMode === 'takeaway' &&
+                  !linkedTakeawayOrder &&
+                  !takeawayInfo.customerName.trim()
+                ) {
+                  setTakeawayNameAttempted(true);
+                }
+                onProceedOrder();
+              }}
+              className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer tabular-nums"
+            >
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>
-                Borrador ({cartCount} {cartCount === 1 ? 'ítem' : 'ítems'})
+                {orderMode === 'dine-in'
+                  ? activeTableOrder && !activeTableOrder.paid
+                    ? `Agregar a Mesa ${selectedTable} (${formatBs(total)})`
+                    : `Enviar a cocina — Mesa ${selectedTable}`
+                  : orderMode === 'takeaway'
+                  ? linkedTakeawayOrder && !linkedTakeawayOrder.paid
+                    ? `Agregar a ${linkedTakeawayOrder.code} (${formatBs(total)})`
+                    : `Enviar Para llevar (${formatBs(total)})`
+                  : isStaffRole && linkedDeliveryOrder && !linkedDeliveryOrder.paid
+                  ? `Guardar en ${linkedDeliveryOrder.code} (${formatBs(total)})`
+                  : `Continuar a Delivery (${formatBs(total)})`}
               </span>
-              <span className="text-[var(--ink-primary)] tabular-nums">
-                {formatBsDecimal(total)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[var(--ink-muted)] font-semibold">
-              <span>Envío / Servicio</span>
-              <span className="text-[var(--status-ok)] font-bold tabular-nums">
-                Bs 0.00 (Gratis)
-              </span>
-            </div>
-            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
-              <span className="text-sm font-bold text-[var(--ink-primary)]">
-                Total a enviar
+            </button>
+
+            <button
+              type="button"
+              onClick={onClearCart}
+              className="w-full py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:text-[var(--status-danger)] active:scale-[0.97] transition-[transform,color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+            >
+              Vaciar borrador actual
+            </button>
+          </>
+        ) : inspectedOrder ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[var(--ink-muted)]">
+                Total acumulado ({activeOrderItemTotalUnits}{' '}
+                {activeOrderItemTotalUnits === 1 ? 'plato' : 'platos'})
               </span>
               <span className="text-lg font-bold text-[var(--accent-primary)] tabular-nums">
-                {formatBsDecimal(total)}
+                {formatBsDecimal(inspectedOrder.total)}
               </span>
             </div>
-          </div>
-        )}
 
-        <button
-          type="button"
-          disabled={cart.length === 0}
-          onClick={() => {
-            if (
-              orderMode === 'takeaway' &&
-              !linkedTakeawayOrder &&
-              !takeawayInfo.customerName.trim()
-            ) {
-              setTakeawayNameAttempted(true);
-            }
-            onProceedOrder();
-          }}
-          className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-45 disabled:cursor-not-allowed active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer tabular-nums"
-        >
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>
-            {orderMode === 'dine-in'
-              ? activeTableOrder && !activeTableOrder.paid
-                ? `Agregar a Mesa ${selectedTable} · ${formatBs(total)}`
-                : `Enviar a Cocina · Mesa ${selectedTable}`
-              : orderMode === 'takeaway'
-              ? linkedTakeawayOrder && !linkedTakeawayOrder.paid
-                ? `Agregar a ${linkedTakeawayOrder.code} · ${formatBs(total)}`
-                : `Enviar Para llevar · ${formatBs(total)}`
-              : isStaffRole && linkedDeliveryOrder && !linkedDeliveryOrder.paid
-              ? `Guardar en ${linkedDeliveryOrder.code} · ${formatBs(total)}`
-              : `Continuar a Delivery · ${formatBs(total)}`}
-          </span>
-        </button>
+            {isStaffRole ? (
+              <div className="grid grid-cols-1 gap-2">
+                {canCollectBilling && !inspectedOrder.paid && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectingOrder(inspectedOrder)}
+                    className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-canvas)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] cursor-pointer tabular-nums"
+                  >
+                    <Banknote className="w-4 h-4 shrink-0" />
+                    <span>Cobrar {formatBs(inspectedOrder.total)}</span>
+                  </button>
+                )}
 
-        {cart.length > 0 && (
+                <a
+                  href={buildWhatsAppShareUrl(inspectedOrder, effectivePhone)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] font-bold text-xs flex items-center justify-center gap-2 hover:border-[var(--status-ok)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
+                >
+                  <MessageCircle className="w-4 h-4 text-[var(--status-ok)] shrink-0" />
+                  <span>Enviar recibo por WhatsApp</span>
+                </a>
+              </div>
+            ) : !inspectedOrder.paid && orderMode === 'dine-in' ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onRequestBill
+                      ? onRequestBill(inspectedOrder.id)
+                      : onCallWaiter(inspectedOrder.id)
+                  }
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-[var(--ink-primary)] text-xs font-bold flex items-center justify-center gap-1.5 hover:border-[var(--accent-primary)] active:scale-[0.97] transition-[transform,border-color] duration-150 ease-[var(--ease-out)] cursor-pointer"
+                >
+                  <ReceiptText className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
+                  <span>
+                    {inspectedOrder.billRequested
+                      ? 'Cuenta solicitada'
+                      : 'Solicitar cuenta'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onPayAtTable}
+                  className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
+                >
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <span>Pagar {formatBs(inspectedOrder.total)}</span>
+                </button>
+              </div>
+            ) : !inspectedOrder.paid && orderMode === 'takeaway' ? (
+              <button
+                type="button"
+                onClick={onPayTakeawayOrder}
+                className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer tabular-nums"
+              >
+                <Lock className="w-4 h-4 shrink-0" />
+                <span>Pagar pedido ({formatBs(inspectedOrder.total)})</span>
+              </button>
+            ) : (
+              <a
+                href={buildWhatsAppShareUrl(inspectedOrder, effectivePhone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--status-ok)] text-[var(--bg-surface)] font-bold text-xs flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-[var(--ease-out)]"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span>Enviar recibo por WhatsApp</span>
+              </a>
+            )}
+          </>
+        ) : (
           <button
             type="button"
-            onClick={onClearCart}
-            className="w-full py-1 text-[11px] font-semibold text-[var(--ink-muted)] hover:text-[var(--status-danger)] transition-colors duration-150 ease-[var(--ease-out)] cursor-pointer"
+            onClick={() => {
+              onGoMenu();
+              if (onClose) onClose();
+            }}
+            className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[var(--ink-primary)] text-[var(--bg-canvas)] font-bold text-xs flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.97] transition-[transform,opacity] duration-150 ease-[var(--ease-out)] cursor-pointer"
           >
-            Vaciar borrador actual
+            <Plus className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+            <span>Agregar platos desde la Carta</span>
           </button>
         )}
       </div>

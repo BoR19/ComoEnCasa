@@ -29,6 +29,7 @@ import {
 import {
   buildWhatsAppShareUrl,
   formatBoliviaDisplayPhone,
+  maskPhoneNumberForPrivacy,
 } from '../../utils/ticketHelpers';
 import { OfficialLogo } from '../BrandAssets';
 import type { AppUserRole } from '../LiveCartPanel';
@@ -917,6 +918,7 @@ interface TableOrderScreenProps {
   onGoMenu: () => void;
   onCallWaiter: (orderId: string) => void;
   onRequestBill?: (orderId: string) => void;
+  onAttachPhone?: (phone: string) => Promise<boolean>;
   onPayAtTable: () => void;
 }
 
@@ -927,9 +929,13 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
   onGoMenu,
   onCallWaiter,
   onRequestBill,
+  onAttachPhone,
   onPayAtTable,
 }) => {
   const [showTicket, setShowTicket] = useState(false);
+  const [showInlinePhoneForm, setShowInlinePhoneForm] = useState(false);
+  const [inlinePhone, setInlinePhone] = useState('');
+  const [isSavingInlinePhone, setIsSavingInlinePhone] = useState(false);
 
   if (!order) {
     return (
@@ -971,7 +977,7 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
               {order.customerPhone && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--status-ok)]/12 text-[var(--status-ok)] font-bold text-[11px] tabular-nums">
                   <MessageCircle className="w-3 h-3 shrink-0" />
-                  <span>{formatBoliviaDisplayPhone(order.customerPhone)}</span>
+                  <span>{maskPhoneNumberForPrivacy(order.customerPhone)}</span>
                 </span>
               )}
             </div>
@@ -1076,6 +1082,77 @@ export const TableOrderScreen: React.FC<TableOrderScreenProps> = ({
                     {formatBs(order.total)}
                   </span>
                 </div>
+
+                {!order.customerPhone && !order.paid && onAttachPhone && (
+                  <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MessageCircle className="w-4 h-4 text-[var(--status-ok)] shrink-0" />
+                        <span className="text-xs font-semibold text-[var(--ink-primary)] leading-snug">
+                          Añade tu WhatsApp para enviarte el recibo digital
+                        </span>
+                      </div>
+                      {!showInlinePhoneForm && (
+                        <button
+                          type="button"
+                          onClick={() => setShowInlinePhoneForm(true)}
+                          className="min-h-[36px] px-3 py-1 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] cursor-pointer shrink-0"
+                        >
+                          Añadir
+                        </button>
+                      )}
+                    </div>
+
+                    {showInlinePhoneForm && (
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!inlinePhone.trim() || isSavingInlinePhone) return;
+                          setIsSavingInlinePhone(true);
+                          const ok = await onAttachPhone(inlinePhone);
+                          setIsSavingInlinePhone(false);
+                          if (ok) {
+                            setShowInlinePhoneForm(false);
+                            setInlinePhone('');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 pt-1"
+                      >
+                        <span className="h-9 px-2.5 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-muted)] flex items-center tabular-nums shrink-0">
+                          +591
+                        </span>
+                        <input
+                          type="tel"
+                          maxLength={10}
+                          value={inlinePhone}
+                          onChange={(e) =>
+                            setInlinePhone(e.target.value.replace(/\D/g, ''))
+                          }
+                          placeholder="71234567"
+                          autoFocus
+                          className="flex-1 min-w-0 h-9 px-3 rounded-xl bg-[var(--bg-inset)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] tabular-nums"
+                        />
+                        <button
+                          type="submit"
+                          disabled={
+                            isSavingInlinePhone || inlinePhone.length < 8
+                          }
+                          className="h-9 px-3 rounded-xl bg-[var(--accent-primary)] text-[var(--bg-canvas)] text-xs font-bold disabled:opacity-40 cursor-pointer active:scale-[0.97] transition-transform duration-150 ease-[var(--ease-out)] shrink-0"
+                        >
+                          {isSavingInlinePhone ? '...' : 'Guardar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowInlinePhoneForm(false)}
+                          aria-label="Cancelar"
+                          className="h-9 w-9 rounded-xl flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--ink-primary)] cursor-pointer shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
               </section>
 
               {order.billRequested && !order.paid && (
